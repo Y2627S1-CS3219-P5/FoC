@@ -1,10 +1,11 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented bounded, fail-closed User Service session verification
- * for issue #16.
+ * for issue #16 and adopted shared UUID validation during issue #17 review.
  * Author review: Required before merge.
  */
 import { SessionVerificationConfiguration } from "../config/environment";
+import { isUuid } from "../http/uuid";
 import {
   SessionVerificationUnavailableError,
   SessionVerifier,
@@ -15,9 +16,6 @@ import {
 } from "./session-verifier";
 
 type Fetch = typeof globalThis.fetch;
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isUserRole(value: unknown): value is UserRole {
   return USER_ROLES.some((role) => role === value);
@@ -30,8 +28,7 @@ function parsePrincipal(value: unknown): VerifiedPrincipal {
     Array.isArray(value) ||
     !("id" in value) ||
     !("role" in value) ||
-    typeof value.id !== "string" ||
-    !UUID_PATTERN.test(value.id) ||
+    !isUuid(value.id) ||
     !isUserRole(value.role)
   ) {
     throw new SessionVerificationUnavailableError();

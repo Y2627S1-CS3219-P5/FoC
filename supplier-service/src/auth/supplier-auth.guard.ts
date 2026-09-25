@@ -1,22 +1,26 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added bearer authentication, verified-principal attachment, and
- * role-aware NestJS route protection for issue #16.
+ * role-aware NestJS route protection for issue #16; adopted shared public
+ * error factories during issue #17 review.
  * Author review: Required before merge.
  */
 import {
   applyDecorators,
   CanActivate,
   ExecutionContext,
-  ForbiddenException,
   Inject,
   Injectable,
-  ServiceUnavailableException,
   SetMetadata,
-  UnauthorizedException,
   UseGuards,
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+
+import {
+  supplierAuthenticationUnavailableException,
+  supplierForbiddenException,
+  supplierUnauthenticatedException,
+} from "../http/supplier-http-errors";
 
 import {
   SESSION_VERIFIER,
@@ -39,20 +43,6 @@ export interface AuthenticatedSupplierRequest extends SupplierHttpRequest {
   principal: VerifiedPrincipal;
 }
 
-function unauthenticated(): UnauthorizedException {
-  return new UnauthorizedException({
-    code: "UNAUTHENTICATED",
-    message: "A valid bearer token is required.",
-  });
-}
-
-function verificationUnavailable(): ServiceUnavailableException {
-  return new ServiceUnavailableException({
-    code: "AUTHENTICATION_UNAVAILABLE",
-    message: "Authentication is temporarily unavailable.",
-  });
-}
-
 @Injectable()
 export class SupplierAuthGuard implements CanActivate {
   constructor(
@@ -68,7 +58,7 @@ export class SupplierAuthGuard implements CanActivate {
       typeof authorization !== "string" ||
       !BEARER_HEADER_PATTERN.test(authorization)
     ) {
-      throw unauthenticated();
+      throw supplierUnauthenticatedException();
     }
 
     let principal: VerifiedPrincipal;
@@ -76,9 +66,9 @@ export class SupplierAuthGuard implements CanActivate {
       principal = await this.verifier.verify(authorization);
     } catch (error) {
       if (error instanceof UnauthenticatedSessionError) {
-        throw unauthenticated();
+        throw supplierUnauthenticatedException();
       }
-      throw verificationUnavailable();
+      throw supplierAuthenticationUnavailableException();
     }
 
     (request as AuthenticatedSupplierRequest).principal = principal;
@@ -88,10 +78,7 @@ export class SupplierAuthGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
     if (requiredRoles?.length && !requiredRoles.includes(principal.role)) {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "You do not have permission to perform this action.",
-      });
+      throw supplierForbiddenException();
     }
 
     return true;

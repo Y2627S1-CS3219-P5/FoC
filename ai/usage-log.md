@@ -6,6 +6,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Recorded the exact second Supplier backend increment prompt, the author's follow-up approval, and the implementation/check summary.
 Author review of the second increment: Required before merge.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
+Scope: Recorded the author's approved `q` bound and request-logging follow-up prompts, plus the issue #17 review-remediation summary.
+The decisions are author-approved; implementation review is required before merge.
 -->
 
 # AI Usage Log
@@ -191,3 +194,22 @@ The follow-up approved the proposed backend defaults presented for this incremen
 ### Key response
 
 Codex implemented the second Supplier backend increment without changing User Service application code: a bounded `SessionVerifier` implementation that forwards the bearer header unchanged to User Service, a NestJS guard and role policy, PostgreSQL-backed Supplier list/detail reads with approved query defaults and stable pagination, archived visibility rules, strong detail ETags, server-generated request IDs, consistent error responses, and bundled image serving. It added focused unit/contract tests and an isolated Compose integration runner. The live runner verified a clean 21-row migration/seed and zero-insert repeat seed preserving an archived fixture, real MEMBER and ADMINISTRATOR registration/login/verification, search/filter/stable paging/detail, 401/403/404/503 behavior, ETags, request correlation, image serving, and recovery after User Service restart. An integration finding also bounded page/size combinations so their database offset remains a safe JavaScript integer. Author review remains required before merge; the separate strict-JSON course-owner exception remains pending for submission.
+
+## 2026-09-25 — Supplier search bound and completion logging approval
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Explaining the implemented list-query term, formatting the author's 300-character approval into the Supplier specification, selecting the smallest Nest-native request-completion logging mechanism consistent with the author's request and official Nest guidance, and implementing issue #17 code-review remediation.
+- **Repository files affected:** `supplier-service/SPEC.md`, `supplier-service/README.md`, `supplier-service/docs/verification/second-backend-increment.md`, `supplier-service/scripts/compose-smoke.mjs`, Supplier HTTP/authentication source and tests under `supplier-service/src/`, and `ai/usage-log.md`
+- **Author review:** The 300-character `q` decision and request-completion logging direction were approved by the author; implementation review is required before merge.
+
+### Exact prompts
+
+> `can i check what does q represent here and why 300 chars for length specifically? also how will non-sensitive request completion logging be done`
+
+> `makes sense that works, also for hte server geenrated request ID are we using the nestjs observability/microservice sdk for this implementation, feel free to search the web or use best practices, if so implement it`
+
+### Key response
+
+Codex clarified that `q` is the trimmed free-text term used for case-insensitive Supplier name and location-description search. The author approved a maximum of 300 characters because `location_description varchar(300)` is the longer searched field; the implementation counts Unicode code points, accepts 300, and returns the existing 400 validation body with `fieldErrors.q` at 301.
+
+For completion logging, Codex used the existing HTTP middleware lifecycle and a dedicated Nest built-in `ConsoleLogger` in JSON mode rather than adding `@nestjs/observe`, a microservices SDK, `AsyncLocalStorage`, Pino, tracing/APM, or an exporter. Each request produces at most one machine-readable completion line correlated to the server-generated UUID. The application `message` payload contains only the stable event name, request ID, method, query-free pathname, status, completed/aborted result, and duration; Nest adds its normal non-sensitive JSON logger envelope (`level`, process ID, timestamp, and context). It never records authorization/token data, query values (including `q`), full URLs, bodies, or user identity. Review remediation also centralized public Supplier HTTP error definitions/factories and shared UUID syntax validation while preserving the existing 400 and fail-closed 503 mappings.

@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested Supplier Identifier validation, including durable UUIDv5 seed
- * identifiers, for issue #17.
+ * identifiers and the preserved public 400 shape, for issue #17.
  * Author review: Required before merge.
  */
 import { BadRequestException } from "@nestjs/common";
@@ -22,6 +22,17 @@ describe("SupplierIdentifierPipe", () => {
   });
 
   it("rejects a malformed Supplier Identifier with a field error", () => {
-    expect(() => pipe.transform("not-a-uuid")).toThrow(BadRequestException);
+    try {
+      pipe.transform("not-a-uuid");
+      throw new Error("Expected Supplier Identifier validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as BadRequestException).getResponse()).toEqual({
+        code: "SUPPLIER_VALIDATION_FAILED",
+        message: "Please correct the Supplier Identifier.",
+        fieldErrors: { id: "Supplier Identifier must be a UUID." },
+      });
+    }
   });
 });

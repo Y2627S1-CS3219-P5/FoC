@@ -1,23 +1,22 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added Supplier Identifier validation that accepts durable UUIDv5 seed
- * identifiers for issue #17.
+ * identifiers and adopted shared UUID/error helpers for issue #17.
  * Author review: Required before merge.
  */
-import { BadRequestException, Injectable, PipeTransform } from "@nestjs/common";
+import { Injectable, PipeTransform } from "@nestjs/common";
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { supplierValidationException } from "../../http/supplier-http-errors";
+import { isUuid } from "../../http/uuid";
 
 @Injectable()
 export class SupplierIdentifierPipe implements PipeTransform<string, string> {
   transform(value: string): string {
-    if (!UUID_PATTERN.test(value)) {
-      throw new BadRequestException({
-        code: "SUPPLIER_VALIDATION_FAILED",
-        message: "Please correct the Supplier Identifier.",
-        fieldErrors: { id: "Supplier Identifier must be a UUID." },
-      });
+    if (!isUuid(value)) {
+      throw supplierValidationException(
+        "Please correct the Supplier Identifier.",
+        { id: "Supplier Identifier must be a UUID." },
+      );
     }
     return value;
   }
