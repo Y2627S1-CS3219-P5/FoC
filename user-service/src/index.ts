@@ -1,9 +1,20 @@
 import { authRouter } from "./auth";
 import { bootstrapFirstAdmin } from "./bootstrap";
+import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
 import { initSchema } from "./schema";
 
 const app = express();
+
+// Browsers may only call this service from these origins. Server-to-server calls
+// (e.g. Supplier -> /auth/verify) are unaffected: CORS is enforced by browsers only.
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins }));
+
+
 app.use(express.json());
 
 app.get("/health", (req: Request, res: Response) => {
