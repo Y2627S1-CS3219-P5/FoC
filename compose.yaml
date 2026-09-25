@@ -7,6 +7,7 @@ services:
     environment:
       PORT: 3001
       DATABASE_URL: postgres://foc:foc@user-db:5432/users
+      ALLOWED_EMAIL_DOMAIN: u.nus.edu
     depends_on:
       user-db:
         condition: service_healthy  # wait until Postgres accepts connections
