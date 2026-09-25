@@ -1,3 +1,4 @@
+import { signAccessToken, ACCESS_TOKEN_TTL_SECONDS } from "./token";
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { DatabaseError } from "pg";
@@ -75,4 +76,51 @@ authRouter.post("/register", async (req: Request, res: Response) => {
     }
     throw err; // anything else goes to the error handler in index.ts
   }
+});
+
+// Hash of a throwaway string. Unknown usernames are still compared against it, so a
+// "no such user" response takes as long as a "wrong password" one. Otherwise response
+// time would reveal which usernames exist.
+const DUMMY_HASH = bcrypt.hashSync("not-a-real-password-just-for-timing", BCRYPT_COST);
+
+authRouter.post("/login", async (req: Request, res: Response) => {
+  const { identifier, password } = req.body ?? {};
+  if (typeof identifier !== "string" || typeof password !== "string") {
+    res.status(400).json({ error: "VALIDATION_FAILED", message: "identifier and password are required" });
+    return;
+  }
+
+  // Usernames cannot contain '@', so an identifier can never match one account's
+  // username and another account's email at the same time
+  const result = await pool.query(
+    `SELECT id, password_hash, status FROM users
+     WHERE lower(username) = lower($1) OR email = lower($1)`,
+    [identifier],
+  );
+  const user = result.rows[0];
+
+  const passwordOk = await bcrypt.compare(password, user?.password_hash ?? DUMMY_HASH);
+
+  // US-F3.1.1: one generic answer for unknown user, wrong password or closed account
+  if (!user || !passwordOk || user.status === "CLOSED") {
+    res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid username/email or password" });
+    return;
+  }
+
+  // US-F3.1.2: status is revealed only after the password was correct
+  if (user.status === "PENDING_VERIFICATION" || user.status === "SUSPENDED") {
+    res.status(403).json({
+      error: `ACCOUNT_${user.status}`,
+      message: user.status === "SUSPENDED"
+        ? "This account is suspended"
+        : "Please verify your email before logging in",
+    });
+    return;
+  }
+
+  res.json({
+    accessToken: signAccessToken(user.id),
+    tokenType: "Bearer",
+    expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+  });
 });

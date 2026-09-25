@@ -8,6 +8,8 @@ services:
       PORT: 3001
       DATABASE_URL: postgres://foc:foc@user-db:5432/users
       ALLOWED_EMAIL_DOMAIN: u.nus.edu
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-1800}
     depends_on:
       user-db:
         condition: service_healthy  # wait until Postgres accepts connections
