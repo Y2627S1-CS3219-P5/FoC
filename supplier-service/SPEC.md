@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
-Scope: Interpreted the supplied project, D1, and D2 reference documents and formatted decisions explicitly supplied by the Supplier workstream author, including the team's archive and single-description approvals. This edit does not add new architecture or design decisions.
+Scope: Interpreted the supplied project, D1, and D2 reference documents and formatted decisions explicitly supplied by the Supplier workstream author, including the team's archive and single-description approvals and the User Service contract implemented in PR #14. This edit does not add new architecture or design decisions.
 Author review: Required before submission.
 -->
 
@@ -27,8 +27,8 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | Database | PostgreSQL, private to Supplier Service, instantiated in a Docker Instance | Selected |
 | Database access | Drizzle ORM and versioned migrations | Selected |
 | Frontend | Shared React + TypeScript app using Vite | Selected for D2 |
-| User credential | Opaque session in a same-origin, `HttpOnly` cookie | Proposed shared contract; User owner to confirm |
-| User validation | Private, authenticated User Service call per protected request | Proposed shared contract; User owner to confirm |
+| User credential | Short-lived HS256 JWT access token returned by login and sent as `Authorization: Bearer` | Implemented by User Service in PR #14 |
+| User validation | `GET /auth/verify` with the caller's bearer header, including a live account lookup | Implemented by User Service in PR #14; no separate service credential |
 | Roles | MEMBER browses; ADMINISTRATOR browses and manages | Selected |
 | Description | Use `locationDescription` as the only displayed Supplier description | Approved by team; replaces the separate D1 general-description field |
 | Removal | Archive, retain record, allow administrator restoration | Approved by team; replaces the D1 deletion restriction |
@@ -37,11 +37,11 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 
 ## 3. Ownership and boundaries
 
-Supplier Service owns supplier metadata and ACTIVE/ARCHIVED state under the approved archive model. User Service owns identity, role, account status, and session validity. The browser UI is a client: hiding an administrator control cannot substitute for backend access control. Supplier Service does not need public-profile lookup or User status events in D2.
+Supplier Service owns supplier metadata and ACTIVE/ARCHIVED state under the approved archive model. User Service owns identity, role, account status, and access-token issuance and validation. The browser UI is a client: hiding an administrator control cannot substitute for backend access control. Supplier Service does not need public-profile lookup or User status events in D2.
 
 A Supplier ID identifies one physical errand origin. Moving an outlet to another building creates a new Supplier record and archives the old record. Correcting directions within the same physical location retains the ID.
 
-For the browser demo, serve the built Vite app and proxy Supplier and User routes under one origin. Use a Vite development proxy locally and equivalent integrated routing in Compose. The proxy forwards the User-owned session cookie, so frontend JavaScript never needs to read it. Agree on the final origin and routes with the User/frontend owners.
+User Service currently supports configured frontend origins through CORS. After login, the browser receives an access token and sends it in the `Authorization` header on protected Supplier requests. Final frontend token storage/persistence and whether the integrated deployment uses direct service URLs or a same-origin proxy remain frontend integration decisions; do not infer either from the backend contract.
 
 ## 4. Data model and seed data
 
@@ -131,34 +131,34 @@ This revises D1 SS-F2.2.3, which blocks deletion while an active errand exists. 
 
 | Caller | ACTIVE list/detail | Create/edit/archive/restore | ARCHIVED list/detail |
 | --- | --- | --- | --- |
-| Missing/invalid session | 401 | 401 | 401 |
+| Missing/invalid access token | 401 | 401 | 401 |
 | Active MEMBER | Allowed | 403 | 403 for explicit archive query; archived detail concealed as 404 |
 | Active ADMINISTRATOR | Allowed | Allowed | Allowed |
-| Revoked/expired/suspended/closed | 401 | 401 | 401 |
+| Expired token or inactive/suspended/closed account | 401 | 401 | 401 |
 
-**401** means no valid user session. **403** means a valid user lacks permission. Never trust a client-supplied role header or body value. Apply backend role checks before every mutation.
+**401** means no valid bearer token or no active account. **403** means a verified active user lacks permission. Never trust a client-supplied role header or body value. Apply backend role checks before every mutation.
 
-### 6.2 Proposed User Service contract
+### 6.2 Implemented User Service contract
 
-This is a **FoC-specific JSON contract inspired by token introspection**, not an implementation of the RFC 7662 wire format.
+PR #14 establishes the User Service contract that Supplier builds against:
 
-1. After login, User Service issues an opaque, high-entropy session identifier in `Set-Cookie: __Host-foc_session=<opaque>; Path=/; Secure; HttpOnly; SameSite=Lax`, with no `Domain` attribute. Deployed environments use HTTPS. User Service owns session creation, expiry, logout, role changes, suspension, and revocation.
-2. The browser automatically sends the cookie on same-origin Supplier requests. Supplier extracts the session value server-side. The frontend does not read or put it in `localStorage`.
-3. For every protected request in D2, Supplier calls `POST /internal/sessions/validate` on the private User Service route. The request is JSON `{ "sessionToken": "<opaque>" }`. Authenticate Supplier independently, for example using `Authorization: Bearer <supplier-service-credential>` configured as a service secret. Never use the end-user session as the service credential or place either credential in a URL. Use TLS for service traffic outside a trusted local development network.
-4. User Service returns HTTP 200 `{ "active": true, "id": "<user-uuid>", "role": "MEMBER" }` (or `ADMINISTRATOR`), or HTTP 200 `{ "active": false }` for invalid/expired/revoked sessions. Internal 401/403 means the *Supplier Service's* credential was rejected; Supplier treats this as an integration failure, not as user logout.
-5. Supplier maps inactive to client 401, active with wrong role to 403, and timeout/unavailable/malformed User Service response to fail-closed 503. Use a bounded timeout, do not log credentials, and do not cache validation for D2. User Service decides whether validation refreshes the D1 idle timer and enforces its session lifetime.
+1. `POST /auth/login` accepts JSON `identifier` and `password`. On success, User Service returns HTTP 200 `{ "accessToken": "<jwt>", "tokenType": "Bearer", "expiresIn": 1800 }`, where `expiresIn` follows `JWT_ACCESS_TOKEN_TTL` and defaults to 1,800 seconds.
+2. The access token is an HS256 JWT whose payload contains the account ID in `sub` plus `iat` and `exp`. It deliberately does not contain the role. The client sends it as `Authorization: Bearer <jwt>` on protected Supplier requests; never accept it from a URL or request body and never log it.
+3. For every protected request, Supplier's `SessionVerifier` implementation calls `GET /auth/verify` on User Service and forwards the caller's `Authorization` header unchanged. PR #14 does not require or implement a separate Supplier service credential on this endpoint.
+4. User Service verifies the token signature and expiry, then performs a live database lookup. It returns HTTP 200 `{ "id": "<user-uuid>", "role": "MEMBER" }` (or `ADMINISTRATOR`) only when the account exists and has status `ACTIVE`. Missing, malformed, invalid, or expired tokens and missing or non-active accounts return HTTP 401 `{ "error": "UNAUTHENTICATED", "message": "..." }`.
+5. Supplier maps a User Service 401 to client 401, a verified user with the wrong role to 403, and timeout, unavailability, non-401 downstream errors, or malformed success bodies to fail-closed 503. Use a bounded timeout and do not cache verification for D2 so current role and status remain authoritative.
 
-Encapsulate the call in a NestJS guard plus a `SessionVerifier` interface. Use a **development-only verifier stub** until User Service is ready; integrated tests and the D2 demo use the real User Service. Do not deploy a bypass in the integrated environment.
+Encapsulate the call in a NestJS guard plus the planned `SessionVerifier` interface seam. Local tests may use a verifier test double, but the integrated environment and D2 demo use the real User Service endpoint. Do not deploy a bypass.
 
-Supplier work may proceed against the development verifier while the User Service owner reviews the proposed contract. The integrated D2 acceptance gate requires the same flows to use real User Service sessions.
+The bearer token is manually attached rather than browser-managed cookie authentication, so the earlier cookie-specific CSRF-token proposal does not apply to this implemented contract. The final frontend token storage/persistence policy is not defined by PR #14 and must be agreed before frontend integration.
 
-Cookie-authenticated POST/PUT/DELETE/Restore operations need CSRF protection. Use a CSRF token passed in a custom request header and validated server-side (or an equivalent agreed framework mechanism). SameSite complements this check. The proxy must forward the cookie and CSRF header; do not allow arbitrary credentialed CORS origins.
+PR #14 does not implement refresh tokens, logout, an access-token revocation list, or a separate service credential for `/auth/verify`. Account role/status changes take effect on the next verification call because the endpoint reads the User database. The `JWT_REFRESH_TOKEN_TTL` example variable is currently unused by User Service.
 
-**Confirm with User Service owner:** cookie name/attributes, shared origin and login routes, exact endpoint and fields, internal service-credential provisioning, timeout, response semantics, session idle refresh, and CSRF-token issuance/verification. Record the agreed contract in the repository before integration. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
+**Remaining integration decisions:** frontend token storage/persistence; whether refresh/logout is required for D2; final frontend origins and routing; the Supplier-to-User base URL, bounded timeout, and deployed TLS routing. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
 
 ## 7. HTTP API contract (proposed v1)
 
-Base path: `/api/v1/suppliers`. All business endpoints require an active session. JSON bodies; UTC ISO 8601 timestamps; UUID string IDs. Server controls IDs, timestamps, status, and versions. Commit successful mutations before responding.
+Base path: `/api/v1/suppliers`. All business endpoints require a verified active user. JSON bodies; UTC ISO 8601 timestamps; UUID string IDs. Server controls IDs, timestamps, status, and versions. Commit successful mutations before responding.
 
 | Method and path | Behaviour | Success |
 | --- | --- | --- |
@@ -223,7 +223,7 @@ Example list response (illustrative values only):
 | Status | Meaning |
 | --- | --- |
 | 400 | Invalid payload/query, malformed ETag, or unsupported sort/category |
-| 401 | Missing/invalid/expired user session |
+| 401 | Missing/invalid/expired bearer token or inactive account |
 | 403 | Valid user lacks permission |
 | 404 | Unknown supplier; archived detail hidden from members |
 | 409 | Exact normalized Supplier duplicate, including an archived match |
@@ -239,7 +239,7 @@ React + Vite follows the D1 prototype's shared navigation while using live APIs.
 
 ### 8.1 Member view
 
-Show name, category, building label/floor, `locationDescription`, typical hours, and the seed-managed image or fallback. Search, filters, sort, and pagination call the API. Detail uses `locationDescription` as the displayed Supplier description and shows coordinates where present. A Request Errand action appears only when connected to a future Order Service. Show useful loading, empty, network-error, and expired-session states. Mobile controls/cards stack without horizontal overflow; desktop may use a denser layout. Keep keyboard focus and controls usable.
+Show name, category, building label/floor, `locationDescription`, typical hours, and the seed-managed image or fallback. Search, filters, sort, and pagination call the API. Detail uses `locationDescription` as the displayed Supplier description and shows coordinates where present. A Request Errand action appears only when connected to a future Order Service. Show useful loading, empty, network-error, and expired-token states. Mobile controls/cards stack without horizontal overflow; desktop may use a denser layout. Keep keyboard focus and controls usable.
 
 ### 8.2 Administrator view
 
@@ -250,7 +250,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 - **Deployment:** Compose runs NestJS Supplier and its private PostgreSQL container with health checks and secret-free environment examples. The integrated demo includes React/Vite and User Service.
 - **Migrations/seed:** clean checkout applies versioned Drizzle migrations and seeds once; restart creates no duplicates.
 - **Performance:** Measure D1's p95 under two seconds using 100 Suppliers, 20 concurrent clients, approximately 10 requests per second for five minutes, with an 80% list and 20% detail mix. Include synchronous User Service validation in the measured response time.
-- **Security:** parameterized Drizzle queries, sort allowlist, bounded input, CSRF protection, least-privilege DB user, User timeout, no credential logging.
+- **Security:** parameterized Drizzle queries, sort allowlist, bounded input, bearer-token and role guards, least-privilege DB user, bounded User timeout, and no token logging.
 - **Observability:** request ID, action/result logs without tokens, and non-sensitive `/health`.
 
 ### 9.1 Acceptance scenarios
@@ -260,7 +260,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 | A1 | Clean deployment serves seeded PostgreSQL catalogue, not hard-coded arrays. |
 | A2 | Member can search name/location, filter building/category, sort, page, and view detail on mobile/desktop. |
 | A3 | Member's direct create/edit/archive/restore calls return 403 without mutations. |
-| A4 | Missing/revoked session returns 401; unavailable User Service returns 503 without mutation. |
+| A4 | Missing/invalid/expired token or inactive account returns 401; unavailable User Service returns 503 without mutation. |
 | A5 | Admin creates a valid ACTIVE supplier visible in the list. |
 | A6 | Invalid input returns useful 400 and preserves prior values. |
 | A7 | Admin edit appears in refreshed list/detail. |
@@ -281,15 +281,15 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 
 ## 10. Coordination and implementation sequence
 
-**External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; obtain User Service owner agreement on the cookie/login/proxy, validation endpoint and service credential, timeout and idle-refresh rules, and CSRF issuance/validation. Publish the shared auth contract in the repository. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
+**External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; decide frontend bearer-token storage/persistence, whether refresh/logout is required for D2, final origins/routing, and the Supplier verification timeout/TLS routing. PR #14 is the implemented backend auth contract; it has no separate service credential for `/auth/verify`. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
 
-**Suggested increments:** (1) NestJS/Drizzle schema, migrations, repeatable seed, list/detail; (2) admin create/edit/archive/restore and atomic version checks; (3) verifier interface and dev stub, real User validation/role guard/CSRF, Vite screens; (4) same-origin Compose integration, contract tests, acceptance demo.
+**Suggested increments:** (1) NestJS/Drizzle schema, migrations, repeatable seed, list/detail; (2) admin create/edit/archive/restore and atomic version checks; (3) implement `SessionVerifier` against `GET /auth/verify` plus the real bearer-token/role guard, then Vite screens; (4) integrated routing, contract tests, and acceptance demo.
 
 ### Sources
 
 - `CS3219-ProjectDocument-FoC.pdf`, pp. 2–3 and 9–10; `CS3219-Instructions-MilestoneD2.pdf`, pp. 3–4; `Project-D1-Group-5.pdf`, pp. 12–14 and 25–26.
 - Team template and seed data: <https://github.com/Y2627S1-CS3219-P5/FoC>.
 - HTTP conditional requests: <https://www.rfc-editor.org/rfc/rfc9110.html>; precondition-required status: <https://www.rfc-editor.org/rfc/rfc6585.html>.
-- Token introspection inspiration: <https://www.rfc-editor.org/rfc/rfc7662.html> (FoC session endpoint is custom JSON).
-- Session and CSRF guidance: <https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html> and <https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html>.
-- NestJS and Drizzle: <https://docs.nestjs.com/first-steps>, <https://docs.nestjs.com/security/csrf>, <https://orm.drizzle.team/docs/update>.
+- Implemented User Service contract: <https://github.com/Y2627S1-CS3219-P5/FoC/pull/14>.
+- JSON Web Tokens and bearer authentication: <https://www.rfc-editor.org/rfc/rfc7519.html> and <https://www.rfc-editor.org/rfc/rfc6750.html>.
+- NestJS and Drizzle: <https://docs.nestjs.com/first-steps> and <https://orm.drizzle.team/docs/update>.

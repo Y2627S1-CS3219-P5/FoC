@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
-Scope: Added the consolidated project AI Use Summary for the Supplier backend foundation.
+Scope: Added the consolidated project AI Use Summary for the Supplier backend foundation and its integration with the merged User Service contract.
 Author review: Required before submission.
 -->
 
@@ -54,4 +54,4 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the first Supplier backend increment from the author-approved specification: recording the approved description/archive decisions; NestJS/Drizzle setup; the PostgreSQL schema and versioned migrations; database readiness; explicit, guarded, edit-preserving seed identities and tests; least-privilege Compose/container setup; and implementation documentation. The project author must review all AI-influenced work before submission. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) record the pending course-owner exception approval; the exact prompt and key-response summary are recorded in `ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the first Supplier backend increment from the author-approved specification: recording the approved description/archive decisions; NestJS/Drizzle setup; the PostgreSQL schema and versioned migrations; database readiness; explicit, guarded, edit-preserving seed identities and tests; least-privilege Compose/container setup; and implementation documentation. It also resolved the post-PR-#14 integration conflicts by preserving both services' Compose/environment configuration and documenting the User Service's implemented bearer-token verification contract in the Supplier specification. The project author must review all AI-influenced work before submission. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) record the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.

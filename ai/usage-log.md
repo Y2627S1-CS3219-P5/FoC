@@ -137,3 +137,18 @@ Codex formatted the supplied duplicate rule, building request/response fields, h
 Codex recorded archive and the single `locationDescription` field as team-approved changes while retaining the note that the D1 text still needs alignment. It implemented only the requested backend foundation: NestJS/Express, a private PostgreSQL connection through Drizzle, constrained Supplier/category schema and generated migrations, database-backed `GET /health`, and a repeatable 21-row CSV importer that uses an explicit durable identity manifest without overwriting administrator-edited records or categories. Review remediation added guarded fixed seed IDs independent of editable name/location text, the database building-code allowlist, lossless unconstrained decimal coordinates, centralized connection cleanup, and distinct bootstrap, migration-owner, and least-privilege runtime Compose roles. It added focused mapping/idempotency/readiness tests and the necessary Docker Compose, container, environment-example, and operational documentation changes; it did not add frontend, catalogue APIs, mutations, authentication, or changes to other services.
 
 Strict JSON cannot contain literal comments. To keep the required disclosure as the first JSON member without making the files invalid, `supplier-service/package.json` and `supplier-service/nest-cli.json` use a leading `"//"` metadata property linked to the adjacent [Supplier disclosure sidecar](../supplier-service/AI-DISCLOSURES.md#strict-json-files). Codex verified that npm and the Nest CLI accept the property. Course-owner approval for this unavoidable strict-JSON exception is still required before submission, as is project-author review. Markdown, TypeScript, YAML, shell, and Docker files retain ordinary leading comments where their formats permit them.
+
+## 2026-09-25 — User/Supplier integration conflict resolution
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Comparing the merged User Service implementation with the previously author-approved Supplier proposal; formatting the implementation facts into the Supplier specification at the author's explicit direction; resolving Git conflicts without changing either service's behavior.
+- **Repository files affected:** `.env.example`, `compose.yaml`, `README.md`, `supplier-service/README.md`, `supplier-service/SPEC.md`, and `ai/usage-log.md`
+- **Author review:** Required before submission.
+
+### Exact prompt
+
+> `$resolving-merge-conflicts https://github.com/Y2627S1-CS3219-P5/FoC/pull/14 the person in charge of user service just implemented it, can you check if it aligns with our contract if not modify SPEC, also there seems to be merge conflict so resolve it`
+
+### Key response
+
+Codex found that PR #14 implements an HS256 bearer access token and `GET /auth/verify`, rather than the Supplier proposal's opaque cookie and `POST /internal/sessions/validate`. At the author's direction, it documented the implemented request/response and error semantics, retained `SessionVerifier` as the future Supplier integration seam, and left frontend token storage, refresh/logout, final routing, and verification timeout/TLS as explicit remaining decisions. It merged both services' environment and Compose definitions, preserved their private databases and startup dependencies, ran both services' available checks, and completed the merge without changing User Service behavior.

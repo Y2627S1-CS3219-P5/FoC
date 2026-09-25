@@ -1,7 +1,7 @@
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
-Scope: Documented the implemented Supplier backend foundation, operation, and verification.
+Scope: Documented the implemented Supplier backend foundation, operation, verification, and its future integration with the merged User Service bearer-token contract.
 Author review: Required before submission.
 -->
 
@@ -9,7 +9,7 @@ Author review: Required before submission.
 
 This increment provides the Supplier Service backend foundation: NestJS with the Express adapter, a private PostgreSQL database accessed through Drizzle, a versioned Supplier schema migration, a database-backed readiness endpoint, and a repeatable import of the repository's 21-row Supplier CSV.
 
-It intentionally does not provide the list/detail/mutation APIs, authentication or `SessionVerifier`, CSRF handling, or a frontend. The proposed User Service contract in `SPEC.md` remains the contract for a later increment and does not block this foundation.
+It intentionally does not provide the list/detail/mutation APIs, authentication or `SessionVerifier`, or a frontend. The User Service bearer-token contract implemented in PR #14 is documented in `SPEC.md` for a later Supplier integration increment and does not block this foundation.
 
 ## Local development
 
