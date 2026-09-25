@@ -1,13 +1,14 @@
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: merged the User and Supplier Compose definitions while preserving their separate databases, startup order, and runtime configuration. Author review: Reviewed and approved by @ron.
 services:
   user-service:
     build: ./user-service
-    init: true                      
+    init: true
     ports:
       - "3001:3001"
     environment:
       PORT: 3001
       DATABASE_URL: postgres://foc:foc@user-db:5432/users
-      ALLOWED_EMAIL_DOMAIN: u.nus.edu
+      ALLOWED_EMAIL_DOMAIN: ${ALLOWED_EMAIL_DOMAIN:-u.nus.edu}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-1800}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
@@ -16,12 +17,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     depends_on:
       user-db:
-        condition: service_healthy  # wait until Postgres accepts connections
+        condition: service_healthy
 
   user-db:
     image: postgres:17-alpine
     environment:
-      # Note: Credentials are fine for local development for now.
+      # Credentials are local-development defaults from the User Service.
       POSTGRES_USER: foc
       POSTGRES_PASSWORD: foc
       POSTGRES_DB: users
@@ -33,5 +34,54 @@ services:
       timeout: 3s
       retries: 10
 
+  supplier-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${SUPPLIER_DB_NAME:-supplier}
+      POSTGRES_USER: ${SUPPLIER_DB_ADMIN_USER:-supplier_bootstrap}
+      POSTGRES_PASSWORD: ${SUPPLIER_DB_ADMIN_PASSWORD:?Set SUPPLIER_DB_ADMIN_PASSWORD in .env}
+      SUPPLIER_DB_MIGRATION_USER: ${SUPPLIER_DB_MIGRATION_USER:-supplier_migrator}
+      SUPPLIER_DB_MIGRATION_PASSWORD: ${SUPPLIER_DB_MIGRATION_PASSWORD:?Set SUPPLIER_DB_MIGRATION_PASSWORD in .env}
+      SUPPLIER_DB_USER: ${SUPPLIER_DB_USER:-supplier_app}
+      SUPPLIER_DB_PASSWORD: ${SUPPLIER_DB_PASSWORD:?Set SUPPLIER_DB_PASSWORD in .env}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - supplier-db-data:/var/lib/postgresql/data
+      - ./supplier-service/docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/010-supplier-roles.sh:ro
+
+  supplier-migrate:
+    image: foc-supplier-service:local
+    build:
+      context: .
+      dockerfile: supplier-service/Dockerfile
+    command: ["node", "dist/database/migrate.js"]
+    environment:
+      DATABASE_URL: postgresql://${SUPPLIER_DB_MIGRATION_USER:-supplier_migrator}:${SUPPLIER_DB_MIGRATION_PASSWORD:?Set SUPPLIER_DB_MIGRATION_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier}
+      DATABASE_RUNTIME_ROLE: ${SUPPLIER_DB_USER:-supplier_app}
+    depends_on:
+      supplier-db:
+        condition: service_healthy
+    restart: "no"
+
+  supplier-service:
+    image: foc-supplier-service:local
+    pull_policy: never
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${SUPPLIER_DB_USER:-supplier_app}:${SUPPLIER_DB_PASSWORD:?Set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier}
+      SUPPLIER_SEED_CSV_PATH: /data/csv/supplier-seed-data.csv
+    depends_on:
+      supplier-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${SUPPLIER_PORT:-3000}:3000"
+
 volumes:
   user-db-data:
+  supplier-db-data:
