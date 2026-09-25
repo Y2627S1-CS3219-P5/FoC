@@ -1,13 +1,14 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
- * Scope: implemented exact Supplier list query validation and approved defaults
- * for issue #17.
+ * Scope: implemented exact Supplier list query validation, approved defaults,
+ * and the approved 300-character search bound for issue #17.
  * Author review: Required before merge.
  */
-import { BadRequestException, Injectable, PipeTransform } from "@nestjs/common";
+import { Injectable, PipeTransform } from "@nestjs/common";
 
 import { supplierCategory, supplierStatus } from "../../database/schema";
 import { BUILDING_CODES, BuildingCode } from "../../domain/buildings";
+import { supplierValidationException } from "../../http/supplier-http-errors";
 import {
   SUPPLIER_LIST_DEFAULT_PAGE,
   SUPPLIER_LIST_DEFAULT_SIZE,
@@ -19,6 +20,7 @@ import {
 } from "../read/supplier-read.types";
 
 export const SUPPLIER_LIST_MIN_SIZE = 1;
+export const SUPPLIER_LIST_MAX_SEARCH_LENGTH = 300;
 export const SUPPLIER_LIST_DEFAULT_SORT: SupplierSort = "name,asc";
 
 const SUPPORTED_QUERY_KEYS = new Set([
@@ -59,6 +61,15 @@ export function parseSupplierListQuery(
   const sortValue = readScalar(raw, "sort", errors);
 
   const q = qValue?.trim() || undefined;
+  if (
+    q !== undefined &&
+    Array.from(q).length > SUPPLIER_LIST_MAX_SEARCH_LENGTH
+  ) {
+    errors.set(
+      "q",
+      `Search must be at most ${SUPPLIER_LIST_MAX_SEARCH_LENGTH} characters.`,
+    );
+  }
   const buildingCode = parseControlledValue(
     buildingValue,
     BUILDING_CODES,
@@ -114,11 +125,10 @@ export function parseSupplierListQuery(
   }
 
   if (errors.size > 0) {
-    throw new BadRequestException({
-      code: "SUPPLIER_VALIDATION_FAILED",
-      message: "Please correct the query parameters.",
-      fieldErrors: Object.fromEntries(errors),
-    });
+    throw supplierValidationException(
+      "Please correct the query parameters.",
+      Object.fromEntries(errors),
+    );
   }
 
   return {

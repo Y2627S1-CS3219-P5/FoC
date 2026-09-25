@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added non-sensitive, request-correlated Supplier HTTP error responses
- * for issue #17.
+ * and adopted shared fallback definitions for issue #17.
  * Author review: Required before merge.
  */
 import {
@@ -14,6 +14,10 @@ import {
 import { randomUUID } from "node:crypto";
 
 import { RequestWithRequestId } from "./request-id";
+import {
+  DEFAULT_SUPPLIER_HTTP_ERRORS,
+  SUPPLIER_HTTP_ERRORS,
+} from "./supplier-http-errors";
 
 interface ErrorResponse {
   status(statusCode: number): ErrorResponse;
@@ -33,31 +37,6 @@ interface ErrorPayload {
   fieldErrors?: unknown;
 }
 
-const DEFAULT_ERRORS: Readonly<
-  Record<number, Pick<SupplierErrorBody, "code" | "message">>
-> = {
-  [HttpStatus.BAD_REQUEST]: {
-    code: "SUPPLIER_VALIDATION_FAILED",
-    message: "The request is invalid.",
-  },
-  [HttpStatus.UNAUTHORIZED]: {
-    code: "UNAUTHENTICATED",
-    message: "A valid bearer token is required.",
-  },
-  [HttpStatus.FORBIDDEN]: {
-    code: "FORBIDDEN",
-    message: "You do not have permission to perform this action.",
-  },
-  [HttpStatus.NOT_FOUND]: {
-    code: "SUPPLIER_NOT_FOUND",
-    message: "The Supplier was not found.",
-  },
-  [HttpStatus.SERVICE_UNAVAILABLE]: {
-    code: "SERVICE_UNAVAILABLE",
-    message: "The service is temporarily unavailable.",
-  },
-};
-
 @Catch()
 export class SupplierHttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
@@ -68,10 +47,9 @@ export class SupplierHttpExceptionFilter implements ExceptionFilter {
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
-    const fallback = DEFAULT_ERRORS[status] ?? {
-      code: "INTERNAL_SERVER_ERROR",
-      message: "An unexpected error occurred.",
-    };
+    const fallback =
+      DEFAULT_SUPPLIER_HTTP_ERRORS[status] ??
+      SUPPLIER_HTTP_ERRORS.internalServerError;
     const payload = this.getPayload(exception);
 
     const body: SupplierErrorBody = {

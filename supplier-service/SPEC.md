@@ -7,6 +7,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded
 the Supplier workstream author's approved list defaults, verification deployment
 timeout, server-owned request IDs, and bundled-asset path for issue #17.
 Author review of this issue #17 edit: Required before merge.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded
+the author's approved 300-character trimmed search bound and request-completion
+logging decision, then implemented the related issue #17 review remediation.
+The decisions are author-approved; implementation review is required before merge.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -36,7 +40,9 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | Verification deployment | Configurable User Service base URL; Compose uses `http://user-service:3001`; 1,000 ms timeout | Approved by Supplier workstream author |
 | Roles | MEMBER browses; ADMINISTRATOR browses and manages | Selected |
 | List defaults | `status=ACTIVE`, `page=0`, `size=12` (minimum 1, maximum 100), `sort=name,asc` | Approved by Supplier workstream author |
+| List search bound | Trimmed `q` is at most 300 characters, matching the longest searched field (`location_description varchar(300)`) | Approved by Supplier workstream author on 2026-09-25 |
 | Request correlation | Server generates each request ID and does not trust a client-supplied ID | Approved by Supplier workstream author |
+| Request completion logging | Nest middleware plus the built-in JSON `ConsoleLogger`; no tracing/APM SDK or external exporter in this increment | Approved by Supplier workstream author on 2026-09-25 |
 | Bundled images | Supplier serves repository `data/images` at `/assets/suppliers` | Approved by Supplier workstream author |
 | Description | Use `locationDescription` as the only displayed Supplier description | Approved by team; replaces the separate D1 general-description field |
 | Removal | Archive, retain record, allow administrator restoration | Approved by team; replaces the D1 deletion restriction |
@@ -180,7 +186,7 @@ Base path: `/api/v1/suppliers`. All business endpoints require a verified active
 | `POST /api/v1/suppliers/{id}/restore` | Restore; always require `If-Match` | 200 body and `ETag`; repeat restore with current tag returns unchanged body/tag |
 | `GET /health` | Non-sensitive container readiness | 200 when ready |
 
-**List query:** `q` searches `name` and `locationDescription` case-insensitively; `buildingCode` accepts a controlled building code; `category` is controlled text; `status=ARCHIVED` is admin-only and omitted `status` defaults to `ACTIVE`; `page` is zero-based (default 0); `size` defaults to 12 (minimum 1, maximum 100); `sort` allowlist: `name,asc`, `name,desc`, `updatedAt,desc`, with omitted `sort` defaulting to `name,asc`. Trim `q`; blank means no search. Reject invalid values with 400. Filter before pagination; break ties by ID. Admins can request ACTIVE or ARCHIVED explicitly, not an unspecified all-status view.
+**List query:** `q` is the free-text search term for `name` and `locationDescription`, matched case-insensitively; `buildingCode` accepts a controlled building code; `category` is controlled text; `status=ARCHIVED` is admin-only and omitted `status` defaults to `ACTIVE`; `page` is zero-based (default 0); `size` defaults to 12 (minimum 1, maximum 100); `sort` allowlist: `name,asc`, `name,desc`, `updatedAt,desc`, with omitted `sort` defaulting to `name,asc`. Trim `q`; blank means no search. The trimmed value has a maximum of 300 Unicode code points, aligning with PostgreSQL character counting and the longer searched field, `location_description varchar(300)`; 301 or more returns the existing 400 validation shape with a `q` field error. Reject other invalid values with 400. Filter before pagination; break ties by ID. Admins can request ACTIVE or ARCHIVED explicitly, not an unspecified all-status view.
 
 Example list response (illustrative values only):
 
@@ -232,6 +238,8 @@ Example list response (illustrative values only):
 
 Supplier generates a new request ID for every request, returns it in `X-Request-Id`, and includes it in JSON error responses. It does not trust or echo a client-supplied request ID.
 
+The same HTTP middleware emits exactly one JSON completion event for a normally finished or prematurely closed request. The application `message` payload contains only the stable event name `supplier.http.request.completed`, `requestId`, method, pathname without the query string, numeric status, `completed`/`aborted` result, and duration in milliseconds. Nest's JSON `ConsoleLogger` adds its normal non-sensitive envelope metadata (`level`, process ID, timestamp, and `SupplierHttp` context). Neither payload nor envelope includes the `Authorization` header or token, `q` or any query value, the full URL, request/response bodies, or user identity. The dedicated Nest built-in logger uses JSON mode so each structured event is one machine-readable stdout line. This increment does not add `@nestjs/observe`, a microservices SDK, `AsyncLocalStorage`, Pino, tracing/APM, or an external exporter.
+
 | Status | Meaning |
 | --- | --- |
 | 400 | Invalid payload/query, malformed ETag, or unsupported sort/category |
@@ -263,7 +271,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 - **Migrations/seed:** clean checkout applies versioned Drizzle migrations and seeds once; restart creates no duplicates.
 - **Performance:** Measure D1's p95 under two seconds using 100 Suppliers, 20 concurrent clients, approximately 10 requests per second for five minutes, with an 80% list and 20% detail mix. Include synchronous User Service validation in the measured response time.
 - **Security:** parameterized Drizzle queries, sort allowlist, bounded input, bearer-token and role guards, least-privilege DB user, bounded User timeout, and no token logging.
-- **Observability:** server-generated request ID returned in `X-Request-Id` and error bodies, action/result logs without tokens, and non-sensitive `/health`.
+- **Observability:** server-generated request ID returned in `X-Request-Id` and error bodies; one request-correlated, query-redacted JSON completion event with status/result/duration; and non-sensitive `/health`.
 
 ### 9.1 Acceptance scenarios
 
@@ -304,4 +312,4 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 - HTTP conditional requests: <https://www.rfc-editor.org/rfc/rfc9110.html>; precondition-required status: <https://www.rfc-editor.org/rfc/rfc6585.html>.
 - Implemented User Service contract: <https://github.com/Y2627S1-CS3219-P5/FoC/pull/14>.
 - JSON Web Tokens and bearer authentication: <https://www.rfc-editor.org/rfc/rfc7519.html> and <https://www.rfc-editor.org/rfc/rfc6750.html>.
-- NestJS and Drizzle: <https://docs.nestjs.com/first-steps> and <https://orm.drizzle.team/docs/update>.
+- NestJS middleware/logger and Drizzle: <https://docs.nestjs.com/middleware>, <https://docs.nestjs.com/techniques/logger>, and <https://orm.drizzle.team/docs/update>.

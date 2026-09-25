@@ -1,12 +1,15 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested exact Supplier list query defaults, normalization, allowlists,
- * bounds, and scalar validation for issue #17.
+ * Unicode search bounds, and scalar validation for issue #17.
  * Author review: Required before merge.
  */
 import { BadRequestException } from "@nestjs/common";
 
-import { parseSupplierListQuery } from "./supplier-list-query.pipe";
+import {
+  parseSupplierListQuery,
+  SUPPLIER_LIST_MAX_SEARCH_LENGTH,
+} from "./supplier-list-query.pipe";
 
 describe("parseSupplierListQuery", () => {
   it("applies the approved ACTIVE, paging, and name sort defaults", () => {
@@ -45,6 +48,29 @@ describe("parseSupplierListQuery", () => {
 
   it("treats a blank search as omitted", () => {
     expect(parseSupplierListQuery({ q: "  " }).q).toBeUndefined();
+  });
+
+  it("accepts 300 trimmed Unicode characters", () => {
+    const q = "💡".repeat(SUPPLIER_LIST_MAX_SEARCH_LENGTH);
+
+    expect(parseSupplierListQuery({ q: `  ${q}  ` }).q).toBe(q);
+  });
+
+  it("rejects 301 trimmed Unicode characters with the existing 400 shape", () => {
+    const q = "💡".repeat(SUPPLIER_LIST_MAX_SEARCH_LENGTH + 1);
+
+    try {
+      parseSupplierListQuery({ q });
+      throw new Error("Expected query validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(BadRequestException);
+      expect((error as BadRequestException).getStatus()).toBe(400);
+      expect((error as BadRequestException).getResponse()).toEqual({
+        code: "SUPPLIER_VALIDATION_FAILED",
+        message: "Please correct the query parameters.",
+        fieldErrors: { q: "Search must be at most 300 characters." },
+      });
+    }
   });
 
   it("rejects a page and size whose database offset is not a safe integer", () => {

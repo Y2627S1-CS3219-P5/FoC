@@ -1,7 +1,8 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added an isolated, repeatable live integration check for the Supplier
- * authenticated read increment against PostgreSQL and the real User Service.
+ * authenticated read increment, including query bounds and correlated redacted
+ * completion logging, against PostgreSQL and the real User Service.
  * Author review: Required before merge.
  */
 import assert from "node:assert/strict";
@@ -219,6 +220,50 @@ async function run() {
   assert.equal(filtered.response.status, 200);
   assert.deepEqual(filtered.body.items.map(({ id }) => id), [printerId]);
 
+  const maximumSearch = await supplierRequest(
+    `/api/v1/suppliers?q=${"a".repeat(300)}`,
+    memberToken,
+  );
+  assert.equal(maximumSearch.response.status, 200);
+
+  const overlongSearch = await supplierRequest(
+    `/api/v1/suppliers?q=${"a".repeat(301)}`,
+    memberToken,
+  );
+  assert.equal(overlongSearch.response.status, 400);
+  assert.equal(typeof overlongSearch.body.fieldErrors.q, "string");
+
+  const logProbeQuery = "must-not-appear-in-supplier-logs";
+  const logProbe = await supplierRequest(
+    `/api/v1/suppliers?q=${logProbeQuery}`,
+    memberToken,
+  );
+  assert.equal(logProbe.response.status, 200);
+  const logProbeRequestId = logProbe.response.headers.get("x-request-id");
+  assert.match(logProbeRequestId, /^[0-9a-f-]{36}$/i);
+  const supplierLogs = compose(
+    ["logs", "--no-color", "supplier-service"],
+    { capture: true },
+  );
+  const completionLines = supplierLogs
+    .split("\n")
+    .filter((line) => line.includes(logProbeRequestId));
+  assert.equal(completionLines.length, 1);
+  const jsonStart = completionLines[0].indexOf("{");
+  assert.notEqual(jsonStart, -1);
+  const completionLog = JSON.parse(completionLines[0].slice(jsonStart));
+  assert.deepEqual(completionLog.message, {
+    event: "supplier.http.request.completed",
+    requestId: logProbeRequestId,
+    method: "GET",
+    pathname: "/api/v1/suppliers",
+    status: 200,
+    result: "completed",
+    durationMs: completionLog.message.durationMs,
+  });
+  assert.equal(typeof completionLog.message.durationMs, "number");
+  assert.equal(supplierLogs.includes(logProbeQuery), false);
+
   const detail = await supplierRequest(
     `/api/v1/suppliers/${printerId}`,
     memberToken,
@@ -311,7 +356,8 @@ async function run() {
 
   console.info(
     "PASS: 21-row seed, repeat seed, real login/verification, catalogue reads, " +
-      "stable paging, roles, errors, ETag, request IDs, assets, and fail-closed auth.",
+      "search bounds, stable paging, roles, errors, request completion logging, " +
+      "ETag, request IDs, assets, and fail-closed auth.",
   );
 }
 

@@ -1,12 +1,16 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: enforced MEMBER and ADMINISTRATOR catalogue visibility for Supplier
- * list and detail reads in issue #17.
+ * list/detail reads and adopted shared public errors in issue #17.
  * Author review: Required before merge.
  */
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 
 import { VerifiedPrincipal } from "../../auth/session-verifier";
+import {
+  supplierForbiddenException,
+  supplierNotFoundException,
+} from "../../http/supplier-http-errors";
 import { SupplierReadService } from "../read/supplier-read.service";
 import {
   SupplierListPage,
@@ -23,10 +27,9 @@ export class SupplierCatalogueService {
     principal: VerifiedPrincipal,
   ): Promise<SupplierListPage> {
     if (query.status === "ARCHIVED" && principal.role !== "ADMINISTRATOR") {
-      throw new ForbiddenException({
-        code: "FORBIDDEN",
-        message: "Only administrators may browse archived Suppliers.",
-      });
+      throw supplierForbiddenException(
+        "Only administrators may browse archived Suppliers.",
+      );
     }
     return this.reads.list(query);
   }
@@ -47,13 +50,6 @@ export class SupplierCatalogueService {
       }
     }
 
-    throw supplierNotFound();
+    throw supplierNotFoundException();
   }
-}
-
-function supplierNotFound(): NotFoundException {
-  return new NotFoundException({
-    code: "SUPPLIER_NOT_FOUND",
-    message: "The Supplier was not found.",
-  });
 }

@@ -4,10 +4,12 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25; served bundled
  * Supplier assets and installed server-owned request/error handling for issue
- * #17. Author review of additional changes: Required before merge.
+ * #17, including a JSON ConsoleLogger for non-sensitive request completions.
+ * Author review of additional changes: Required before merge.
  */
 import "reflect-metadata";
 
+import { ConsoleLogger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
 
@@ -16,12 +18,16 @@ import {
   getPort,
   getSupplierImageDirectory,
 } from "./config/environment";
-import { assignServerRequestId } from "./http/request-id";
+import {
+  createSupplierCompletionLogger,
+  createSupplierRequestMiddleware,
+} from "./http/request-id";
 import { SupplierHttpExceptionFilter } from "./http/supplier-http-exception.filter";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.use(assignServerRequestId);
+  const completionLogger: ConsoleLogger = createSupplierCompletionLogger();
+  app.use(createSupplierRequestMiddleware(completionLogger));
   app.useGlobalFilters(new SupplierHttpExceptionFilter());
   app.useStaticAssets(getSupplierImageDirectory(), {
     prefix: "/assets/suppliers/",

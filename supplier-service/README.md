@@ -6,6 +6,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Documented authenticated catalogue reads and the isolated live integration check for the second Supplier backend increment.
 Author review of the second increment: Required before merge.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
+Scope: Documented and implemented the approved search bound and non-sensitive request completion logging during issue #17 review remediation.
+The decisions are author-approved; implementation review is required before merge.
 -->
 
 # Supplier Service
@@ -57,11 +60,12 @@ The second command should report `0 inserted, 21 already present` after startup.
 
 ## Authenticated read API
 
-- `GET /api/v1/suppliers` defaults to ACTIVE, page 0, size 12, and `name,asc`. It supports `q`, `buildingCode`, `category`, `status`, `page`, `size`, and the sort allowlist in `SPEC.md`.
+- `GET /api/v1/suppliers` defaults to ACTIVE, page 0, size 12, and `name,asc`. It supports `q`, `buildingCode`, `category`, `status`, `page`, `size`, and the sort allowlist in `SPEC.md`. The trimmed free-text `q` searches Supplier name/location and accepts at most 300 Unicode code points; a longer value returns 400 with `fieldErrors.q`.
 - `GET /api/v1/suppliers/{id}` returns a strong `ETag`, such as `"v0"`.
 - MEMBER can read ACTIVE Suppliers. Only ADMINISTRATOR can list or retrieve ARCHIVED Suppliers; archived detail is concealed from MEMBER as 404.
 - Missing or invalid authentication returns 401. User Service verification failure returns 503 while `/health` remains independent.
 - Bundled images are public at `/assets/suppliers/<filename>`.
+- Every request receives a server-owned `X-Request-Id`. On finish or premature close, Supplier emits one JSON `supplier.http.request.completed` event. Its application `message` payload contains only request ID, method, query-free pathname, status, completion/aborted result, and duration; Nest adds the normal non-sensitive JSON logger envelope (`level`, process ID, timestamp, and logger context). Authorization, tokens, query values, full URLs, bodies, and user identity are not logged.
 
 ## Checks
 
@@ -75,7 +79,7 @@ npm run build
 npm run test:integration
 ```
 
-`test:integration` builds a fresh disposable Compose project named `foc-supplier-smoke` on ports 3900/3901. It verifies clean migration and the 21-row seed, a second zero-insert seed that preserves an archived fixture, real MEMBER and ADMINISTRATOR login and verification, list/search/filter/stable paging/detail, 401/403/404/503 behavior, request IDs, ETags, the bundled image, and recovery after User Service restarts. It removes only that project and its volumes when finished; Docker must be running and ports 3900/3901 must be free.
+`test:integration` builds a fresh disposable Compose project named `foc-supplier-smoke` on ports 3900/3901. It verifies clean migration and the 21-row seed, a second zero-insert seed that preserves an archived fixture, real MEMBER and ADMINISTRATOR login and verification, list/search/filter/stable paging/detail, the search boundary, 401/403/404/503 behavior, correlated query-redacted completion logging, request IDs, ETags, the bundled image, and recovery after User Service restarts. It removes only that project and its volumes when finished; Docker must be running and ports 3900/3901 must be free.
 
 The latest recorded check matrix is in [docs/verification/second-backend-increment.md](docs/verification/second-backend-increment.md).
 
