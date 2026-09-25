@@ -1,3 +1,10 @@
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-09-25
+Scope: Recorded the exact Supplier backend implementation prompt and key response.
+Author review: Required before submission.
+-->
+
 # AI Usage Log
 
 ## 2026-09-25 — Supplier specification requirements review
@@ -108,3 +115,23 @@ Codex formatted the supplied building mapping, category values, hours discrimina
 ### Key response
 
 Codex formatted the supplied duplicate rule, building request/response fields, hours validation rules, and approval contingency into the specification and glossary, then performed a final consistency audit.
+
+## 2026-09-25 — First Supplier backend increment
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing code and tests from the author-approved Supplier specification; recording the two approvals supplied by the author; documenting and checking the result.
+- **Repository files affected:** `README.md`, `.dockerignore`, `.env.example`, `.gitignore`, `compose.yaml`, `ai/usage-log.md`, and the backend/configuration files under `supplier-service/`
+- **Author review:** Required before submission.
+
+### Exact prompt
+
+> I want to implement a spec using $implement-spec . THIS SHOULD ONLY IMPLEMENT THE BACKEND PORTION REMEMBER, we'll do frontend another day. Read `AGENTS.md`, `supplier-service/SPEC.md`. The team has approved archive in place of the D1 deletion restriction and `locationDescription` as the only Supplier description. Ensure the spec records those approvals accurately.
+>
+> Implement the **first Supplier backend increment only**: NestJS setup, PostgreSQL connection through Drizzle, schema and migrations from the spec, `/health`, and a repeatable seed import that preserves administrator edits. Work mainly in `supplier-service/`; make only necessary Compose changes. Do not build the frontend or change other services.
+>
+> Our proposed User Service contract is the Supplier workstream contract to build against later through `SessionVerifier`; do not wait for User Service to start this increment. Do not invent design decisions where the spec is unclear—report the specific blocker. Run relevant checks, show the changed files and results, and record AI assistance as the course policy requires.
+> The spec.md was finetuned and edited and draws from sources like the 3 pdfs in supplier-service/docs/references
+
+### Key response
+
+Codex recorded archive and the single `locationDescription` field as team-approved changes while retaining the note that the D1 text still needs alignment. It implemented only the requested backend foundation: NestJS/Express, a private PostgreSQL connection through Drizzle, constrained Supplier/category schema and generated migration, database-backed `GET /health`, and a deterministic 21-row CSV importer that inserts absent stable IDs without overwriting administrator-edited records or categories. It added focused mapping/idempotency/readiness tests and the necessary Docker Compose, container, environment-example, and operational documentation changes; it did not add frontend, catalogue APIs, mutations, authentication, or changes to other services.

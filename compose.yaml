@@ -1,0 +1,34 @@
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: composed the Supplier service with its private PostgreSQL database. Author review required before submission.
+services:
+  supplier-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${SUPPLIER_DB_NAME:-supplier}
+      POSTGRES_USER: ${SUPPLIER_DB_USER:-supplier}
+      POSTGRES_PASSWORD: ${SUPPLIER_DB_PASSWORD:-supplier_dev}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - supplier-db-data:/var/lib/postgresql/data
+
+  supplier-service:
+    build:
+      context: .
+      dockerfile: supplier-service/Dockerfile
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${SUPPLIER_DB_USER:-supplier}:${SUPPLIER_DB_PASSWORD:-supplier_dev}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier}
+      SUPPLIER_SEED_CSV_PATH: /data/csv/supplier-seed-data.csv
+    depends_on:
+      supplier-db:
+        condition: service_healthy
+    ports:
+      - "${SUPPLIER_PORT:-3000}:3000"
+
+volumes:
+  supplier-db-data:

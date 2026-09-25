@@ -1,3 +1,10 @@
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-09-25
+Scope: Added the consolidated project AI Use Summary for the Supplier backend foundation.
+Author review: Required before submission.
+-->
+
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
 
 ## Friend on Campus (FoC)
@@ -45,4 +52,6 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
   may be added as needed, but must still **respect the
   one-service-per-folder skeleton** for core implementation.
 
----
+## AI Use Summary
+
+OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the first Supplier backend increment from the author-approved specification: recording the approved description/archive decisions; NestJS/Drizzle setup; the PostgreSQL schema and versioned migration; database readiness; deterministic, edit-preserving seed import and tests; Compose/container setup; and implementation documentation. The project author must review all AI-influenced work before submission. The exact prompt and key-response summary are recorded in `ai/usage-log.md`.

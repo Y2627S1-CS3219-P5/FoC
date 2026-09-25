@@ -1,0 +1,9 @@
+{
+  "_aiAssistanceDisclosure": "OpenAI Codex (GPT-6), 2026-09-25. Scope: Supplier NestJS project configuration. Author review required before submission.",
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}

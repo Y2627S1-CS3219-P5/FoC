@@ -3,8 +3,8 @@
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
-Scope: Interpreted the supplied project, D1, and D2 reference documents and formatted decisions explicitly supplied by the Supplier workstream author. This edit does not add new architecture or design decisions.
-Author review: reviewed and approved by @ron.
+Scope: Interpreted the supplied project, D1, and D2 reference documents and formatted decisions explicitly supplied by the Supplier workstream author, including the team's archive and single-description approvals. This edit does not add new architecture or design decisions.
+Author review: Required before submission.
 -->
 
 ## 1. Scope
@@ -30,16 +30,16 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | User credential | Opaque session in a same-origin, `HttpOnly` cookie | Proposed shared contract; User owner to confirm |
 | User validation | Private, authenticated User Service call per protected request | Proposed shared contract; User owner to confirm |
 | Roles | MEMBER browses; ADMINISTRATOR browses and manages | Selected |
-| Description | Use `locationDescription` as the only displayed Supplier description | Proposed D1 change; team approval pending |
-| Removal | Archive, retain record, allow administrator restoration | Proposed D1 change; team approval pending |
+| Description | Use `locationDescription` as the only displayed Supplier description | Approved by team; replaces the separate D1 general-description field |
+| Removal | Archive, retain record, allow administrator restoration | Approved by team; replaces the D1 deletion restriction |
 | Edit conflicts | DB integer version exposed as ETag; `If-Match` and 412/428 | Selected |
 | Order integration | Deferred | Outside D2 |
 
 ## 3. Ownership and boundaries
 
-Supplier Service owns supplier metadata and, under the proposed archive model, ACTIVE/ARCHIVED state. User Service owns identity, role, account status, and session validity. The browser UI is a client: hiding an administrator control cannot substitute for backend access control. Supplier Service does not need public-profile lookup or User status events in D2.
+Supplier Service owns supplier metadata and ACTIVE/ARCHIVED state under the approved archive model. User Service owns identity, role, account status, and session validity. The browser UI is a client: hiding an administrator control cannot substitute for backend access control. Supplier Service does not need public-profile lookup or User status events in D2.
 
-A Supplier ID identifies one physical errand origin. Moving an outlet to another building creates a new Supplier record and archives the old record under the proposed archive model. Correcting directions within the same physical location retains the ID.
+A Supplier ID identifies one physical errand origin. Moving an outlet to another building creates a new Supplier record and archives the old record. Correcting directions within the same physical location retains the ID.
 
 For the browser demo, serve the built Vite app and proxy Supplier and User routes under one origin. Use a Vite development proxy locally and equivalent integrated routing in Compose. The proxy forwards the User-owned session cookie, so frontend JavaScript never needs to read it. Agree on the final origin and routes with the User/frontend owners.
 
@@ -56,15 +56,14 @@ For the browser demo, serve the built Vite app and proxy Supplier and User route
 | `building_code` | varchar(120), nonblank; controlled canonical code | Location filter/display |
 | `floor` | varchar(20), nullable | Floor or named level |
 | `location_description` | varchar(300), nonblank | Only displayed Supplier description; includes directions within the location |
-| `description` | text, nonblank when present | Required only if the proposed single-description D1 change is not approved |
 | `latitude`, `longitude` | decimals, nullable together; valid ranges | Optional map coordinates |
 | `hours_kind` | `UNKNOWN`, `ALL_DAY`, or `INTERVAL`, not null | Explicit hours interpretation |
 | `opens_at`, `closes_at` | times, nullable together | Required only for `INTERVAL`; closing before opening means next day |
 | `image_path` | varchar(500), nullable | Optional seed-managed display asset |
-| `status` | ACTIVE or ARCHIVED, not null | Proposed archive state and catalogue visibility |
+| `status` | ACTIVE or ARCHIVED, not null | Archive state and catalogue visibility |
 | `version` | nonnegative integer/bigint, not null | Optimistic concurrency |
 | `created_at`, `updated_at` | timestamptz, not null | Audit/sorting |
-| `archived_at` | timestamptz, nullable | Proposed current archive time; cleared on restoration |
+| `archived_at` | timestamptz, nullable | Current archive time; cleared on restoration |
 
 **`supplier_categories`** has `supplier_id` (UUID FK to `suppliers.id`) and controlled `category` (`FOOD`, `COFFEE`, `PRINTING`, `SHOPPING`, or `PICKUP_POINT`), with composite primary key (`supplier_id`, `category`). A category describes what the errand origin offers. Application validation requires at least one category and stores category changes in the same transaction as supplier edits. A Supplier can have multiple categories; map the seed's `Food/Coffee` value to `FOOD` and `COFFEE`. A foyer used only for pickup is `PICKUP_POINT`, irrespective of whether it is also a landmark.
 
@@ -94,7 +93,7 @@ Requests identify a building using `buildingCode` only. Responses return both `b
 
 Index the primary key, status/building code, and category membership. Sort names with ID as a stable tiebreaker. Use ordinary case-insensitive substring search over the small catalogue; measure before adding specialist indexes. Do not create cross-service foreign keys.
 
-Under the proposed archive model, keep archived records for future restoration with the same ID. Physical purging and any long-term retention policy are beyond D2.
+Keep archived records for future restoration with the same ID. Physical purging and any long-term retention policy are beyond D2.
 
 The API requires `hoursKind: UNKNOWN | ALL_DAY | INTERVAL` on create and full update. `UNKNOWN` and `ALL_DAY` require `opensAt` and `closesAt` to be absent. `INTERVAL` requires both times in `HH:mm`. Equal opening and closing times are invalid; a closing time before its opening time means the interval ends the next day. Reject contradictory fields rather than ignoring them. Interpret all clock values in `Asia/Singapore`.
 
@@ -104,29 +103,27 @@ Reject creation with 409 when an existing ACTIVE or ARCHIVED Supplier is an exac
 
 The repository contains `data/csv/supplier-seed-data.csv` with 21 rows and six image files. Create a repeatable seed process using stable seed IDs or guarded upsert; restarts must not duplicate suppliers. APIs must query PostgreSQL, not hard-coded arrays.
 
-- Map the CSV's **Location Description** to `location_description` and display it as the Supplier's description under the proposed D1 change.
+- Map the CSV's **Location Description** to `location_description` and display it as the Supplier's only description.
 - Normalize building aliases to the controlled codes above during import, including straight and curly apostrophes in `Prince George's Park`; map `Food/Coffee` to `FOOD` and `COFFEE`.
 - Parse `0900hrs` as an `INTERVAL` starting at `09:00`. `11:00`–`02:00` crosses midnight. Keep `0000hrs`–`2359hrs` as `INTERVAL` from `00:00` to `23:59` until the source is verified as meaning 24-hour operation. Label these *typical hours*; weekdays are not specified.
 - Serve bundled images through actual asset paths, rather than GitHub `blob` pages; show a fallback when missing.
 - Review suspect coordinates and add useful facilities/landmarks. Attribute externally sourced text/images.
 
-### 4.3 D1 description change proposal
+### 4.3 Approved D1 description change
 
-D1 SS-F1.1.2 and SS-F2.1.1 currently require a general `description` in addition to location. The team proposes using the required `locationDescription` as the Supplier's only displayed description, with no separate general-description field. Do not treat this change as accepted or claim D1 compliance until the team updates those requirements and their acceptance criteria.
+The team approved using the required `locationDescription` as the Supplier's only displayed description, with no separate general-description field. This replaces the separate general `description` required by the earlier D1 SS-F1.1.2 and SS-F2.1.1 text. The D1 requirements and their acceptance criteria must record this approved revision before the team claims the documents are aligned.
 
-Work that does not depend on this proposal may proceed while approval is pending. If approval has not arrived when this field must be implemented, follow current D1 by requiring and displaying a separate `description`.
+Supplier schema and APIs therefore use `locationDescription` only and do not add a `description` field.
 
-## 5. Supplier lifecycle — proposed D1 change
+## 5. Supplier lifecycle — approved D1 change
 
-The archive model in this section is the team's intended design but remains unapproved. Do not treat it as the accepted deletion contract or claim D1 compliance until the team updates D1 SS-F2.2.3 and its acceptance criteria.
+The team approved archive in place of the deletion restriction in the earlier D1 SS-F2.2.3 text. The D1 requirement and its acceptance criteria must record this approved revision before the team claims the documents are aligned.
 
 An administrator can archive a supplier after a confirmation modal. Archive hides it from ordinary member list/detail results while retaining its record and ID. Administrator management can inspect archived records and restore them to ACTIVE; the UI shows an actionable success/error result.
 
 `DELETE /api/v1/suppliers/{id}` archives an ACTIVE row, sets `archived_at`, and increments `version`. Repeating archive on an ARCHIVED row returns 204 without changing its archive time/version. `POST /api/v1/suppliers/{id}/restore` returns an ARCHIVED row to ACTIVE, clears `archived_at`, and increments `version`. Repeating restore on an ACTIVE row with the current `If-Match` returns its current representation without changing its version; a stale `If-Match` still returns 412. All these actions require ADMINISTRATOR.
 
-If approved, this will revise D1 SS-F2.2.3, which blocks deletion while an active errand exists. The proposed product rule is that archiving prevents new errand selection while existing errands keep the pickup details they need. Order Service behaviour is **not implemented or tested in D2**. Demonstrate catalogue visibility, retention, and restoration without claiming order integration only after the change is approved.
-
-Work that does not depend on deletion may proceed while approval is pending. If approval has not arrived when deletion must be implemented, follow current D1. Report an unfinished active-errand check honestly and do not demonstrate unconditional archive as approved behavior.
+This revises D1 SS-F2.2.3, which blocks deletion while an active errand exists. The approved product rule is that archiving prevents new errand selection while existing errands keep the pickup details they need. Order Service behaviour is **not implemented or tested in D2**. Demonstrate catalogue visibility, retention, and restoration without claiming Order Service integration.
 
 ## 6. Authentication and authorisation
 
@@ -169,8 +166,8 @@ Base path: `/api/v1/suppliers`. All business endpoints require an active session
 | `GET /api/v1/suppliers/{id}` | Detail; archived detail for admin only | 200 body and `ETag` |
 | `POST /api/v1/suppliers` | Validate and create ACTIVE row | 201 body, `Location`, `ETag` |
 | `PUT /api/v1/suppliers/{id}` | Replace editable fields, require `If-Match` | 200 body, new `ETag` |
-| `DELETE /api/v1/suppliers/{id}` | **Proposed:** archive; require `If-Match` when ACTIVE | 204; repeat archive 204 |
-| `POST /api/v1/suppliers/{id}/restore` | **Proposed:** restore; always require `If-Match` | 200 body and `ETag`; repeat restore with current tag returns unchanged body/tag |
+| `DELETE /api/v1/suppliers/{id}` | Archive; require `If-Match` when ACTIVE | 204; repeat archive 204 |
+| `POST /api/v1/suppliers/{id}/restore` | Restore; always require `If-Match` | 200 body and `ETag`; repeat restore with current tag returns unchanged body/tag |
 | `GET /health` | Non-sensitive container readiness | 200 when ready |
 
 **List query:** `q` searches `name` and `locationDescription` case-insensitively; `buildingCode` accepts a controlled building code; `category` is controlled text; `status=ARCHIVED` is admin-only; `page` is zero-based (default 0); `size` defaults to 12 (maximum 100); `sort` allowlist: `name,asc`, `name,desc`, `updatedAt,desc`. Trim `q`; blank means no search. Reject invalid values with 400. Filter before pagination; break ties by ID. Admins can request ACTIVE or ARCHIVED explicitly, not an unspecified all-status view.
@@ -208,7 +205,7 @@ Example list response (illustrative values only):
 }
 ```
 
-**Create/update body:** editable fields only: `name`, nonempty `categories`, `buildingCode`, optional `floor`, required `locationDescription`, optional paired coordinates, and required `hoursKind` with its conditional interval fields. If the proposed single-description change is not approved, a separate required `description` is also editable. `buildingLabel` is response-only. `imagePath` is not administrator-editable in D2. Trim text; reject missing/blank required fields, invalid categories, unknown building codes, out-of-range coordinates, one-sided coordinates, inconsistent hours fields, and oversized values.
+**Create/update body:** editable fields only: `name`, nonempty `categories`, `buildingCode`, optional `floor`, required `locationDescription`, optional paired coordinates, and required `hoursKind` with its conditional interval fields. `buildingLabel` is response-only. `imagePath` is not administrator-editable in D2. Trim text; reject missing/blank required fields, invalid categories, unknown building codes, out-of-range coordinates, one-sided coordinates, inconsistent hours fields, and oversized values.
 
 **Concurrency:** DB `version` is an integer. Detail/create/update/restore responses return a strong quoted `ETag`, e.g. `ETag: "v3"`. An admin sends that ETag in `If-Match` for PUT and restore, and for archive of an ACTIVE record. The server atomically updates with `WHERE id = ? AND version = ? AND status = ?` and increments the version in the same transaction. Only one edit of a stale screen commits. Missing `If-Match` on a state-changing operation returns **428**; stale returns **412** with no mutation. `If-Match: *` does not substitute for a specific version. Repeating archive on an already ARCHIVED row is a no-op returning 204 after authorisation, even without `If-Match`. Repeating restore requires the current `If-Match` and returns 200 without changing the row. Fetch detail before editing a list item to obtain its ETag. Mutation bodies have no version field.
 
@@ -262,14 +259,14 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 | --- | --- |
 | A1 | Clean deployment serves seeded PostgreSQL catalogue, not hard-coded arrays. |
 | A2 | Member can search name/location, filter building/category, sort, page, and view detail on mobile/desktop. |
-| A3 | Member's direct create/edit calls, and archive/restore calls if approved, return 403 without mutations. |
+| A3 | Member's direct create/edit/archive/restore calls return 403 without mutations. |
 | A4 | Missing/revoked session returns 401; unavailable User Service returns 503 without mutation. |
 | A5 | Admin creates a valid ACTIVE supplier visible in the list. |
 | A6 | Invalid input returns useful 400 and preserves prior values. |
 | A7 | Admin edit appears in refreshed list/detail. |
 | A8 | Two admins edit version N; one succeeds, other receives 412; missing If-Match receives 428. |
-| A9 | **Proposed:** Archive hides from member list/detail but retains same ID and admin ARCHIVED visibility. |
-| A10 | **Proposed:** Restore returns same ID to member catalogue and increments version; repeats are harmless. |
+| A9 | Archive hides from member list/detail but retains same ID and admin ARCHIVED visibility. |
+| A10 | Restore returns same ID to member catalogue and increments version; repeats are harmless. |
 | A11 | API works while frontend process is stopped. |
 | A12 | Real login, role checks, mutation, database state, and responsive UI appear in integrated demo. |
 | A13 | Creating an exact normalized duplicate of an ACTIVE or ARCHIVED Supplier returns 409 and identifies the existing record without mutation. |
@@ -284,7 +281,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 
 ## 10. Coordination and implementation sequence
 
-**External decisions remaining:** approve and publish the description and archive revisions to D1; obtain User Service owner agreement on the cookie/login/proxy, validation endpoint and service credential, timeout and idle-refresh rules, and CSRF issuance/validation. Publish the shared auth contract in the repository. Until approval, follow the fallback behavior documented in §§4.3 and 5. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
+**External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; obtain User Service owner agreement on the cookie/login/proxy, validation endpoint and service credential, timeout and idle-refresh rules, and CSRF issuance/validation. Publish the shared auth contract in the repository. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
 
 **Suggested increments:** (1) NestJS/Drizzle schema, migrations, repeatable seed, list/detail; (2) admin create/edit/archive/restore and atomic version checks; (3) verifier interface and dev stub, real User validation/role guard/CSRF, Vite screens; (4) same-origin Compose integration, contract tests, acceptance demo.
 
