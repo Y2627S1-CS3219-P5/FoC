@@ -1,5 +1,5 @@
 {
-  "//": "AI Assistance Disclosure: see AI-DISCLOSURES.md#strict-json-files. OpenAI Codex (GPT-6), 2026-09-25; Supplier backend package configuration. Author review approved by @ron; strict-JSON metadata exception still requires course-owner approval.",
+  "//": "AI Assistance Disclosure: see AI-DISCLOSURES.md#strict-json-files. OpenAI Codex (GPT-6), 2026-09-25; Supplier backend package configuration and isolated Compose integration-check command. Foundation author review approved by @ron; second-increment author review and strict-JSON metadata exception approval are required before merge/submission respectively.",
   "name": "foc-supplier-service",
   "version": "0.1.0",
   "private": true,
@@ -14,6 +14,7 @@
     "start:dev": "nest start --watch",
     "typecheck": "tsc --noEmit",
     "test": "jest --runInBand",
+    "test:integration": "node scripts/compose-smoke.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/database/migrate.ts",
     "db:seed": "tsx src/database/seed/run.ts"

@@ -106,6 +106,13 @@ export function parseSupplierListQuery(
       errors,
     ) ?? SUPPLIER_LIST_DEFAULT_SORT;
 
+  if (page > Math.floor(Number.MAX_SAFE_INTEGER / size)) {
+    errors.set(
+      "page",
+      "Page and size must produce a safe pagination offset.",
+    );
+  }
+
   if (errors.size > 0) {
     throw new BadRequestException({
       code: "SUPPLIER_VALIDATION_FAILED",

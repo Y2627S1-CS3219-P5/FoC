@@ -1,12 +1,13 @@
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: merged the User and Supplier Compose definitions while preserving their separate databases, startup order, and runtime configuration. Author review: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: configured Supplier-to-User session verification for issue #16. Author review: Required before merge.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded the approved 1000 ms Supplier verification deployment timeout for issue #17. Author review of additional changes: Required before merge.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: made the User Service host port configurable so the isolated Supplier integration smoke test can avoid a developer stack. Author review of additional changes: Required before merge.
 services:
   user-service:
     build: ./user-service
     init: true
     ports:
-      - "3001:3001"
+      - "${USER_PORT:-3001}:3001"
     environment:
       PORT: 3001
       DATABASE_URL: postgres://foc:foc@user-db:5432/users
