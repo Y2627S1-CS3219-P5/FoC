@@ -1,0 +1,30 @@
+services:
+  user-service:
+    build: ./user-service
+    init: true                      
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://foc:foc@user-db:5432/users
+    depends_on:
+      user-db:
+        condition: service_healthy  # wait until Postgres accepts connections
+
+  user-db:
+    image: postgres:17-alpine
+    environment:
+      # Note: Credentials are fine for local development for now.
+      POSTGRES_USER: foc
+      POSTGRES_PASSWORD: foc
+      POSTGRES_DB: users
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foc -d users"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  user-db-data:
