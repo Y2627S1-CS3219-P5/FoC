@@ -1,5 +1,6 @@
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: merged the User and Supplier Compose definitions while preserving their separate databases, startup order, and runtime configuration. Author review: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: configured Supplier-to-User session verification for issue #16. Author review: Required before merge.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded the approved 1000 ms Supplier verification deployment timeout for issue #17. Author review of additional changes: Required before merge.
 services:
   user-service:
     build: ./user-service
@@ -78,7 +79,7 @@ services:
       DATABASE_URL: postgresql://${SUPPLIER_DB_USER:-supplier_app}:${SUPPLIER_DB_PASSWORD:?Set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier}
       SUPPLIER_SEED_CSV_PATH: /data/csv/supplier-seed-data.csv
       USER_SERVICE_BASE_URL: http://user-service:3001
-      USER_SERVICE_VERIFY_TIMEOUT_MS: ${USER_SERVICE_VERIFY_TIMEOUT_MS:?Set USER_SERVICE_VERIFY_TIMEOUT_MS in .env}
+      USER_SERVICE_VERIFY_TIMEOUT_MS: ${USER_SERVICE_VERIFY_TIMEOUT_MS:-1000}
     depends_on:
       supplier-migrate:
         condition: service_completed_successfully
