@@ -141,7 +141,7 @@ Strict JSON cannot contain literal comments. To keep the required disclosure as 
 ## 2026-09-25 — User/Supplier integration conflict resolution
 
 - **Tool:** OpenAI Codex (GPT-6)
-- **Allowed-use scope:** Comparing the merged User Service implementation with the previously author-approved Supplier proposal; formatting the implementation facts into the Supplier specification at the author's explicit direction; resolving Git conflicts without changing either service's behavior.
+- **Allowed-use scope:** Comparing the merged User Service implementation with the previously author-approved Supplier proposal; formatting the implementation facts into the Supplier specification at the author's explicit direction; resolving Git conflicts without changing User Service application code.
 - **Repository files affected:** `.env.example`, `compose.yaml`, `README.md`, `supplier-service/README.md`, `supplier-service/SPEC.md`, and `ai/usage-log.md`
 - **Author review:** Required before submission.
 
@@ -151,4 +151,4 @@ Strict JSON cannot contain literal comments. To keep the required disclosure as 
 
 ### Key response
 
-Codex found that PR #14 implements an HS256 bearer access token and `GET /auth/verify`, rather than the Supplier proposal's opaque cookie and `POST /internal/sessions/validate`. At the author's direction, it documented the implemented request/response and error semantics, retained `SessionVerifier` as the future Supplier integration seam, and left frontend token storage, refresh/logout, final routing, and verification timeout/TLS as explicit remaining decisions. It merged both services' environment and Compose definitions, preserved their private databases and startup dependencies, ran both services' available checks, and completed the merge without changing User Service behavior.
+Codex found that PR #14 implements an HS256 bearer access token and `GET /auth/verify`, rather than the Supplier proposal's opaque cookie and `POST /internal/sessions/validate`. At the author's direction, it documented the implemented request/response and error semantics, retained `SessionVerifier` as the future Supplier integration seam, and left frontend token storage, refresh/logout, final routing, and verification timeout/TLS as explicit remaining decisions. It merged both services' environment and Compose definitions, preserved their private databases and startup dependencies, made Compose honor the User Service's documented `ALLOWED_EMAIL_DOMAIN` variable, ran both services' available checks, and completed the merge without changing User Service application code.
