@@ -1,4 +1,4 @@
-import { signAccessToken, ACCESS_TOKEN_TTL_SECONDS } from "./token";
+import { signAccessToken, verifyAccessToken, ACCESS_TOKEN_TTL_SECONDS } from "./token";
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { DatabaseError } from "pg";
@@ -123,4 +123,34 @@ authRouter.post("/login", async (req: Request, res: Response) => {
     tokenType: "Bearer",
     expiresIn: ACCESS_TOKEN_TTL_SECONDS,
   });
+});
+
+
+// Called by other services, forwarding the frontend's Authorization header unchanged.
+authRouter.get("/verify", async (req: Request, res: Response) => {
+  const header = req.headers.authorization;
+  const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
+  if (!token) {
+    res.status(401).json({ error: "UNAUTHENTICATED", message: "Missing bearer token" });
+    return;
+  }
+
+  const userId = verifyAccessToken(token);
+  if (!userId) {
+    res.status(401).json({ error: "UNAUTHENTICATED", message: "Invalid or expired token" });
+    return;
+  }
+
+  // Live lookup on every call: role changes and suspensions apply immediately (US-F4.1.4)
+  const result = await pool.query(
+    "SELECT id, role, status FROM users WHERE id = $1",
+    [userId],
+  );
+  const user = result.rows[0];
+  if (!user || user.status !== "ACTIVE") {
+    res.status(401).json({ error: "UNAUTHENTICATED", message: "Account is not active" });
+    return;
+  }
+
+  res.json({ id: user.id, role: user.role });
 });

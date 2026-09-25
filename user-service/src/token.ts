@@ -19,3 +19,17 @@ export function signAccessToken(userId: string): string {
     algorithm: "HS256",
   });
 }
+
+// Returns the account id if the token's signature and expiry are valid, otherwise null.
+// algorithms is pinned to HS256 so a token claiming "alg: none" (no signature) is rejected.
+export function verifyAccessToken(token: string): string | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] });
+    if (typeof payload === "string" || typeof payload.sub !== "string") {
+      return null;
+    }
+    return payload.sub;
+  } catch {
+    return null; // bad signature, expired, malformed: all treated the same
+  }
+}
