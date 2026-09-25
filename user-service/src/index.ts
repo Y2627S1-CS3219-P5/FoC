@@ -1,6 +1,7 @@
+import { authRouter } from "./auth";
+import { bootstrapFirstAdmin } from "./bootstrap";
 import express, { Request, Response, NextFunction } from "express";
 import { initSchema } from "./schema";
-import { authRouter } from "./auth";
 
 const app = express();
 app.use(express.json());
@@ -20,6 +21,7 @@ const PORT = Number(process.env.PORT) || 3001;
 
 async function main(): Promise<void> {
   await initSchema();
+  await bootstrapFirstAdmin();
   app.listen(PORT, () => console.log(`user-service listening on ${PORT}`));
 }
 
