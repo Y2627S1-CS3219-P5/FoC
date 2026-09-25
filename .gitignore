@@ -10,6 +10,10 @@ out/
 *.pem
 *.key
 
+# Locally installed agent skills
+.agents/
+skills-lock.json
+
 # OS
 .DS_Store
 Thumbs.db
