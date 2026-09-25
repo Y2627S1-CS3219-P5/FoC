@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: translated the approved Supplier data model into Drizzle schema constraints and indexes.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { sql } from "drizzle-orm";
 import {
@@ -17,6 +17,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { BUILDING_CODES, BuildingCode } from "../domain/buildings";
 
 export const supplierCategory = pgEnum("supplier_category", [
   "FOOD",
@@ -36,26 +37,6 @@ export const supplierStatus = pgEnum("supplier_status", [
   "ACTIVE",
   "ARCHIVED",
 ]);
-
-export const BUILDING_CODES = [
-  "COM2",
-  "COM3",
-  "CENTRAL_LIBRARY",
-  "ENG_E3",
-  "ENG_E4",
-  "ENG_EA",
-  "FRONTIER",
-  "TERRACE",
-  "THE_RIDGE",
-  "YIH",
-  "PGP",
-  "HSSML",
-  "MED_SCI_LIBRARY",
-  "AS8",
-  "INNOVATION_4_0",
-] as const;
-
-export type BuildingCode = (typeof BUILDING_CODES)[number];
 
 export const suppliers = pgTable(
   "suppliers",

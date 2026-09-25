@@ -1,4 +1,4 @@
-# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: kept Supplier container build inputs deterministic and compact. Author review required before submission.
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: kept Supplier container build inputs deterministic and compact. Author review: Reviewed and approved by @ron.
 .git
 .env
 **/node_modules

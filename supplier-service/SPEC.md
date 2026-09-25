@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Interpreted the supplied project, D1, and D2 reference documents and formatted decisions explicitly supplied by the Supplier workstream author, including the team's archive and single-description approvals and the User Service contract implemented in PR #14. This edit does not add new architecture or design decisions.
-Author review: Required before submission.
+Author review: Reviewed and approved by @ron.
 -->
 
 # FoC Supplier Service — D2 Specification

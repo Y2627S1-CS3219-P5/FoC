@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: configured versioned PostgreSQL migrations for the Supplier schema.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { defineConfig } from "drizzle-kit";
 

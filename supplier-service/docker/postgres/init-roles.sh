@@ -1,5 +1,5 @@
 #!/bin/sh
-# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: initialized isolated Supplier migration and runtime PostgreSQL roles for clean Compose databases. Author review required before submission.
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: initialized isolated Supplier migration and runtime PostgreSQL roles for clean Compose databases. Author review: Reviewed and approved by @ron.
 set -eu
 
 : "${POSTGRES_USER:?POSTGRES_USER is required}"

@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: wired the Supplier backend foundation and readiness endpoint.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Module } from "@nestjs/common";
 

@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: centralized creation and cleanup of Supplier PostgreSQL/Drizzle connections.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";

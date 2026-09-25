@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added bounded Supplier runtime environment parsing.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 export function getDatabaseUrl(): string {
   const databaseUrl = process.env.DATABASE_URL?.trim();

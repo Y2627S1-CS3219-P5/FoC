@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested deterministic parsing and approved mappings against the repository Supplier CSV.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";

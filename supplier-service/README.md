@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Documented the implemented Supplier backend foundation, operation, verification, and its future integration with the merged User Service bearer-token contract.
-Author review: Required before submission.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service
@@ -39,7 +39,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Compose exposes only the Supplier HTTP port (3000 by default); PostgreSQL remains on the Compose network. On a clean database, PostgreSQL first creates distinct bootstrap, migration-owner, and runtime roles. A one-shot migration service applies committed migrations as the schema owner and grants the runtime role only table DML and sequence use. The Supplier service then imports the seed and starts NestJS with that runtime role. The runtime role has no schema creation privilege. Configuration in `.env.example` is for local development only; blank passwords must be supplied in the untracked `.env` file.
+Compose exposes only the Supplier HTTP port (3000 by default); PostgreSQL remains on the Compose network. On a clean database, PostgreSQL first creates distinct bootstrap, migration-owner, and runtime roles. A one-shot migration service applies committed migrations as the schema owner. It grants the runtime role SELECT/INSERT/UPDATE on Suppliers and SELECT/INSERT/DELETE on category memberships, but no permission to delete Supplier rows or create schema objects. The Supplier service then imports the seed and starts NestJS with that runtime role. Configuration in `.env.example` is for local development only; blank passwords must be supplied in the untracked `.env` file.
 
 ## Checks
 
@@ -51,4 +51,4 @@ npm run build
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing this backend increment from the author-approved specification: NestJS/Drizzle setup, PostgreSQL schema and migration, readiness behavior, explicit seed identity mapping/import tests, least-privilege container configuration, and documentation. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Course-owner approval for this strict-JSON exception and project-author review of all AI-influenced work are still required before submission. The exact prompt and a key-response summary are recorded in `../ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing this backend increment from the author-approved specification: NestJS/Drizzle setup, PostgreSQL schema and migration, readiness behavior, explicit seed identity mapping/import tests, least-privilege container configuration, and documentation. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Project-author review was completed and approved by @ron; course-owner approval for the strict-JSON exception is still required before submission. The exact prompt and a key-response summary are recorded in `../ai/usage-log.md`.

@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: verified repeatable seed imports skip existing IDs and preserve administrator edits.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   importSeedSuppliers,

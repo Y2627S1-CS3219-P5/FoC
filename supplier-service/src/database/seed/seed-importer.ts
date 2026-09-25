@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented insert-only repeatable seed semantics that preserve administrator edits.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 

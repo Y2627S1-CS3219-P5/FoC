@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added a deterministic versioned-migration runner for local and container startup.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import path from "node:path";
@@ -28,23 +28,29 @@ export async function runMigrations(): Promise<void> {
   });
 }
 
-async function grantRuntimePrivileges(
+export async function grantRuntimePrivileges(
   pool: Pool,
   runtimeRole: string,
 ): Promise<void> {
   const role = `"${runtimeRole}"`;
 
   await pool.query(
-    `GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${role}`,
+    `REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM ${role}`,
   );
   await pool.query(
-    `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${role}`,
+    `REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM ${role}`,
   );
   await pool.query(
-    `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${role}`,
+    `GRANT SELECT, INSERT, UPDATE ON TABLE public.suppliers TO ${role}`,
   );
   await pool.query(
-    `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ${role}`,
+    `GRANT SELECT, INSERT, DELETE ON TABLE public.supplier_categories TO ${role}`,
+  );
+  await pool.query(
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM ${role}`,
+  );
+  await pool.query(
+    `ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM ${role}`,
   );
 }
 

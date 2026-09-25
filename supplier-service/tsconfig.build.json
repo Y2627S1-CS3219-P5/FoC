@@ -1,4 +1,4 @@
-// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: Supplier backend build configuration. Author review required before submission.
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: Supplier backend build configuration. Author review: Reviewed and approved by @ron.
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {

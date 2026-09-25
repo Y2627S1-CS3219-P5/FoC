@@ -1,41 +1,22 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented deterministic parsing and approved value mappings for the repository Supplier CSV.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import path from "node:path";
 import { parse } from "csv-parse/sync";
 
 import {
+  BUILDING_CODE_BY_SEED_ALIAS,
   BuildingCode,
-  NewSupplier,
-  SupplierCategory,
-} from "../schema";
+} from "../../domain/buildings";
+import { NewSupplier, SupplierCategory } from "../schema";
 import {
   SeedSourceIdentity,
   SUPPLIER_SEED_IDENTITIES,
 } from "./seed-identities";
 
 export const EXPECTED_SEED_ROW_COUNT = SUPPLIER_SEED_IDENTITIES.length;
-
-const BUILDING_CODE_BY_ALIAS: Readonly<Record<string, BuildingCode>> = {
-  "Com 2": "COM2",
-  Com2: "COM2",
-  COM3: "COM3",
-  "Central Library": "CENTRAL_LIBRARY",
-  "Engineering Block E3": "ENG_E3",
-  "Engineering Block E4": "ENG_E4",
-  "Engineering Block EA": "ENG_EA",
-  Frontier: "FRONTIER",
-  Terrace: "TERRACE",
-  "The Ridge": "THE_RIDGE",
-  "Yusof Ishak House": "YIH",
-  "Prince George's Park": "PGP",
-  "Hon Sui Sen Memorial Library": "HSSML",
-  "Medicine+Science Library": "MED_SCI_LIBRARY",
-  "Blk AS8": "AS8",
-  "innovation4.0": "INNOVATION_4_0",
-};
 
 const CATEGORY_MAPPINGS: Readonly<
   Record<string, readonly SupplierCategory[]>
@@ -93,8 +74,8 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
   return rows.map((row, index) => {
     const name = requiredText(row.Name, "Name", index);
     const buildingCode = mapBuildingCode(row.Building, index);
-    const supplierType = requiredText(row.Type, "Type", index);
-    const categories = mapCategories(supplierType, index);
+    const sourceCategoryValue = requiredText(row.Type, "Type", index);
+    const categories = mapCategories(sourceCategoryValue, index);
     const locationDescription = requiredText(
       row["Location Description"],
       "Location Description",
@@ -111,7 +92,7 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
     }
 
     const id = getManifestSeedId(index, {
-      supplierType,
+      sourceCategoryValue,
       buildingCode,
       floor,
       ...coordinates,
@@ -145,11 +126,8 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
 }
 
 function mapBuildingCode(value: string, index: number): BuildingCode {
-  const normalizedAlias = requiredText(value, "Building", index).replaceAll(
-    "’",
-    "'",
-  );
-  const buildingCode = BUILDING_CODE_BY_ALIAS[normalizedAlias];
+  const sourceAlias = requiredText(value, "Building", index);
+  const buildingCode = BUILDING_CODE_BY_SEED_ALIAS[sourceAlias];
   if (!buildingCode) {
     throw rowError(index, `unknown building alias: ${value}`);
   }
@@ -164,7 +142,7 @@ function mapCategories(
   const normalizedType = requiredText(value, "Type", index);
   const categories = CATEGORY_MAPPINGS[normalizedType];
   if (!categories) {
-    throw rowError(index, `unknown Supplier type: ${value}`);
+    throw rowError(index, `unknown Supplier category value: ${value}`);
   }
 
   return categories;

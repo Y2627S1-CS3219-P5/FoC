@@ -1,4 +1,4 @@
-# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: containerized Supplier build and runtime seed/application startup after the separate migration job. Author review required before submission.
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: containerized Supplier build and runtime seed/application startup after the separate migration job. Author review: Reviewed and approved by @ron.
 FROM node:22-alpine AS build
 
 WORKDIR /app

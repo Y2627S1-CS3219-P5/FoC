@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added the executable PostgreSQL Supplier seed import.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";

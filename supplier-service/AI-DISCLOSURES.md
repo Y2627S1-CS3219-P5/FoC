@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Documented the disclosure convention for strict-JSON Supplier configuration files.
-Author review: Required before submission.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service AI disclosures
@@ -11,7 +11,7 @@ Author review: Required before submission.
 
 JSON does not permit literal comments. For a strict-JSON file that requires a leading AI disclosure, this project uses a leading `"//"` string-valued metadata property and records the full disclosure in this adjacent sidecar. The property is operational metadata, not JSON comment syntax. Each JSON consumer must be verified to accept it.
 
-This convention is an unavoidable exception to putting a literal disclosure comment at the start of every AI-influenced file. **Course-owner approval for this strict-JSON exception is still required before submission.** Project-author review is also required.
+This convention is an unavoidable exception to putting a literal disclosure comment at the start of every AI-influenced file. **Course-owner approval for this strict-JSON exception is still required before submission.** Project-author review was completed and approved by @ron.
 
 | JSON file | Tool and date | AI-assisted scope | Consumer verification |
 | --- | --- | --- | --- |

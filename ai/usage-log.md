@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Recorded the exact Supplier backend implementation prompt and key response.
-Author review: Required before submission.
+Author review: Reviewed and approved by @ron.
 -->
 
 # AI Usage Log
@@ -45,7 +45,7 @@ An earlier interview round contained suggested design answers before the PDF's A
 - **Tool:** OpenAI Codex (GPT-6)
 - **Allowed-use scope:** Formatting value mappings and decisions supplied by the project author; identifying the resulting D1 conflict.
 - **Repository files affected:** `supplier-service/SPEC.md`, `CONTEXT.md`, `ai/usage-log.md`
-- **Author review:** Required before submission.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Prompt
 
@@ -98,7 +98,7 @@ Codex formatted the supplied building mapping, category values, hours discrimina
 - **Tool:** OpenAI Codex (GPT-6)
 - **Allowed-use scope:** Formatting decisions supplied by the project author and checking their consistency against the existing specification.
 - **Repository files affected:** `supplier-service/SPEC.md`, `CONTEXT.md`, `ai/usage-log.md`
-- **Author review:** Required before submission.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Prompt
 
@@ -121,7 +121,7 @@ Codex formatted the supplied duplicate rule, building request/response fields, h
 - **Tool:** OpenAI Codex (GPT-6)
 - **Allowed-use scope:** Implementing code and tests from the author-approved Supplier specification; recording the two approvals supplied by the author; documenting and checking the result.
 - **Repository files affected:** `README.md`, `.dockerignore`, `.env.example`, `.gitignore`, `compose.yaml`, `ai/usage-log.md`, and the implementation, configuration, and documentation files under `supplier-service/`, including `supplier-service/AI-DISCLOSURES.md`
-- **Author review:** Required before submission.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompt
 
@@ -136,14 +136,14 @@ Codex formatted the supplied duplicate rule, building request/response fields, h
 
 Codex recorded archive and the single `locationDescription` field as team-approved changes while retaining the note that the D1 text still needs alignment. It implemented only the requested backend foundation: NestJS/Express, a private PostgreSQL connection through Drizzle, constrained Supplier/category schema and generated migrations, database-backed `GET /health`, and a repeatable 21-row CSV importer that uses an explicit durable identity manifest without overwriting administrator-edited records or categories. Review remediation added guarded fixed seed IDs independent of editable name/location text, the database building-code allowlist, lossless unconstrained decimal coordinates, centralized connection cleanup, and distinct bootstrap, migration-owner, and least-privilege runtime Compose roles. It added focused mapping/idempotency/readiness tests and the necessary Docker Compose, container, environment-example, and operational documentation changes; it did not add frontend, catalogue APIs, mutations, authentication, or changes to other services.
 
-Strict JSON cannot contain literal comments. To keep the required disclosure as the first JSON member without making the files invalid, `supplier-service/package.json` and `supplier-service/nest-cli.json` use a leading `"//"` metadata property linked to the adjacent [Supplier disclosure sidecar](../supplier-service/AI-DISCLOSURES.md#strict-json-files). Codex verified that npm and the Nest CLI accept the property. Course-owner approval for this unavoidable strict-JSON exception is still required before submission, as is project-author review. Markdown, TypeScript, YAML, shell, and Docker files retain ordinary leading comments where their formats permit them.
+Strict JSON cannot contain literal comments. To keep the required disclosure as the first JSON member without making the files invalid, `supplier-service/package.json` and `supplier-service/nest-cli.json` use a leading `"//"` metadata property linked to the adjacent [Supplier disclosure sidecar](../supplier-service/AI-DISCLOSURES.md#strict-json-files). Codex verified that npm and the Nest CLI accept the property. Project-author review was completed and approved by @ron; course-owner approval for this unavoidable strict-JSON exception is still required before submission. Markdown, TypeScript, YAML, shell, and Docker files retain ordinary leading comments where their formats permit them.
 
 ## 2026-09-25 — User/Supplier integration conflict resolution
 
 - **Tool:** OpenAI Codex (GPT-6)
 - **Allowed-use scope:** Comparing the merged User Service implementation with the previously author-approved Supplier proposal; formatting the implementation facts into the Supplier specification at the author's explicit direction; resolving Git conflicts without changing User Service application code.
 - **Repository files affected:** `.env.example`, `compose.yaml`, `README.md`, `supplier-service/README.md`, `supplier-service/SPEC.md`, and `ai/usage-log.md`
-- **Author review:** Required before submission.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompt
 
@@ -152,3 +152,18 @@ Strict JSON cannot contain literal comments. To keep the required disclosure as 
 ### Key response
 
 Codex found that PR #14 implements an HS256 bearer access token and `GET /auth/verify`, rather than the Supplier proposal's opaque cookie and `POST /internal/sessions/validate`. At the author's direction, it documented the implemented request/response and error semantics, retained `SessionVerifier` as the future Supplier integration seam, and left frontend token storage, refresh/logout, final routing, and verification timeout/TLS as explicit remaining decisions. It merged both services' environment and Compose definitions, preserved their private databases and startup dependencies, made Compose honor the User Service's documented `ALLOWED_EMAIL_DOMAIN` variable, ran both services' available checks, and completed the merge without changing User Service application code.
+
+## 2026-09-25 — Supplier foundation approval fixes
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Applying the project author's requested PR review fixes and recording the author's explicit approval.
+- **Repository files affected:** Supplier building-domain/schema/seed files, database privilege setup and tests, ignore/configuration disclosures, `CONTEXT.md`, Supplier documentation, and `ai/usage-log.md`
+- **Author review:** Reviewed and approved by @ron; the separate strict-JSON course-owner exception remains pending.
+
+### Exact prompt
+
+> `make the fix then, also add my approval to the docstrings where needed we can proceed to merge after that`
+
+### Key response
+
+Codex removed runtime permission to delete Supplier rows while retaining the narrowly required ability to replace category memberships, including revoking earlier broad grants when migrations rerun. It renamed the raw CSV `Type` concept to `sourceCategoryValue`, consolidated building codes, display labels, and seed aliases into one registry, removed the duplicate `node_modules/` ignore entry, added a least-privilege regression test, and recorded @ron's project-author approval without claiming the still-pending course-owner approval for strict-JSON disclosure metadata.

@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Formatted domain definitions explicitly supplied by the Supplier workstream author and the project reference documents.
-Author review: Required before submission.
+Author review: Reviewed and approved by @ron.
 -->
 
 # FoC Domain Language

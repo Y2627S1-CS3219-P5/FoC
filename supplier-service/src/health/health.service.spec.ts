@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested successful and failed database readiness behavior.
- * Author review required before submission.
+ * Author review: Reviewed and approved by @ron.
  */
 import { ServiceUnavailableException } from "@nestjs/common";
 
