@@ -3,6 +3,10 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Interpreted the supplied project, D1, and D2 reference documents and formatted decisions explicitly supplied by the Supplier workstream author, including the team's archive and single-description approvals and the User Service contract implemented in PR #14. This edit does not add new architecture or design decisions.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded
+the Supplier workstream author's approved list defaults, verification deployment
+timeout, server-owned request IDs, and bundled-asset path for issue #17.
+Author review of this issue #17 edit: Required before merge.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -29,7 +33,11 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | Frontend | Shared React + TypeScript app using Vite | Selected for D2 |
 | User credential | Short-lived HS256 JWT access token returned by login and sent as `Authorization: Bearer` | Implemented by User Service in PR #14 |
 | User validation | `GET /auth/verify` with the caller's bearer header, including a live account lookup | Implemented by User Service in PR #14; no separate service credential |
+| Verification deployment | Configurable User Service base URL; Compose uses `http://user-service:3001`; 1,000 ms timeout | Approved by Supplier workstream author |
 | Roles | MEMBER browses; ADMINISTRATOR browses and manages | Selected |
+| List defaults | `status=ACTIVE`, `page=0`, `size=12` (minimum 1, maximum 100), `sort=name,asc` | Approved by Supplier workstream author |
+| Request correlation | Server generates each request ID and does not trust a client-supplied ID | Approved by Supplier workstream author |
+| Bundled images | Supplier serves repository `data/images` at `/assets/suppliers` | Approved by Supplier workstream author |
 | Description | Use `locationDescription` as the only displayed Supplier description | Approved by team; replaces the separate D1 general-description field |
 | Removal | Archive, retain record, allow administrator restoration | Approved by team; replaces the D1 deletion restriction |
 | Edit conflicts | DB integer version exposed as ETag; `If-Match` and 412/428 | Selected |
@@ -106,7 +114,7 @@ The repository contains `data/csv/supplier-seed-data.csv` with 21 rows and six i
 - Map the CSV's **Location Description** to `location_description` and display it as the Supplier's only description.
 - Normalize building aliases to the controlled codes above during import, including straight and curly apostrophes in `Prince George's Park`; map `Food/Coffee` to `FOOD` and `COFFEE`.
 - Parse `0900hrs` as an `INTERVAL` starting at `09:00`. `11:00`–`02:00` crosses midnight. Keep `0000hrs`–`2359hrs` as `INTERVAL` from `00:00` to `23:59` until the source is verified as meaning 24-hour operation. Label these *typical hours*; weekdays are not specified.
-- Serve bundled images through actual asset paths, rather than GitHub `blob` pages; show a fallback when missing.
+- Serve repository `data/images` through Supplier at `/assets/suppliers`, rather than using GitHub `blob` pages; the frontend shows a fallback when an asset is missing.
 - Review suspect coordinates and add useful facilities/landmarks. Attribute externally sourced text/images.
 
 ### 4.3 Approved D1 description change
@@ -154,7 +162,9 @@ The bearer token is manually attached rather than browser-managed cookie authent
 
 PR #14 does not implement refresh tokens, logout, an access-token revocation list, or a separate service credential for `/auth/verify`. Account role/status changes take effect on the next verification call because the endpoint reads the User database. The `JWT_REFRESH_TOKEN_TTL` example variable is currently unused by User Service.
 
-**Remaining integration decisions:** frontend token storage/persistence; whether refresh/logout is required for D2; final frontend origins and routing; the Supplier-to-User base URL, bounded timeout, and deployed TLS routing. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
+The Supplier-to-User base URL remains runtime-configurable. The integrated Compose deployment uses `http://user-service:3001` with a 1,000 ms verification timeout. Deployed TLS routing remains an environment concern rather than a hard-coded application URL.
+
+**Remaining integration decisions:** frontend token storage/persistence; whether refresh/logout is required for D2; and final frontend origins and routing. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
 
 ## 7. HTTP API contract (proposed v1)
 
@@ -170,7 +180,7 @@ Base path: `/api/v1/suppliers`. All business endpoints require a verified active
 | `POST /api/v1/suppliers/{id}/restore` | Restore; always require `If-Match` | 200 body and `ETag`; repeat restore with current tag returns unchanged body/tag |
 | `GET /health` | Non-sensitive container readiness | 200 when ready |
 
-**List query:** `q` searches `name` and `locationDescription` case-insensitively; `buildingCode` accepts a controlled building code; `category` is controlled text; `status=ARCHIVED` is admin-only; `page` is zero-based (default 0); `size` defaults to 12 (maximum 100); `sort` allowlist: `name,asc`, `name,desc`, `updatedAt,desc`. Trim `q`; blank means no search. Reject invalid values with 400. Filter before pagination; break ties by ID. Admins can request ACTIVE or ARCHIVED explicitly, not an unspecified all-status view.
+**List query:** `q` searches `name` and `locationDescription` case-insensitively; `buildingCode` accepts a controlled building code; `category` is controlled text; `status=ARCHIVED` is admin-only and omitted `status` defaults to `ACTIVE`; `page` is zero-based (default 0); `size` defaults to 12 (minimum 1, maximum 100); `sort` allowlist: `name,asc`, `name,desc`, `updatedAt,desc`, with omitted `sort` defaulting to `name,asc`. Trim `q`; blank means no search. Reject invalid values with 400. Filter before pagination; break ties by ID. Admins can request ACTIVE or ARCHIVED explicitly, not an unspecified all-status view.
 
 Example list response (illustrative values only):
 
@@ -216,9 +226,11 @@ Example list response (illustrative values only):
   "code": "SUPPLIER_VALIDATION_FAILED",
   "message": "Please correct the highlighted fields.",
   "fieldErrors": { "name": "Name is required." },
-  "requestId": "trace-or-request-id"
+  "requestId": "server-generated-uuid"
 }
 ```
+
+Supplier generates a new request ID for every request, returns it in `X-Request-Id`, and includes it in JSON error responses. It does not trust or echo a client-supplied request ID.
 
 | Status | Meaning |
 | --- | --- |
@@ -251,7 +263,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 - **Migrations/seed:** clean checkout applies versioned Drizzle migrations and seeds once; restart creates no duplicates.
 - **Performance:** Measure D1's p95 under two seconds using 100 Suppliers, 20 concurrent clients, approximately 10 requests per second for five minutes, with an 80% list and 20% detail mix. Include synchronous User Service validation in the measured response time.
 - **Security:** parameterized Drizzle queries, sort allowlist, bounded input, bearer-token and role guards, least-privilege DB user, bounded User timeout, and no token logging.
-- **Observability:** request ID, action/result logs without tokens, and non-sensitive `/health`.
+- **Observability:** server-generated request ID returned in `X-Request-Id` and error bodies, action/result logs without tokens, and non-sensitive `/health`.
 
 ### 9.1 Acceptance scenarios
 
@@ -281,7 +293,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 
 ## 10. Coordination and implementation sequence
 
-**External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; decide frontend bearer-token storage/persistence, whether refresh/logout is required for D2, final origins/routing, and the Supplier verification timeout/TLS routing. PR #14 is the implemented backend auth contract; it has no separate service credential for `/auth/verify`. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
+**External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; decide frontend bearer-token storage/persistence, whether refresh/logout is required for D2, final origins/routing, and deployed TLS routing. The Supplier verification deployment timeout is approved at 1,000 ms. PR #14 is the implemented backend auth contract; it has no separate service credential for `/auth/verify`. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
 
 **Suggested increments:** (1) NestJS/Drizzle schema, migrations, repeatable seed, list/detail; (2) admin create/edit/archive/restore and atomic version checks; (3) implement `SessionVerifier` against `GET /auth/verify` plus the real bearer-token/role guard, then Vite screens; (4) integrated routing, contract tests, and acceptance demo.
 

@@ -5,7 +5,12 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25; added User
  * Service verification endpoint and timeout parsing for issue #16.
  * Author review of additional changes: Required before merge.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25; exposed the
+ * repository/container Supplier image directory convention for issue #17.
+ * Author review of issue #17 changes: Required before merge.
  */
+import { resolve } from "node:path";
+
 export interface SessionVerificationConfiguration {
   userServiceBaseUrl: string;
   timeoutMs: number;
@@ -48,6 +53,10 @@ export function getPort(): number {
   }
 
   return port;
+}
+
+export function getSupplierImageDirectory(): string {
+  return resolve(process.cwd(), "../data/images");
 }
 
 export function getSessionVerificationConfiguration(): SessionVerificationConfiguration {
