@@ -17,15 +17,17 @@ Use Node.js 22 or newer and a PostgreSQL instance. From this directory:
 
 ```sh
 npm ci
-export DATABASE_URL=postgresql://supplier:supplier_dev@localhost:5432/supplier
+export DATABASE_URL=postgresql://supplier:YOUR_LOCAL_PASSWORD@localhost:5432/supplier
 npm run db:migrate
 npm run db:seed
 npm run start:dev
 ```
 
-`GET /health` returns `200 {"status":"ok"}` only after PostgreSQL responds. It returns 503 when the database is unavailable.
+`GET /health` returns `200 {"status":"ok"}` only after PostgreSQL responds. It returns 503 when the database is unavailable. The single-user URL above is only a concise manual-development example; Compose uses separate database roles as described below.
 
 The default seed source is `../data/csv/supplier-seed-data.csv`. Override it with `SUPPLIER_SEED_CSV_PATH` when needed. The import assigns each source Supplier a deterministic UUID and only inserts an ID that is absent. Repeating it therefore creates no duplicates and never overwrites later administrator edits, including category changes.
+
+The stable UUID is derived from the source Supplier's trimmed name, canonical building code, floor, and location description. Thus, Suppliers with the same name at different physical origins retain distinct seed identities. Coordinates are stored as unconstrained PostgreSQL decimals and imported as strings so source precision is not rounded through JavaScript numbers.
 
 ## Compose
 
@@ -33,10 +35,11 @@ From the repository root:
 
 ```sh
 cp .env.example .env
+# Fill the three blank password values with distinct local secrets.
 docker compose up --build
 ```
 
-Compose exposes only the Supplier HTTP port (3000 by default); PostgreSQL remains on the Compose network. The service waits for PostgreSQL readiness, applies committed migrations, imports the seed, and then starts NestJS. Configuration in `.env.example` is for local development only.
+Compose exposes only the Supplier HTTP port (3000 by default); PostgreSQL remains on the Compose network. On a clean database, PostgreSQL first creates distinct bootstrap, migration-owner, and runtime roles. A one-shot migration service applies committed migrations as the schema owner and grants the runtime role only table DML and sequence use. The Supplier service then imports the seed and starts NestJS with that runtime role. The runtime role has no schema creation privilege. Configuration in `.env.example` is for local development only; blank passwords must be supplied in the untracked `.env` file.
 
 ## Checks
 
@@ -48,4 +51,4 @@ npm run build
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing this backend increment from the author-approved specification: NestJS/Drizzle setup, PostgreSQL schema and migration, readiness behavior, deterministic seed mapping/import tests, container configuration, and documentation. The project author must review all AI-influenced work before submission. The exact prompt and a key-response summary are recorded in `../ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing this backend increment from the author-approved specification: NestJS/Drizzle setup, PostgreSQL schema and migration, readiness behavior, deterministic seed mapping/import tests, least-privilege container configuration, and documentation. Strict JSON cannot contain comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property for the required disclosure; both consumers were checked with that property present. The project author must review all AI-influenced work before submission. The exact prompt and a key-response summary are recorded in `../ai/usage-log.md`.

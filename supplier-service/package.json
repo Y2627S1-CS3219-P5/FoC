@@ -1,5 +1,5 @@
 {
-  "_aiAssistanceDisclosure": "OpenAI Codex (GPT-6), 2026-09-25. Scope: implemented the approved Supplier backend foundation from supplier-service/SPEC.md. Author review required before submission.",
+  "//": "AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: implemented the approved Supplier backend foundation from supplier-service/SPEC.md. Strict JSON has no comment syntax, so this leading metadata key is used instead. Author review required before submission.",
   "name": "foc-supplier-service",
   "version": "0.1.0",
   "private": true,

@@ -1,11 +1,15 @@
-# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: composed the Supplier service with its private PostgreSQL database. Author review required before submission.
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: composed the Supplier service with isolated bootstrap, migration-owner, and least-privilege runtime database roles. Author review required before submission.
 services:
   supplier-db:
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: ${SUPPLIER_DB_NAME:-supplier}
-      POSTGRES_USER: ${SUPPLIER_DB_USER:-supplier}
-      POSTGRES_PASSWORD: ${SUPPLIER_DB_PASSWORD:-supplier_dev}
+      POSTGRES_USER: ${SUPPLIER_DB_ADMIN_USER:-supplier_bootstrap}
+      POSTGRES_PASSWORD: ${SUPPLIER_DB_ADMIN_PASSWORD:?Set SUPPLIER_DB_ADMIN_PASSWORD in .env}
+      SUPPLIER_DB_MIGRATION_USER: ${SUPPLIER_DB_MIGRATION_USER:-supplier_migrator}
+      SUPPLIER_DB_MIGRATION_PASSWORD: ${SUPPLIER_DB_MIGRATION_PASSWORD:?Set SUPPLIER_DB_MIGRATION_PASSWORD in .env}
+      SUPPLIER_DB_USER: ${SUPPLIER_DB_USER:-supplier_app}
+      SUPPLIER_DB_PASSWORD: ${SUPPLIER_DB_PASSWORD:?Set SUPPLIER_DB_PASSWORD in .env}
     healthcheck:
       test:
         - CMD-SHELL
@@ -15,18 +19,32 @@ services:
       retries: 10
     volumes:
       - supplier-db-data:/var/lib/postgresql/data
+      - ./supplier-service/docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/010-supplier-roles.sh:ro
 
-  supplier-service:
+  supplier-migrate:
+    image: foc-supplier-service:local
     build:
       context: .
       dockerfile: supplier-service/Dockerfile
+    command: ["node", "dist/database/migrate.js"]
     environment:
-      PORT: 3000
-      DATABASE_URL: postgresql://${SUPPLIER_DB_USER:-supplier}:${SUPPLIER_DB_PASSWORD:-supplier_dev}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier}
-      SUPPLIER_SEED_CSV_PATH: /data/csv/supplier-seed-data.csv
+      DATABASE_URL: postgresql://${SUPPLIER_DB_MIGRATION_USER:-supplier_migrator}:${SUPPLIER_DB_MIGRATION_PASSWORD:?Set SUPPLIER_DB_MIGRATION_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier}
+      DATABASE_RUNTIME_ROLE: ${SUPPLIER_DB_USER:-supplier_app}
     depends_on:
       supplier-db:
         condition: service_healthy
+    restart: "no"
+
+  supplier-service:
+    image: foc-supplier-service:local
+    pull_policy: never
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${SUPPLIER_DB_USER:-supplier_app}:${SUPPLIER_DB_PASSWORD:?Set SUPPLIER_DB_PASSWORD in .env}@supplier-db:5432/${SUPPLIER_DB_NAME:-supplier}
+      SUPPLIER_SEED_CSV_PATH: /data/csv/supplier-seed-data.csv
+    depends_on:
+      supplier-migrate:
+        condition: service_completed_successfully
     ports:
       - "${SUPPLIER_PORT:-3000}:3000"
 

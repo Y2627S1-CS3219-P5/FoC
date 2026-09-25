@@ -37,26 +37,40 @@ export const supplierStatus = pgEnum("supplier_status", [
   "ARCHIVED",
 ]);
 
+export const BUILDING_CODES = [
+  "COM2",
+  "COM3",
+  "CENTRAL_LIBRARY",
+  "ENG_E3",
+  "ENG_E4",
+  "ENG_EA",
+  "FRONTIER",
+  "TERRACE",
+  "THE_RIDGE",
+  "YIH",
+  "PGP",
+  "HSSML",
+  "MED_SCI_LIBRARY",
+  "AS8",
+  "INNOVATION_4_0",
+] as const;
+
+export type BuildingCode = (typeof BUILDING_CODES)[number];
+
 export const suppliers = pgTable(
   "suppliers",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", { length: 120 }).notNull(),
-    buildingCode: varchar("building_code", { length: 120 }).notNull(),
+    buildingCode: varchar("building_code", { length: 120 })
+      .$type<BuildingCode>()
+      .notNull(),
     floor: varchar("floor", { length: 20 }),
     locationDescription: varchar("location_description", {
       length: 300,
     }).notNull(),
-    latitude: numeric("latitude", {
-      precision: 10,
-      scale: 7,
-      mode: "number",
-    }),
-    longitude: numeric("longitude", {
-      precision: 10,
-      scale: 7,
-      mode: "number",
-    }),
+    latitude: numeric("latitude"),
+    longitude: numeric("longitude"),
     hoursKind: hoursKind("hours_kind").notNull(),
     opensAt: time("opens_at", { withTimezone: false }),
     closesAt: time("closes_at", { withTimezone: false }),
@@ -89,6 +103,13 @@ export const suppliers = pgTable(
     check(
       "suppliers_building_code_nonblank",
       sql`btrim(${table.buildingCode}) <> ''`,
+    ),
+    check(
+      "suppliers_building_code_allowed",
+      sql`${table.buildingCode} in (${sql.join(
+        BUILDING_CODES.map((code) => sql.raw(`'${code}'`)),
+        sql.raw(", "),
+      )})`,
     ),
     check(
       "suppliers_location_description_nonblank",

@@ -7,13 +7,17 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { parse } from "csv-parse/sync";
 
-import { NewSupplier, SupplierCategory } from "../schema";
+import {
+  BuildingCode,
+  NewSupplier,
+  SupplierCategory,
+} from "../schema";
 
 export const EXPECTED_SEED_ROW_COUNT = 21;
 
 const SEED_ID_NAMESPACE = "5b834adc-f6ea-5e0f-994c-8c247c102f5c";
 
-const BUILDING_CODES: Readonly<Record<string, string>> = {
+const BUILDING_CODE_BY_ALIAS: Readonly<Record<string, BuildingCode>> = {
   "Com 2": "COM2",
   Com2: "COM2",
   COM3: "COM3",
@@ -68,6 +72,13 @@ export interface SeedSupplier {
   categories: readonly SupplierCategory[];
 }
 
+export interface SeedPhysicalOrigin {
+  name: string;
+  buildingCode: BuildingCode;
+  floor: string | null;
+  locationDescription: string;
+}
+
 export function decodeSupplierSeedCsv(csv: Uint8Array): string {
   return new TextDecoder("windows-1252", { fatal: true }).decode(csv);
 }
@@ -89,6 +100,7 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
       "Location Description",
       index,
     );
+    const floor = optionalText(row.Floor);
     const coordinates = parseCoordinates(row, index);
     const opensAt = parseSourceTime(row.StartingTime, "StartingTime", index);
     const closesAt = parseSourceTime(row.ClosingTime, "ClosingTime", index);
@@ -97,7 +109,12 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
       throw rowError(index, "opening and closing times must differ");
     }
 
-    const id = createStableSeedId(name);
+    const id = createStableSeedId({
+      name,
+      buildingCode,
+      floor,
+      locationDescription,
+    });
     if (seenIds.has(id)) {
       throw rowError(index, `duplicate seed identity for ${name}`);
     }
@@ -108,7 +125,7 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
         id,
         name,
         buildingCode,
-        floor: optionalText(row.Floor),
+        floor,
         locationDescription,
         ...coordinates,
         hoursKind: "INTERVAL",
@@ -123,11 +140,21 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
   });
 }
 
-export function createStableSeedId(sourceName: string): string {
+export function createStableSeedId(origin: SeedPhysicalOrigin): string {
   const namespaceBytes = Buffer.from(SEED_ID_NAMESPACE.replaceAll("-", ""), "hex");
   const digest = createHash("sha1")
     .update(namespaceBytes)
-    .update(Buffer.from(sourceName, "utf8"))
+    .update(
+      Buffer.from(
+        JSON.stringify([
+          origin.name,
+          origin.buildingCode,
+          origin.floor,
+          origin.locationDescription,
+        ]),
+        "utf8",
+      ),
+    )
     .digest();
   const bytes = Buffer.from(digest.subarray(0, 16));
 
@@ -144,12 +171,12 @@ export function createStableSeedId(sourceName: string): string {
   ].join("-");
 }
 
-function mapBuildingCode(value: string, index: number): string {
+function mapBuildingCode(value: string, index: number): BuildingCode {
   const normalizedAlias = requiredText(value, "Building", index).replaceAll(
     "’",
     "'",
   );
-  const buildingCode = BUILDING_CODES[normalizedAlias];
+  const buildingCode = BUILDING_CODE_BY_ALIAS[normalizedAlias];
   if (!buildingCode) {
     throw rowError(index, `unknown building alias: ${value}`);
   }
@@ -193,7 +220,7 @@ function parseCoordinates(
     throw rowError(index, `invalid longitude: ${longitudeText}`);
   }
 
-  return { latitude, longitude };
+  return { latitude: latitudeText, longitude: longitudeText };
 }
 
 function parseSourceTime(value: string, field: string, index: number): string {

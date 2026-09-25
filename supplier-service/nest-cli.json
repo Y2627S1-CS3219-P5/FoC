@@ -1,5 +1,5 @@
 {
-  "_aiAssistanceDisclosure": "OpenAI Codex (GPT-6), 2026-09-25. Scope: Supplier NestJS project configuration. Author review required before submission.",
+  "//": "AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: Supplier NestJS project configuration. Strict JSON has no comment syntax, so this leading metadata key is used instead. Author review required before submission.",
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",

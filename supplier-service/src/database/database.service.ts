@@ -4,25 +4,21 @@
  * Author review required before submission.
  */
 import { Injectable, OnApplicationShutdown } from "@nestjs/common";
-import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
 
 import { getDatabaseUrl } from "../config/environment";
-import * as schema from "./schema";
+import { createDatabaseConnection } from "./connection";
 
 @Injectable()
 export class DatabaseService implements OnApplicationShutdown {
-  private readonly pool = new Pool({ connectionString: getDatabaseUrl() });
+  private readonly connection = createDatabaseConnection(getDatabaseUrl());
 
-  readonly client: NodePgDatabase<typeof schema> = drizzle(this.pool, {
-    schema,
-  });
+  readonly client = this.connection.database;
 
   async ping(): Promise<void> {
-    await this.pool.query("select 1");
+    await this.connection.pool.query("select 1");
   }
 
   async onApplicationShutdown(): Promise<void> {
-    await this.pool.end();
+    await this.connection.pool.end();
   }
 }

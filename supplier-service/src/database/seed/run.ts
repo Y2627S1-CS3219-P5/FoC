@@ -3,13 +3,11 @@
  * Scope: added the executable PostgreSQL Supplier seed import.
  * Author review required before submission.
  */
-import { drizzle } from "drizzle-orm/node-postgres";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { Pool } from "pg";
 
 import { getDatabaseUrl } from "../../config/environment";
-import * as schema from "../schema";
+import { withDatabaseConnection } from "../connection";
 import {
   importSeedSuppliers,
   PostgresSeedStore,
@@ -35,13 +33,9 @@ export async function runSeedImport(): Promise<SeedImportResult> {
     );
   }
 
-  const pool = new Pool({ connectionString: getDatabaseUrl() });
-  try {
-    const database = drizzle(pool, { schema });
+  return withDatabaseConnection(getDatabaseUrl(), async ({ database }) => {
     return await importSeedSuppliers(seeds, new PostgresSeedStore(database));
-  } finally {
-    await pool.end();
-  }
+  });
 }
 
 if (require.main === module) {

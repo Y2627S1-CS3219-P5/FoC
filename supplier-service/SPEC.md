@@ -1,11 +1,11 @@
-# FoC Supplier Service — D2 Specification
-
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Interpreted the supplied project, D1, and D2 reference documents and formatted decisions explicitly supplied by the Supplier workstream author, including the team's archive and single-description approvals. This edit does not add new architecture or design decisions.
 Author review: Required before submission.
 -->
+
+# FoC Supplier Service — D2 Specification
 
 ## 1. Scope
 

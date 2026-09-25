@@ -27,12 +27,26 @@ describe("Supplier seed parser", () => {
     expect(new Set(seeds.map(({ supplier }) => supplier.id)).size).toBe(
       EXPECTED_SEED_ROW_COUNT,
     );
-    expect(createStableSeedId("Printer @ Com 2")).toBe(
-      createStableSeedId("Printer @ Com 2"),
+    expect(findSeed("Printer @ Com 2").supplier.id).toBe(
+      "ac2288df-661c-5d78-bcc1-ac6bca30fe51",
     );
-    expect(createStableSeedId("Printer @ Com 2")).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-    );
+  });
+
+  it("distinguishes same-name Suppliers at different physical origins", () => {
+    const centralLibraryId = createStableSeedId({
+      name: "Repeated name",
+      buildingCode: "CENTRAL_LIBRARY",
+      floor: "1",
+      locationDescription: "Beside the entrance",
+    });
+    const com2Id = createStableSeedId({
+      name: "Repeated name",
+      buildingCode: "COM2",
+      floor: "1",
+      locationDescription: "Beside the entrance",
+    });
+
+    expect(centralLibraryId).not.toBe(com2Id);
   });
 
   it("normalizes buildings, categories, times, and bundled image paths", () => {
@@ -57,6 +71,9 @@ describe("Supplier seed parser", () => {
       opensAt: "11:00",
       closesAt: "02:00",
     });
+
+    const heBrews = findSeed("he by He Brews");
+    expect(heBrews.supplier.latitude).toBe("1.300566804");
   });
 
   function findSeed(name: string) {

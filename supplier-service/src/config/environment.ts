@@ -12,6 +12,20 @@ export function getDatabaseUrl(): string {
   return databaseUrl;
 }
 
+export function getRuntimeDatabaseRole(): string | undefined {
+  const role = process.env.DATABASE_RUNTIME_ROLE?.trim();
+  if (!role) {
+    return undefined;
+  }
+  if (!/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(role)) {
+    throw new Error(
+      "DATABASE_RUNTIME_ROLE must be a PostgreSQL identifier of at most 63 characters.",
+    );
+  }
+
+  return role;
+}
+
 export function getPort(): number {
   const configuredPort = process.env.PORT ?? "3000";
   if (!/^\d+$/.test(configuredPort)) {
