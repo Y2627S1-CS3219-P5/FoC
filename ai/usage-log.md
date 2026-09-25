@@ -3,6 +3,9 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Recorded the exact Supplier backend implementation prompt and key response.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
+Scope: Recorded the exact second Supplier backend increment prompt, the author's follow-up approval, and the implementation/check summary.
+Author review of the second increment: Required before merge.
 -->
 
 # AI Usage Log
@@ -167,3 +170,24 @@ Codex found that PR #14 implements an HS256 bearer access token and `GET /auth/v
 ### Key response
 
 Codex removed runtime permission to delete Supplier rows while retaining the narrowly required ability to replace category memberships, including revoking earlier broad grants when migrations rerun. It renamed the raw CSV `Type` concept to `sourceCategoryValue`, consolidated building codes, display labels, and seed aliases into one registry, removed the duplicate `node_modules/` ignore entry, added a least-privilege regression test, and recorded @ron's project-author approval without claiming the still-pending course-owner approval for strict-JSON disclosure metadata.
+
+## 2026-09-25 — Second Supplier backend increment
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing and verifying only the authenticated Supplier backend read increment from the author-approved specification and the implemented User Service contract; recording the author's supplied deployment and API decisions; no frontend, Supplier mutations, or User Service application changes.
+- **Repository files affected:** `README.md`, `.env.example`, `compose.yaml`, `ai/usage-log.md`, `supplier-service/README.md`, `supplier-service/AI-DISCLOSURES.md`, `supplier-service/package.json`, and the authentication, read-model, HTTP, configuration, tests, and integration runner under `supplier-service/`
+- **Author review:** Required before merge.
+
+### Exact prompt
+
+> `lets ignore that for now i checkout to main, pull the remote changes we made and then $implement-spec use this to start the implementatoin for second Supplier backend increment based on the spec, now it should be easier since user service is already well defined right, remember we are only working wiht supplier service backend for now and should not edit user service`
+
+### Exact follow-up approval
+
+> `yes assets/suppliers is the standard place to serve image assets, and yes server should be in charge of generating IDs instead of client, proceed`
+
+The follow-up approved the proposed backend defaults presented for this increment: omitted sort defaults to `name,asc`; list size has minimum 1; User Service base URL is configurable and Compose uses `http://user-service:3001`; verification timeout is 1,000 ms; bundled Supplier images are served from `/assets/suppliers`; and Supplier generates request IDs rather than trusting a client-supplied ID.
+
+### Key response
+
+Codex implemented the second Supplier backend increment without changing User Service application code: a bounded `SessionVerifier` implementation that forwards the bearer header unchanged to User Service, a NestJS guard and role policy, PostgreSQL-backed Supplier list/detail reads with approved query defaults and stable pagination, archived visibility rules, strong detail ETags, server-generated request IDs, consistent error responses, and bundled image serving. It added focused unit/contract tests and an isolated Compose integration runner. The live runner verified a clean 21-row migration/seed and zero-insert repeat seed preserving an archived fixture, real MEMBER and ADMINISTRATOR registration/login/verification, search/filter/stable paging/detail, 401/403/404/503 behavior, ETags, request correlation, image serving, and recovery after User Service restart. An integration finding also bounded page/size combinations so their database offset remains a safe JavaScript integer. Author review remains required before merge; the separate strict-JSON course-owner exception remains pending for submission.

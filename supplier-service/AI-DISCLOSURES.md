@@ -15,7 +15,7 @@ This convention is an unavoidable exception to putting a literal disclosure comm
 
 | JSON file | Tool and date | AI-assisted scope | Consumer verification |
 | --- | --- | --- | --- |
-| `package.json` | OpenAI Codex (GPT-6), 2026-09-25 | Supplier backend package metadata, scripts, dependencies, and test configuration | `npm ci`, `npm pkg get name`, scripts, and production audit accepted the leading property |
+| `package.json` | OpenAI Codex (GPT-6), 2026-09-25 | Supplier backend package metadata, scripts, dependencies, test configuration, and isolated Compose integration-check command | `npm ci`, `npm pkg get name`, unit/build scripts, and `npm run test:integration` accepted the leading property |
 | `nest-cli.json` | OpenAI Codex (GPT-6), 2026-09-25 | Supplier NestJS compiler configuration | `nest build` accepted the leading property |
 
 If the course owner does not approve this convention, the team must agree on an allowed disclosure mechanism before submission; removing the property without an approved replacement would lose the required per-file attribution.

@@ -47,6 +47,13 @@ describe("parseSupplierListQuery", () => {
     expect(parseSupplierListQuery({ q: "  " }).q).toBeUndefined();
   });
 
+  it("rejects a page and size whose database offset is not a safe integer", () => {
+    expectValidationError(
+      { page: Number.MAX_SAFE_INTEGER.toString(), size: "100" },
+      "page",
+    );
+  });
+
   it.each([
     [{ buildingCode: "COM1" }, "buildingCode"],
     [{ category: "BOOKS" }, "category"],
