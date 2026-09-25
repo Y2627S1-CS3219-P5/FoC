@@ -27,7 +27,7 @@ npm run start:dev
 
 The default seed source is `../data/csv/supplier-seed-data.csv`. Override it with `SUPPLIER_SEED_CSV_PATH` when needed. The import assigns each source Supplier a deterministic UUID and only inserts an ID that is absent. Repeating it therefore creates no duplicates and never overwrites later administrator edits, including category changes.
 
-The stable UUID is derived from the source Supplier's trimmed name, canonical building code, floor, and location description. Thus, Suppliers with the same name at different physical origins retain distinct seed identities. Coordinates are stored as unconstrained PostgreSQL decimals and imported as strings so source precision is not rounded through JavaScript numbers.
+The durable identity manifest in `src/database/seed/seed-identities.ts` assigns an explicit UUID to each of the 21 source rows. IDs do not depend on editable names or location descriptions, while guarded source fields outside those editable values make a reordered or unexpectedly changed CSV fail instead of silently attaching an ID to the wrong origin. Coordinates are stored as unconstrained PostgreSQL decimals and imported as strings so source precision is not rounded through JavaScript numbers.
 
 ## Compose
 
@@ -51,4 +51,4 @@ npm run build
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing this backend increment from the author-approved specification: NestJS/Drizzle setup, PostgreSQL schema and migration, readiness behavior, deterministic seed mapping/import tests, least-privilege container configuration, and documentation. Strict JSON cannot contain comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property for the required disclosure; both consumers were checked with that property present. The project author must review all AI-influenced work before submission. The exact prompt and a key-response summary are recorded in `../ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing this backend increment from the author-approved specification: NestJS/Drizzle setup, PostgreSQL schema and migration, readiness behavior, explicit seed identity mapping/import tests, least-privilege container configuration, and documentation. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Course-owner approval for this strict-JSON exception and project-author review of all AI-influenced work are still required before submission. The exact prompt and a key-response summary are recorded in `../ai/usage-log.md`.

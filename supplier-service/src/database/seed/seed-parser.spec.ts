@@ -7,7 +7,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import {
-  createStableSeedId,
   decodeSupplierSeedCsv,
   EXPECTED_SEED_ROW_COUNT,
   parseSupplierSeedCsv,
@@ -18,9 +17,8 @@ describe("Supplier seed parser", () => {
     process.cwd(),
     "../data/csv/supplier-seed-data.csv",
   );
-  const seeds = parseSupplierSeedCsv(
-    decodeSupplierSeedCsv(readFileSync(csvPath)),
-  );
+  const source = decodeSupplierSeedCsv(readFileSync(csvPath));
+  const seeds = parseSupplierSeedCsv(source);
 
   it("maps all 21 source rows to stable, unique IDs", () => {
     expect(seeds).toHaveLength(EXPECTED_SEED_ROW_COUNT);
@@ -32,21 +30,50 @@ describe("Supplier seed parser", () => {
     );
   });
 
-  it("distinguishes same-name Suppliers at different physical origins", () => {
-    const centralLibraryId = createStableSeedId({
-      name: "Repeated name",
-      buildingCode: "CENTRAL_LIBRARY",
-      floor: "1",
-      locationDescription: "Beside the entrance",
-    });
-    const com2Id = createStableSeedId({
-      name: "Repeated name",
-      buildingCode: "COM2",
-      floor: "1",
-      locationDescription: "Beside the entrance",
-    });
+  it("retains a fixed ID when editable name and location text change", () => {
+    const editedSource = source
+      .replace(
+        "Printer @ Com 2,Printing,Com 2,1,Next to LT19,",
+        "Renamed printer,Printing,Com 2,1,Updated directions,",
+      );
+    const editedSeeds = parseSupplierSeedCsv(editedSource);
 
-    expect(centralLibraryId).not.toBe(com2Id);
+    expect(
+      editedSeeds.find(({ supplier }) => supplier.name === "Renamed printer")
+        ?.supplier.id,
+    ).toBe("ac2288df-661c-5d78-bcc1-ac6bca30fe51");
+  });
+
+  it("assigns distinct fixed IDs to same-name rows", () => {
+    const sameNameSource = source.replace(
+      "NUS Co-op,Shopping",
+      "Anna's x Soup Union,Shopping",
+    );
+    const sameNameSeeds = parseSupplierSeedCsv(sameNameSource).filter(
+      ({ supplier }) => supplier.name === "Anna's x Soup Union",
+    );
+
+    expect(sameNameSeeds.map(({ supplier }) => supplier.id)).toEqual([
+      "bdee8954-e570-58cf-a813-0ab36a084296",
+      "5061f9ec-5fba-5119-888e-dfeeaefdb727",
+    ]);
+  });
+
+  it("rejects reordered source rows instead of reassigning IDs", () => {
+    const lines = source.split(/\r?\n/);
+    [lines[1], lines[2]] = [lines[2], lines[1]];
+
+    expect(() => parseSupplierSeedCsv(lines.join("\n"))).toThrow(
+      /row 2: source identity does not match the durable manifest/,
+    );
+  });
+
+  it("rejects a guarded source identity mismatch", () => {
+    const mismatchedSource = source.replace("1.2938347", "1.2938348");
+
+    expect(() => parseSupplierSeedCsv(mismatchedSource)).toThrow(
+      /source identity does not match the durable manifest \(latitude\)/,
+    );
   });
 
   it("normalizes buildings, categories, times, and bundled image paths", () => {

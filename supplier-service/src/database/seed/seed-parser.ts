@@ -3,7 +3,6 @@
  * Scope: implemented deterministic parsing and approved value mappings for the repository Supplier CSV.
  * Author review required before submission.
  */
-import { createHash } from "node:crypto";
 import path from "node:path";
 import { parse } from "csv-parse/sync";
 
@@ -12,10 +11,12 @@ import {
   NewSupplier,
   SupplierCategory,
 } from "../schema";
+import {
+  SeedSourceIdentity,
+  SUPPLIER_SEED_IDENTITIES,
+} from "./seed-identities";
 
-export const EXPECTED_SEED_ROW_COUNT = 21;
-
-const SEED_ID_NAMESPACE = "5b834adc-f6ea-5e0f-994c-8c247c102f5c";
+export const EXPECTED_SEED_ROW_COUNT = SUPPLIER_SEED_IDENTITIES.length;
 
 const BUILDING_CODE_BY_ALIAS: Readonly<Record<string, BuildingCode>> = {
   "Com 2": "COM2",
@@ -72,13 +73,6 @@ export interface SeedSupplier {
   categories: readonly SupplierCategory[];
 }
 
-export interface SeedPhysicalOrigin {
-  name: string;
-  buildingCode: BuildingCode;
-  floor: string | null;
-  locationDescription: string;
-}
-
 export function decodeSupplierSeedCsv(csv: Uint8Array): string {
   return new TextDecoder("windows-1252", { fatal: true }).decode(csv);
 }
@@ -89,12 +83,18 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
     columns: true,
     skip_empty_lines: true,
   }) as CsvSupplierRow[];
+  if (rows.length !== SUPPLIER_SEED_IDENTITIES.length) {
+    throw new Error(
+      `Supplier seed manifest has ${SUPPLIER_SEED_IDENTITIES.length} entries, but the CSV has ${rows.length} rows.`,
+    );
+  }
   const seenIds = new Set<string>();
 
   return rows.map((row, index) => {
     const name = requiredText(row.Name, "Name", index);
     const buildingCode = mapBuildingCode(row.Building, index);
-    const categories = mapCategories(row.Type, index);
+    const supplierType = requiredText(row.Type, "Type", index);
+    const categories = mapCategories(supplierType, index);
     const locationDescription = requiredText(
       row["Location Description"],
       "Location Description",
@@ -104,16 +104,20 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
     const coordinates = parseCoordinates(row, index);
     const opensAt = parseSourceTime(row.StartingTime, "StartingTime", index);
     const closesAt = parseSourceTime(row.ClosingTime, "ClosingTime", index);
+    const imagePath = mapImagePath(row.ImageURL, index);
 
     if (opensAt === closesAt) {
       throw rowError(index, "opening and closing times must differ");
     }
 
-    const id = createStableSeedId({
-      name,
+    const id = getManifestSeedId(index, {
+      supplierType,
       buildingCode,
       floor,
-      locationDescription,
+      ...coordinates,
+      opensAt,
+      closesAt,
+      imagePath,
     });
     if (seenIds.has(id)) {
       throw rowError(index, `duplicate seed identity for ${name}`);
@@ -131,44 +135,13 @@ export function parseSupplierSeedCsv(csv: string): SeedSupplier[] {
         hoursKind: "INTERVAL",
         opensAt,
         closesAt,
-        imagePath: mapImagePath(row.ImageURL, index),
+        imagePath,
         status: "ACTIVE",
         version: 0,
       },
       categories,
     };
   });
-}
-
-export function createStableSeedId(origin: SeedPhysicalOrigin): string {
-  const namespaceBytes = Buffer.from(SEED_ID_NAMESPACE.replaceAll("-", ""), "hex");
-  const digest = createHash("sha1")
-    .update(namespaceBytes)
-    .update(
-      Buffer.from(
-        JSON.stringify([
-          origin.name,
-          origin.buildingCode,
-          origin.floor,
-          origin.locationDescription,
-        ]),
-        "utf8",
-      ),
-    )
-    .digest();
-  const bytes = Buffer.from(digest.subarray(0, 16));
-
-  bytes[6] = (bytes[6] & 0x0f) | 0x50;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-
-  const hex = bytes.toString("hex");
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    hex.slice(12, 16),
-    hex.slice(16, 20),
-    hex.slice(20),
-  ].join("-");
 }
 
 function mapBuildingCode(value: string, index: number): BuildingCode {
@@ -200,7 +173,7 @@ function mapCategories(
 function parseCoordinates(
   row: CsvSupplierRow,
   index: number,
-): Pick<NewSupplier, "latitude" | "longitude"> {
+): Pick<SeedSourceIdentity, "latitude" | "longitude"> {
   const latitudeText = optionalText(row.Latitude);
   const longitudeText = optionalText(row.Longitude);
 
@@ -221,6 +194,28 @@ function parseCoordinates(
   }
 
   return { latitude: latitudeText, longitude: longitudeText };
+}
+
+function getManifestSeedId(
+  index: number,
+  actual: SeedSourceIdentity,
+): string {
+  const manifestEntry = SUPPLIER_SEED_IDENTITIES[index];
+  if (!manifestEntry) {
+    throw rowError(index, "has no durable identity manifest entry");
+  }
+
+  const expected = manifestEntry.expectedSourceIdentity;
+  const fields = Object.keys(expected) as (keyof SeedSourceIdentity)[];
+  const mismatches = fields.filter((field) => actual[field] !== expected[field]);
+  if (mismatches.length > 0) {
+    throw rowError(
+      index,
+      `source identity does not match the durable manifest (${mismatches.join(", ")}); check CSV row order/content before updating the manifest`,
+    );
+  }
+
+  return manifestEntry.id;
 }
 
 function parseSourceTime(value: string, field: string, index: number): string {
