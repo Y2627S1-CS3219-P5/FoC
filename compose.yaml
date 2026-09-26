@@ -2,7 +2,17 @@
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: configured Supplier-to-User session verification for issue #16. Author review: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded the approved 1000 ms Supplier verification deployment timeout for issue #17. Author review of additional changes: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: made the User Service host port configurable so the isolated Supplier integration smoke test can avoid a developer stack. Author review of additional changes: Reviewed and approved by @ron.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-09-26. Scope: added the frontend gateway service (nginx serving the React app and proxying /api/v1 to the services, per the User Service author's routing decisions). Author review: Reviewed and approved by @t-leongchuan.
 services:
+  # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - user-service
+      - supplier-service
+
   user-service:
     build: ./user-service
     init: true
