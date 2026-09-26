@@ -12,6 +12,9 @@ The decisions and implementation were reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Recorded the project author's explicit review approval for PR #19 across the relevant second-increment disclosures.
 Author review: Approval explicitly supplied by @ron; the separate course-owner strict-JSON exception remains pending.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Planned and implemented the third Supplier backend increment for administrator mutations from the repository specification and ticket graph; no frontend or User Service application changes.
+Author review of the third increment: Required before merge.
 -->
 
 # AI Usage Log
@@ -231,3 +234,18 @@ For completion logging, Codex used the existing HTTP middleware lifecycle and a 
 ### Key response
 
 Codex changed the second-increment disclosure status from review-required to reviewed and approved by @ron, retained the separate pending course-owner strict-JSON exception, and made no application-behaviour changes.
+
+## 2026-09-26 — Third Supplier backend increment
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing and verifying only the administrator Supplier mutation backend increment from `supplier-service/SPEC.md`; creating and coordinating its GitHub ticket graph and draft PR; no frontend or User Service application changes.
+- **Repository files affected:** To be completed with the final implementation record.
+- **Author review:** Required before merge.
+
+### Exact prompt
+
+> `ok i merged pr 19, checked out main locally and git pull origin main $implement-spec use this skill if neeeded for third increment implementation`
+
+### Key response
+
+Implementation in progress. The final response and verification summary will replace this note before review.
