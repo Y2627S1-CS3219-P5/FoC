@@ -15,6 +15,9 @@ Author review: Approval explicitly supplied by @ron; the separate course-owner s
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Planned and implemented the third Supplier backend increment for administrator mutations from the repository specification and ticket graph; no frontend or User Service application changes.
 Author review of the third increment: Required before merge.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Added a one-command shell wrapper for the existing Supplier integration demonstration.
+Author review: Required before merge.
 -->
 
 # AI Usage Log
@@ -282,3 +285,18 @@ The first live concurrent-create run found that PostgreSQL could not infer the B
 Codex corrected GitHub wayfinder issue #11 so closed tickets #20–#22 are checked while open verification ticket #23 remains pending. It clarified that PostgreSQL serialization protects concurrent same-normalized-key POST creation across ACTIVE and ARCHIVED rows and does not add duplicate rejection to PUT, preserving the approved 409 contract. The implementation now has one neutral editable mutation-value type and one Supplier ETag formatter/header writer. A focused persistence assertion proves update bypasses the create-only duplicate lookup, and focused ETag tests cover canonical formatting and header output.
 
 The live runner was split into focused scenario functions, with archive and restore rejection matrices sharing one parameterized precondition verifier. Final checks passed: focused 6 suites/97 tests, full 24 suites/208 tests, typecheck, production build, and the full real-service integration smoke. The unique smoke project's `finally` cleanup passed, and an independent Docker label query found no remaining containers, volumes, or network. No frontend, User Service application file, API behavior, migration, or strict-JSON file changed; the local `supplier-service/node_modules` symlink remains untracked and excluded from the commit.
+
+## 2026-09-26 — One-command Supplier integration demonstration
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Wrapping the already-verified dependency install and isolated Supplier integration suite in one executable shell command; no application or test-behaviour changes.
+- **Repository files affected:** `supplier-service/scripts/run-integration-demo.sh`, `supplier-service/README.md`, and `ai/usage-log.md`
+- **Author review:** Required before merge.
+
+### Exact prompt
+
+> `could we write a bash script for this so that i can just invoke this instead of runnng 3 separate commadnds`
+
+### Key response
+
+Codex added an executable Bash wrapper that resolves `supplier-service/` relative to its own location, verifies that npm and a running Docker daemon are available, installs exactly the dependencies in `package-lock.json` with `npm ci`, and invokes the existing isolated `npm run test:integration` demonstration. The wrapper adds no new credentials, services, application behavior, or test logic.

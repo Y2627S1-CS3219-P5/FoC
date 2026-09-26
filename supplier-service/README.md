@@ -13,6 +13,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Documented the implemented administrator mutation API and the expanded
 real-service, PostgreSQL-backed verification for issue #23.
 Author review of the third increment: Required before merge.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Added and documented a one-command wrapper for the existing isolated
+Supplier backend integration demonstration.
+Author review: Required before merge.
 -->
 
 # Supplier Service
@@ -96,6 +100,13 @@ npm run typecheck
 npm test
 npm run build
 npm run test:integration
+```
+
+For the complete demonstration—including the locked dependency install—run
+this one command from anywhere in the repository:
+
+```sh
+./supplier-service/scripts/run-integration-demo.sh
 ```
 
 `test:integration` builds a fresh disposable Compose project with a unique `foc-supplier-smoke-...` name on ports 3900/3901. It verifies clean migration and the 21-row seed; real MEMBER and ADMINISTRATOR login/verification; catalogue reads, logging, assets, and request correlation; mutation authorization and validation; concurrent and ACTIVE/ARCHIVED duplicate rejection; concurrent same-version update exclusion and ETag preconditions; archive/restore visibility, retention, and no-ops; SQL state; no-op migration plus zero-insert seed reruns preserving administrator edits/categories; and 503 with no write while User Service is stopped followed by recovery. It removes only that unique project and its volumes when finished; Docker must be running and ports 3900/3901 must be free. A concurrent run can fail safely on those fixed host ports but cannot remove the other run's project or data.
