@@ -2,6 +2,9 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: implemented transactional Supplier create, update, archive, and restore persistence with optimistic concurrency.
  * Author review: Pending review by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; compared parsed
+ * bigint ETags safely before passing stored versions to SQL for issue #22.
+ * Author review: Required before merge.
  */
 import { Injectable } from "@nestjs/common";
 
@@ -73,7 +76,7 @@ export class DrizzleSupplierMutationRepository extends SupplierMutationRepositor
 
   async update(
     supplierId: string,
-    expectedVersion: number,
+    expectedVersion: bigint,
     values: SupplierMutationValues,
   ): Promise<UpdateSupplierResult> {
     return this.database.client.transaction(async (transaction) => {
@@ -84,14 +87,14 @@ export class DrizzleSupplierMutationRepository extends SupplierMutationRepositor
       if (current === undefined) {
         return { kind: "not-found" };
       }
-      if (current.version !== expectedVersion) {
+      if (BigInt(current.version) !== expectedVersion) {
         return { kind: "stale" };
       }
 
       const [updated] = await buildSupplierUpdateQuery(
         transaction,
         supplierId,
-        expectedVersion,
+        current.version,
         current.status,
         values,
       );
@@ -115,7 +118,7 @@ export class DrizzleSupplierMutationRepository extends SupplierMutationRepositor
 
   async archive(
     supplierId: string,
-    expectedVersion: number | null,
+    expectedVersion: bigint | null,
   ): Promise<ArchiveSupplierResult> {
     return this.database.client.transaction(async (transaction) => {
       const [current] = await buildSupplierLockQuery(
@@ -131,14 +134,14 @@ export class DrizzleSupplierMutationRepository extends SupplierMutationRepositor
       if (expectedVersion === null) {
         return { kind: "precondition-required" };
       }
-      if (current.version !== expectedVersion) {
+      if (BigInt(current.version) !== expectedVersion) {
         return { kind: "stale" };
       }
 
       const [archived] = await buildSupplierArchiveQuery(
         transaction,
         supplierId,
-        expectedVersion,
+        current.version,
       );
       if (archived === undefined) {
         return { kind: "stale" };
@@ -150,7 +153,7 @@ export class DrizzleSupplierMutationRepository extends SupplierMutationRepositor
 
   async restore(
     supplierId: string,
-    expectedVersion: number,
+    expectedVersion: bigint,
   ): Promise<RestoreSupplierResult> {
     return this.database.client.transaction(async (transaction) => {
       const [current] = await buildSupplierLockQuery(
@@ -160,7 +163,7 @@ export class DrizzleSupplierMutationRepository extends SupplierMutationRepositor
       if (current === undefined) {
         return { kind: "not-found" };
       }
-      if (current.version !== expectedVersion) {
+      if (BigInt(current.version) !== expectedVersion) {
         return { kind: "stale" };
       }
 
@@ -178,7 +181,7 @@ export class DrizzleSupplierMutationRepository extends SupplierMutationRepositor
       const [restored] = await buildSupplierRestoreQuery(
         transaction,
         supplierId,
-        expectedVersion,
+        current.version,
       );
       if (restored === undefined) {
         return { kind: "stale" };
