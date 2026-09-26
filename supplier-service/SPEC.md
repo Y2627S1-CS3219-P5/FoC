@@ -11,6 +11,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded
 the author's approved 300-character trimmed search bound and request-completion
 logging decision, then implemented the related issue #17 review remediation.
 The decisions and implementation were reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: recorded
+the project author's approved third-increment mutation, duplicate, timestamp,
+archive no-op, and canonical strong ETag defaults for issue #20.
+Author review of these contract decisions: Approved by @ron on 2026-09-26.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -47,6 +51,7 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | Description | Use `locationDescription` as the only displayed Supplier description | Approved by team; replaces the separate D1 general-description field |
 | Removal | Archive, retain record, allow administrator restoration | Approved by team; replaces the D1 deletion restriction |
 | Edit conflicts | DB integer version exposed as ETag; `If-Match` and 412/428 | Selected |
+| Mutation defaults | Strict editable-field bodies; canonical single strong `"vN"` ETags; archived Suppliers remain editable | Approved by Supplier workstream author on 2026-09-26 |
 | Order integration | Deferred | Outside D2 |
 
 ## 3. Ownership and boundaries
@@ -111,7 +116,7 @@ Keep archived records for future restoration with the same ID. Physical purging 
 
 The API requires `hoursKind: UNKNOWN | ALL_DAY | INTERVAL` on create and full update. `UNKNOWN` and `ALL_DAY` require `opensAt` and `closesAt` to be absent. `INTERVAL` requires both times in `HH:mm`. Equal opening and closing times are invalid; a closing time before its opening time means the interval ends the next day. Reject contradictory fields rather than ignoring them. Interpret all clock values in `Asia/Singapore`.
 
-Reject creation with 409 when an existing ACTIVE or ARCHIVED Supplier is an exact match on normalized name, building code, floor, and location description. Direct the administrator to the existing record. The same name remains valid at a genuinely different location.
+Reject creation with 409 when an existing ACTIVE or ARCHIVED Supplier is an exact match on name, Building Code, floor, and Location Description after duplicate-key normalization. Normalize the three text fields by trimming, Unicode NFC normalization, and case-insensitive comparison; internal whitespace remains meaningful. Use the canonical Building Code without further normalization, and treat a blank floor as null. Enforce this across both statuses with a race-safe database rule. Return `code: SUPPLIER_ALREADY_EXISTS` and `existingSupplierId` so the administrator can open the existing record. The same name remains valid at a genuinely different location.
 
 ### 4.2 Seed import
 
@@ -135,7 +140,7 @@ The team approved archive in place of the deletion restriction in the earlier D1
 
 An administrator can archive a supplier after a confirmation modal. Archive hides it from ordinary member list/detail results while retaining its record and ID. Administrator management can inspect archived records and restore them to ACTIVE; the UI shows an actionable success/error result.
 
-`DELETE /api/v1/suppliers/{id}` archives an ACTIVE row, sets `archived_at`, and increments `version`. Repeating archive on an ARCHIVED row returns 204 without changing its archive time/version. `POST /api/v1/suppliers/{id}/restore` returns an ARCHIVED row to ACTIVE, clears `archived_at`, and increments `version`. Repeating restore on an ACTIVE row with the current `If-Match` returns its current representation without changing its version; a stale `If-Match` still returns 412. All these actions require ADMINISTRATOR.
+`DELETE /api/v1/suppliers/{id}` archives an ACTIVE row, sets `archived_at`, advances `updated_at`, and increments `version`. Repeating archive on an ARCHIVED row returns 204 without changing its archive time, update time, or version. `POST /api/v1/suppliers/{id}/restore` returns an ARCHIVED row to ACTIVE, clears `archived_at`, advances `updated_at`, and increments `version`. Repeating restore on an ACTIVE row with the current `If-Match` returns its current representation without changing its update time or version; a stale `If-Match` still returns 412. All these actions require ADMINISTRATOR.
 
 This revises D1 SS-F2.2.3, which blocks deletion while an active errand exists. The approved product rule is that archiving prevents new errand selection while existing errands keep the pickup details they need. Order Service behaviour is **not implemented or tested in D2**. Demonstrate catalogue visibility, retention, and restoration without claiming Order Service integration.
 
@@ -221,9 +226,9 @@ Example list response (illustrative values only):
 }
 ```
 
-**Create/update body:** editable fields only: `name`, nonempty `categories`, `buildingCode`, optional `floor`, required `locationDescription`, optional paired coordinates, and required `hoursKind` with its conditional interval fields. `buildingLabel` is response-only. `imagePath` is not administrator-editable in D2. Trim text; reject missing/blank required fields, invalid categories, unknown building codes, out-of-range coordinates, one-sided coordinates, inconsistent hours fields, and oversized values.
+**Create/update body:** create and full update use the same strict contract containing editable fields only: `name`, nonempty `categories`, `buildingCode`, optional `floor`, required `locationDescription`, optional paired coordinates, and required `hoursKind` with its conditional interval fields. Reject unknown keys, including server-owned fields such as IDs, status, versions, timestamps, `buildingLabel`, and `imagePath`. Trim text; blank floor becomes null. Floor and both coordinate fields accept omission or explicit null; non-null coordinates must be JSON numbers and must be supplied together. Reject missing/blank required fields, duplicate or invalid category values, unknown building codes, out-of-range coordinates, inconsistent hours fields, and oversized values. `UNKNOWN` and `ALL_DAY` require the time keys to be omitted; `INTERVAL` requires both times in exact 24-hour `HH:mm` form. Full PUT may edit an ACTIVE or ARCHIVED Supplier, preserves its existing status/archive state, and advances `updatedAt` only when the update succeeds.
 
-**Concurrency:** DB `version` is an integer. Detail/create/update/restore responses return a strong quoted `ETag`, e.g. `ETag: "v3"`. An admin sends that ETag in `If-Match` for PUT and restore, and for archive of an ACTIVE record. The server atomically updates with `WHERE id = ? AND version = ? AND status = ?` and increments the version in the same transaction. Only one edit of a stale screen commits. Missing `If-Match` on a state-changing operation returns **428**; stale returns **412** with no mutation. `If-Match: *` does not substitute for a specific version. Repeating archive on an already ARCHIVED row is a no-op returning 204 after authorisation, even without `If-Match`. Repeating restore requires the current `If-Match` and returns 200 without changing the row. Fetch detail before editing a list item to obtain its ETag. Mutation bodies have no version field.
+**Concurrency:** DB `version` is an integer. Detail/create/update/restore responses return a strong quoted `ETag`, e.g. `ETag: "v3"`. An admin sends that ETag in `If-Match` for PUT and restore, and for archive of an ACTIVE record. Accept exactly one canonical strong tag in the form `"vN"`, where `N` is a nonnegative base-10 integer with no leading zero except `"v0"`. Reject weak tags, lists, wildcards, missing quotes, leading-zero versions, and other malformed values with 400. The server atomically updates with `WHERE id = ? AND version = ? AND status = ?` and increments the version in the same transaction. Only one edit of a stale screen commits. Missing `If-Match` on a state-changing operation returns **428**; stale returns **412** with no mutation. Repeating archive on an already ARCHIVED row is a no-op returning 204 after authorisation, even without `If-Match`; it ignores any supplied `If-Match`, including a malformed or stale value. Repeating restore requires the current `If-Match` and returns 200 without changing the row. Fetch detail before editing a list item to obtain its ETag. Mutation bodies have no version field.
 
 **Error response:**
 
