@@ -7,13 +7,13 @@
 import { HttpException } from "@nestjs/common";
 
 import { SupplierReadModel } from "../read/supplier-read.types";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import { SupplierMutationRepository } from "../write/supplier-mutation.repository";
 import { SupplierAdministrationService } from "./supplier-administration.service";
-import { SupplierMutationInput } from "./supplier-mutation-body.pipe";
 
 const SUPPLIER_ID = "ac2288df-661c-5d78-bcc1-ac6bca30fe51";
 const EXISTING_ID = "a65dd942-d369-4a16-96c4-24e9ce7055ca";
-const VALUES: SupplierMutationInput = {
+const VALUES: SupplierMutationValues = {
   name: "Cafe+ Robot Cafe",
   categories: ["FOOD", "COFFEE"],
   buildingCode: "COM2",

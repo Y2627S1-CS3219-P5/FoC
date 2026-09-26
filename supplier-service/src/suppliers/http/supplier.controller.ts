@@ -33,14 +33,13 @@ import {
   SupplierListQuery,
   SupplierReadModel,
 } from "../read/supplier-read.types";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import { SupplierAdministrationService } from "./supplier-administration.service";
 import { SupplierCatalogueService } from "./supplier-catalogue.service";
+import { setSupplierEtag } from "./supplier-etag";
 import { SupplierIdentifierPipe } from "./supplier-identifier.pipe";
 import { SupplierListQueryPipe } from "./supplier-list-query.pipe";
-import {
-  SupplierMutationBodyPipe,
-  SupplierMutationInput,
-} from "./supplier-mutation-body.pipe";
+import { SupplierMutationBodyPipe } from "./supplier-mutation-body.pipe";
 
 interface HeaderResponse {
   setHeader(name: string, value: string): void;
@@ -69,7 +68,7 @@ export class SupplierController {
     @Res({ passthrough: true }) response: HeaderResponse,
   ): Promise<SupplierReadModel> {
     const supplier = await this.catalogue.get(supplierId, request.principal);
-    response.setHeader("ETag", `"v${supplier.version}"`);
+    setSupplierEtag(response, supplier.version);
     return supplier;
   }
 
@@ -77,12 +76,12 @@ export class SupplierController {
   @HttpCode(HttpStatus.CREATED)
   @RequireSupplierRoles("ADMINISTRATOR")
   async create(
-    @Body(SupplierMutationBodyPipe) values: SupplierMutationInput,
+    @Body(SupplierMutationBodyPipe) values: SupplierMutationValues,
     @Res({ passthrough: true }) response: HeaderResponse,
   ): Promise<SupplierReadModel> {
     const supplier = await this.administration.create(values);
     response.setHeader("Location", `/api/v1/suppliers/${supplier.id}`);
-    response.setHeader("ETag", `"v${supplier.version}"`);
+    setSupplierEtag(response, supplier.version);
     return supplier;
   }
 
@@ -91,7 +90,7 @@ export class SupplierController {
   async update(
     @Param("id", SupplierIdentifierPipe) supplierId: string,
     @Headers("if-match") ifMatch: unknown,
-    @Body(SupplierMutationBodyPipe) values: SupplierMutationInput,
+    @Body(SupplierMutationBodyPipe) values: SupplierMutationValues,
     @Res({ passthrough: true }) response: HeaderResponse,
   ): Promise<SupplierReadModel> {
     const supplier = await this.administration.update(
@@ -99,7 +98,7 @@ export class SupplierController {
       ifMatch,
       values,
     );
-    response.setHeader("ETag", `"v${supplier.version}"`);
+    setSupplierEtag(response, supplier.version);
     return supplier;
   }
 
@@ -122,7 +121,7 @@ export class SupplierController {
     @Res({ passthrough: true }) response: HeaderResponse,
   ): Promise<SupplierReadModel> {
     const supplier = await this.administration.restore(supplierId, ifMatch);
-    response.setHeader("ETag", `"v${supplier.version}"`);
+    setSupplierEtag(response, supplier.version);
     return supplier;
   }
 }

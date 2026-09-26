@@ -9,6 +9,10 @@
  * detection, lifecycle no-ops, SQL state, concurrent update exclusion,
  * edit-preserving migration/seed reruns, and collision-safe project cleanup.
  * Author review of the third increment: Required before merge.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; split the final
+ * review runner into focused scenarios and shared lifecycle-precondition checks
+ * without changing the verified contract.
+ * Author review: Required before merge.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -330,7 +334,7 @@ async function assertSupplierUnchanged(
   assert.equal(detail.response.headers.get("etag"), expectedEtag);
 }
 
-async function run() {
+async function prepareSmokeContext() {
   console.info(`Starting the dedicated Supplier smoke stack ${projectName}...`);
   compose(["up", "--detach", "--build", "--wait"]);
   stackStarted = true;
@@ -370,6 +374,19 @@ async function run() {
   );
   assert.notEqual(secondAdminToken, adminToken);
 
+  return {
+    initialPrinterSnapshot,
+    memberToken,
+    adminToken,
+    secondAdminToken,
+  };
+}
+
+async function verifyCatalogueReadScenarios({
+  initialPrinterSnapshot,
+  memberToken,
+  adminToken,
+}) {
   const invalid = await jsonRequest(`${supplierBaseUrl}/api/v1/suppliers`, {
     headers: {
       Authorization: "Bearer invalid-token",
@@ -497,6 +514,15 @@ async function run() {
   assertError(unsafeOffset, 400, "SUPPLIER_VALIDATION_FAILED");
   assert.equal(typeof unsafeOffset.body.fieldErrors.page, "string");
 
+  return initialPrinterBody;
+}
+
+async function verifyMutationAccessAndCreateScenarios({
+  initialPrinterSnapshot,
+  initialPrinterBody,
+  memberToken,
+  adminToken,
+}) {
   const memberMutationResults = await Promise.all([
     supplierRequest("/api/v1/suppliers", memberToken, {
       method: "POST",
@@ -640,6 +666,16 @@ async function run() {
   }
   assert.deepEqual(supplierSnapshot(createdId), createdSnapshot);
 
+  return { created, createdId, createdSnapshot };
+}
+
+async function verifyUpdateScenarios({
+  adminToken,
+  secondAdminToken,
+  created,
+  createdId,
+  createdSnapshot,
+}) {
   const missingUpdatePrecondition = await supplierRequest(
     `/api/v1/suppliers/${createdId}`,
     adminToken,
@@ -746,15 +782,27 @@ async function run() {
 
   await assertSupplierUnchanged(createdId, adminToken, updatedSnapshot, '"v1"');
 
-  const archivePreconditions = [
+  return { updatedSnapshot };
+}
+
+async function verifyRejectedLifecyclePreconditions({
+  path,
+  method,
+  token,
+  supplierId,
+  expectedSnapshot,
+  expectedEtag,
+  staleEtag,
+}) {
+  const cases = [
     { expectedStatus: 428, expectedCode: "SUPPLIER_PRECONDITION_REQUIRED" },
     {
-      etag: 'W/"v1"',
+      etag: `W/${expectedEtag}`,
       expectedStatus: 400,
       expectedCode: "SUPPLIER_VALIDATION_FAILED",
     },
     {
-      etag: '"v99"',
+      etag: staleEtag,
       expectedStatus: 412,
       expectedCode: "SUPPLIER_VERSION_CONFLICT",
     },
@@ -764,21 +812,35 @@ async function run() {
       expectedCode: "SUPPLIER_VERSION_CONFLICT",
     },
   ];
-  for (const { etag, expectedStatus, expectedCode } of archivePreconditions) {
+
+  for (const { etag, expectedStatus, expectedCode } of cases) {
     const headers = etag === undefined ? {} : { "If-Match": etag };
-    const rejectedArchive = await supplierRequest(
-      `/api/v1/suppliers/${createdId}`,
-      adminToken,
-      { method: "DELETE", headers },
-    );
-    assertError(rejectedArchive, expectedStatus, expectedCode);
+    const rejected = await supplierRequest(path, token, { method, headers });
+    assertError(rejected, expectedStatus, expectedCode);
     await assertSupplierUnchanged(
-      createdId,
-      adminToken,
-      updatedSnapshot,
-      '"v1"',
+      supplierId,
+      token,
+      expectedSnapshot,
+      expectedEtag,
     );
   }
+}
+
+async function verifyArchiveScenarios({
+  memberToken,
+  adminToken,
+  createdId,
+  updatedSnapshot,
+}) {
+  await verifyRejectedLifecyclePreconditions({
+    path: `/api/v1/suppliers/${createdId}`,
+    method: "DELETE",
+    token: adminToken,
+    supplierId: createdId,
+    expectedSnapshot: updatedSnapshot,
+    expectedEtag: '"v1"',
+    staleEtag: '"v99"',
+  });
 
   const archive = await supplierRequest(
     `/api/v1/suppliers/${createdId}`,
@@ -910,34 +972,25 @@ async function run() {
   assert.deepEqual(archivedUpdatedSnapshot.categories, ["SHOPPING"]);
   assertSnapshotMatchesResponse(archivedUpdatedSnapshot, archivedUpdate.body);
 
-  const restorePreconditions = [
-    { expectedStatus: 428, expectedCode: "SUPPLIER_PRECONDITION_REQUIRED" },
-    {
-      etag: 'W/"v3"',
-      expectedStatus: 400,
-      expectedCode: "SUPPLIER_VALIDATION_FAILED",
-    },
-    {
-      etag: '"v2"',
-      expectedStatus: 412,
-      expectedCode: "SUPPLIER_VERSION_CONFLICT",
-    },
-    {
-      etag: hugeEtag,
-      expectedStatus: 412,
-      expectedCode: "SUPPLIER_VERSION_CONFLICT",
-    },
-  ];
-  for (const { etag, expectedStatus, expectedCode } of restorePreconditions) {
-    const headers = etag === undefined ? {} : { "If-Match": etag };
-    const rejectedRestore = await supplierRequest(
-      `/api/v1/suppliers/${createdId}/restore`,
-      adminToken,
-      { method: "POST", headers },
-    );
-    assertError(rejectedRestore, expectedStatus, expectedCode);
-    assert.deepEqual(supplierSnapshot(createdId), archivedUpdatedSnapshot);
-  }
+  return { archivedUpdate, archivedUpdatedSnapshot };
+}
+
+async function verifyRestoreScenarios({
+  memberToken,
+  adminToken,
+  createdId,
+  archivedUpdate,
+  archivedUpdatedSnapshot,
+}) {
+  await verifyRejectedLifecyclePreconditions({
+    path: `/api/v1/suppliers/${createdId}/restore`,
+    method: "POST",
+    token: adminToken,
+    supplierId: createdId,
+    expectedSnapshot: archivedUpdatedSnapshot,
+    expectedEtag: '"v3"',
+    staleEtag: '"v2"',
+  });
 
   const restore = await supplierRequest(
     `/api/v1/suppliers/${createdId}/restore`,
@@ -989,6 +1042,16 @@ async function run() {
   assertError(staleRepeatedRestore, 412, "SUPPLIER_VERSION_CONFLICT");
   assert.deepEqual(supplierSnapshot(createdId), restoredSnapshot);
 
+  return restoredSnapshot;
+}
+
+async function verifyRepeatabilityAndOutageScenarios({
+  memberToken,
+  adminToken,
+  createdId,
+  restoredSnapshot,
+  initialPrinterBody,
+}) {
   const printerUpdateBody = {
     ...initialPrinterBody,
     name: "Printer @ COM2 Smoke Edited",
@@ -1075,10 +1138,39 @@ async function run() {
   await waitFor(`${userBaseUrl}/health`, "restarted User health");
   const recovered = await supplierRequest("/api/v1/suppliers", memberToken);
   assert.equal(recovered.response.status, 200);
+}
+
+async function run() {
+  const context = await prepareSmokeContext();
+  const initialPrinterBody = await verifyCatalogueReadScenarios(context);
+  const createdContext = await verifyMutationAccessAndCreateScenarios({
+    ...context,
+    initialPrinterBody,
+  });
+  const updatedContext = await verifyUpdateScenarios({
+    ...context,
+    ...createdContext,
+  });
+  const archivedContext = await verifyArchiveScenarios({
+    ...context,
+    ...createdContext,
+    ...updatedContext,
+  });
+  const restoredSnapshot = await verifyRestoreScenarios({
+    ...context,
+    ...createdContext,
+    ...archivedContext,
+  });
+  await verifyRepeatabilityAndOutageScenarios({
+    ...context,
+    ...createdContext,
+    restoredSnapshot,
+    initialPrinterBody,
+  });
 
   console.info(
     "PASS: real auth, mutation authorization, validation/preconditions, " +
-      "concurrent and ACTIVE/ARCHIVED duplicate rejection, create/update, " +
+      "concurrent and ACTIVE/ARCHIVED duplicate creation rejection, create/update, " +
       "archive/restore lifecycle no-ops, SQL retention, repeat-migration/seed " +
       "preservation, catalogue reads, logging, assets, and fail-closed auth.",
   );

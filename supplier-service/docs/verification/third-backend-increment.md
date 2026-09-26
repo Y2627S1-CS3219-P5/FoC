@@ -4,11 +4,15 @@ Tool: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Recorded the commands and observed API/SQL results for the third
 Supplier backend increment and its live PostgreSQL defect remediation.
 Author review: Required before merge.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Recorded the final review refactor, focused regression coverage, full
+Supplier checks, live integration rerun, and independent cleanup check.
+Author review: Required before merge.
 -->
 
 # Third Supplier backend increment verification
 
-Verified on 2026-09-26 from branch `feat/supplier-admin-mutations` while merging the issue #23 verification commit. The run used the real Compose User Service and isolated PostgreSQL databases. It did not run a frontend or modify User Service application code.
+Initially verified on 2026-09-26 from branch `feat/supplier-admin-mutations` while merging the issue #23 verification commit, then rerun from `agent/supplier-final-review-fixes` after final code-review remediation. Both runs used the real Compose User Service and isolated PostgreSQL databases. They did not run a frontend or modify User Service application code.
 
 ## Automated checks
 
@@ -16,15 +20,15 @@ Verified on 2026-09-26 from branch `feat/supplier-admin-mutations` while merging
 | --- | --- |
 | `npm ci` in `supplier-service/` | Passed; 570 packages installed from the lockfile |
 | `npm run typecheck` | Passed |
-| `npm test` | 24 suites and 205 tests passed |
+| `npm test` | 24 suites and 208 tests passed after final review remediation |
 | `npm run build` | Passed |
 | `env DATABASE_URL=postgresql://supplier:verification-only@localhost:5432/supplier npm run db:generate` | Reported `No schema changes, nothing to migrate`; migration diff and migration-only status were empty |
 | Strict `JSON.parse` of `package.json` and `nest-cli.json` | Passed |
 | `docker compose config --quiet` with the required validation environment | Passed |
 | `npm ci` and `npm run build` in `user-service/` | Passed; compatibility build only, with no User Service application changes |
-| `npm run test:integration` | Passed against a disposable, unique per-run `foc-supplier-smoke-...` project |
+| `npm run test:integration` | Passed after the runner refactor against disposable project `foc-supplier-smoke-40629-d9106285`; an independent label query found no remaining containers, volumes, or network |
 | `git diff --check` | Passed |
-| `git status --short` | Listed only the eight intended source/documentation paths; no `node_modules` symlink or migration artifact |
+| `git status --short` | Listed only intended remediation paths plus the deliberately untracked local `supplier-service/node_modules` symlink; the symlink is excluded from the commit and no migration artifact exists |
 
 The successful migration drift checks were:
 
@@ -68,7 +72,7 @@ env JWT_SECRET=compose-validation-secret \
 The runner ended with:
 
 ```text
-PASS: real auth, mutation authorization, validation/preconditions, concurrent and ACTIVE/ARCHIVED duplicate rejection, create/update, archive/restore lifecycle no-ops, SQL retention, repeat-migration/seed preservation, catalogue reads, logging, assets, and fail-closed auth.
+PASS: real auth, mutation authorization, validation/preconditions, concurrent and ACTIVE/ARCHIVED duplicate creation rejection, create/update, archive/restore lifecycle no-ops, SQL retention, repeat-migration/seed preservation, catalogue reads, logging, assets, and fail-closed auth.
 ```
 
 The runner generated a unique lowercase Compose project name from its process ID and a random UUID suffix. Its `finally` block removed only that per-run project with volumes and orphans, then asserted the same project's `docker compose ps --quiet` output was empty. A concurrent invocation may fail safely because ports 3900/3901 remain fixed, but it cannot remove the other invocation's containers or volumes.
@@ -78,6 +82,8 @@ The runner generated a unique lowercase Compose project name from its process ID
 The first concurrent-create run exposed a PostgreSQL-only 500 that the mocked generated-query tests had not caught: the Building Code placeholder inside `jsonb_build_array` had no inferred SQL type. The advisory-lock query now casts that parameter to `text`, and its query test asserts the cast. After the fix, the same live race returned one 201 and one 409 and the complete smoke passed.
 
 Merge review found that the original runner proved stale updates sequentially, reran only the seed after edits, and reused a fixed project name whose initial cleanup could remove another run. The final runner instead uses two distinct real administrator tokens for simultaneous same-version PUTs, reruns both migrations and seed while comparing full snapshots, and generates a unique project name before starting anything. The complete live smoke passed again after these corrections.
+
+Final code review found that the specification's phrase “race-safe database rule” could be read as applying duplicate rejection to PUT even though the approved contract reserves 409 for POST. The wording now explicitly scopes database serialization to same-normalized-key creation across ACTIVE and ARCHIVED rows. A persistence regression assertion confirms full update does not invoke the create-only duplicate check. The review also centralized the editable mutation-value type and strong ETag response formatting, extracted the duplicated archive/restore precondition matrix, and split the integration runner into focused catalogue, access/create, update, archive, restore, repeatability, and outage scenarios. The full 24-suite/208-test run, typecheck, build, and live integration smoke all passed after these structural changes.
 
 ## Scope and outstanding review
 

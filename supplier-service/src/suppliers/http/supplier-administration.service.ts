@@ -13,15 +13,15 @@ import {
   supplierVersionConflictException,
 } from "../../http/supplier-http-errors";
 import { SupplierReadModel } from "../read/supplier-read.types";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import { SupplierMutationRepository } from "../write/supplier-mutation.repository";
-import { SupplierMutationInput } from "./supplier-mutation-body.pipe";
 import { parseSupplierIfMatch } from "./supplier-etag";
 
 @Injectable()
 export class SupplierAdministrationService {
   constructor(private readonly mutations: SupplierMutationRepository) {}
 
-  async create(values: SupplierMutationInput): Promise<SupplierReadModel> {
+  async create(values: SupplierMutationValues): Promise<SupplierReadModel> {
     const result = await this.mutations.create(values);
     if (result.kind === "duplicate") {
       throw supplierAlreadyExistsException(result.existingSupplierId);
@@ -32,7 +32,7 @@ export class SupplierAdministrationService {
   async update(
     supplierId: string,
     ifMatch: unknown,
-    values: SupplierMutationInput,
+    values: SupplierMutationValues,
   ): Promise<SupplierReadModel> {
     const result = await this.mutations.update(
       supplierId,

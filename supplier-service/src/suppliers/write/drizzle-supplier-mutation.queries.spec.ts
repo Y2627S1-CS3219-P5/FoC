@@ -8,6 +8,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 
 import * as schema from "../../database/schema";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import {
   buildDuplicateIdentityLockQuery,
   buildDuplicateSupplierQuery,
@@ -19,7 +20,6 @@ import {
   buildSupplierRestoreQuery,
   buildSupplierUpdateQuery,
 } from "./drizzle-supplier-mutation.queries";
-import { SupplierMutationValues } from "./supplier-mutation.types";
 
 describe("Supplier Drizzle mutation queries", () => {
   const database = drizzle.mock({ schema });
