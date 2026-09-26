@@ -4,6 +4,9 @@
  * role-aware NestJS route protection for issue #16; adopted shared public
  * error factories during issue #17 review.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; separated
+ * mutation role metadata from guard installation so User verification runs
+ * once per request for issue #22. Author review: Reviewed and approved by @ron.
  */
 import {
   applyDecorators,
@@ -30,7 +33,7 @@ import {
   VerifiedPrincipal,
 } from "./session-verifier";
 
-const REQUIRED_ROLES = Symbol("REQUIRED_ROLES");
+export const SUPPLIER_REQUIRED_ROLES = Symbol("SUPPLIER_REQUIRED_ROLES");
 const BEARER_HEADER_PATTERN = /^Bearer [^\s]+$/;
 
 interface SupplierHttpRequest {
@@ -74,7 +77,7 @@ export class SupplierAuthGuard implements CanActivate {
     (request as AuthenticatedSupplierRequest).principal = principal;
 
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
-      REQUIRED_ROLES,
+      SUPPLIER_REQUIRED_ROLES,
       [context.getHandler(), context.getClass()],
     );
     if (requiredRoles?.length && !requiredRoles.includes(principal.role)) {
@@ -87,7 +90,12 @@ export class SupplierAuthGuard implements CanActivate {
 
 export function RequireAuthentication(...roles: UserRole[]) {
   return applyDecorators(
-    SetMetadata(REQUIRED_ROLES, roles),
+    SetMetadata(SUPPLIER_REQUIRED_ROLES, roles),
     UseGuards(SupplierAuthGuard),
   );
+}
+
+/** Adds role policy to a route already protected by SupplierAuthGuard. */
+export function RequireSupplierRoles(...roles: UserRole[]) {
+  return SetMetadata(SUPPLIER_REQUIRED_ROLES, roles);
 }

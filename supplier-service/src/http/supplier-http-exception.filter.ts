@@ -3,6 +3,9 @@
  * Scope: added non-sensitive, request-correlated Supplier HTTP error responses
  * and adopted shared fallback definitions for issue #17.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; preserved the
+ * approved duplicate Supplier identifier in 409 responses for issue #22.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   ArgumentsHost,
@@ -28,6 +31,7 @@ interface SupplierErrorBody {
   code: string;
   message: string;
   fieldErrors?: Readonly<Record<string, string>>;
+  existingSupplierId?: string;
   requestId: string;
 }
 
@@ -35,6 +39,7 @@ interface ErrorPayload {
   code?: unknown;
   message?: unknown;
   fieldErrors?: unknown;
+  existingSupplierId?: unknown;
 }
 
 @Catch()
@@ -62,6 +67,9 @@ export class SupplierHttpExceptionFilter implements ExceptionFilter {
     };
     if (isFieldErrors(payload.fieldErrors)) {
       body.fieldErrors = payload.fieldErrors;
+    }
+    if (typeof payload.existingSupplierId === "string") {
+      body.existingSupplierId = payload.existingSupplierId;
     }
 
     response.status(status).json(body);

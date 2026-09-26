@@ -3,14 +3,20 @@
  * Scope: regression-tested centralized Supplier public HTTP error factories
  * during issue #17 review remediation.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; tested mutation
+ * conflict and precondition error contracts for issue #22.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   DEFAULT_SUPPLIER_HTTP_ERRORS,
+  supplierAlreadyExistsException,
   supplierAuthenticationUnavailableException,
   supplierForbiddenException,
   supplierNotFoundException,
+  supplierPreconditionRequiredException,
   supplierUnauthenticatedException,
   supplierValidationException,
+  supplierVersionConflictException,
   SUPPLIER_HTTP_ERRORS,
 } from "./supplier-http-errors";
 
@@ -28,6 +34,15 @@ describe("Supplier public HTTP errors", () => {
     expect(DEFAULT_SUPPLIER_HTTP_ERRORS[404]).toBe(
       SUPPLIER_HTTP_ERRORS.supplierNotFound,
     );
+    expect(DEFAULT_SUPPLIER_HTTP_ERRORS[409]).toBe(
+      SUPPLIER_HTTP_ERRORS.supplierAlreadyExists,
+    );
+    expect(DEFAULT_SUPPLIER_HTTP_ERRORS[412]).toBe(
+      SUPPLIER_HTTP_ERRORS.supplierVersionConflict,
+    );
+    expect(DEFAULT_SUPPLIER_HTTP_ERRORS[428]).toBe(
+      SUPPLIER_HTTP_ERRORS.supplierPreconditionRequired,
+    );
     expect(DEFAULT_SUPPLIER_HTTP_ERRORS[503]).toBe(
       SUPPLIER_HTTP_ERRORS.serviceUnavailable,
     );
@@ -38,6 +53,16 @@ describe("Supplier public HTTP errors", () => {
     [supplierForbiddenException, 403, SUPPLIER_HTTP_ERRORS.forbidden],
     [supplierNotFoundException, 404, SUPPLIER_HTTP_ERRORS.supplierNotFound],
     [
+      supplierVersionConflictException,
+      412,
+      SUPPLIER_HTTP_ERRORS.supplierVersionConflict,
+    ],
+    [
+      supplierPreconditionRequiredException,
+      428,
+      SUPPLIER_HTTP_ERRORS.supplierPreconditionRequired,
+    ],
+    [
       supplierAuthenticationUnavailableException,
       503,
       SUPPLIER_HTTP_ERRORS.authenticationUnavailable,
@@ -47,6 +72,18 @@ describe("Supplier public HTTP errors", () => {
 
     expect(exception.getStatus()).toBe(status);
     expect(exception.getResponse()).toEqual(body);
+  });
+
+  it("identifies the existing Supplier in a duplicate conflict", () => {
+    expect(
+      supplierAlreadyExistsException(
+        "a65dd942-d369-4a16-96c4-24e9ce7055ca",
+      ).getResponse(),
+    ).toEqual({
+      code: "SUPPLIER_ALREADY_EXISTS",
+      message: "A Supplier already exists at this location.",
+      existingSupplierId: "a65dd942-d369-4a16-96c4-24e9ce7055ca",
+    });
   });
 
   it("retains validation fields and a context-specific forbidden message", () => {

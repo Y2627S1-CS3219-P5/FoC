@@ -9,13 +9,21 @@ Author review of the second increment: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Documented and implemented the approved search bound and non-sensitive request completion logging during issue #17 review remediation.
 The decisions and implementation were reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Documented the implemented administrator mutation API and the expanded
+real-service, PostgreSQL-backed verification for issue #23.
+Author review of the third increment: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Added and documented a one-command wrapper for the existing isolated
+Supplier backend integration demonstration.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service
 
-The backend currently provides NestJS/Express, a private PostgreSQL database through Drizzle, versioned migrations, database-backed readiness, and a repeatable 21-row Supplier import. Authenticated `GET /api/v1/suppliers` and `GET /api/v1/suppliers/{id}` endpoints use the real User Service `GET /auth/verify` contract for every request.
+The backend currently provides NestJS/Express, a private PostgreSQL database through Drizzle, versioned migrations, database-backed readiness, a repeatable 21-row Supplier import, authenticated catalogue reads, and administrator create/update/archive/restore operations. Every business request uses the real User Service `GET /auth/verify` contract.
 
-This increment is backend-only. It does not add Supplier mutations or frontend code, and it does not modify User Service application code.
+This increment remains backend-only. It adds no frontend code and does not modify User Service application code.
 
 ## Local development
 
@@ -67,6 +75,21 @@ The second command should report `0 inserted, 21 already present` after startup.
 - Bundled images are public at `/assets/suppliers/<filename>`.
 - Every request receives a server-owned `X-Request-Id`. On finish or premature close, Supplier emits one JSON `supplier.http.request.completed` event. Its application `message` payload contains only request ID, method, query-free pathname, status, completion/aborted result, and duration; Nest adds the normal non-sensitive JSON logger envelope (`level`, process ID, timestamp, and logger context). Authorization, tokens, query values, full URLs, bodies, and user identity are not logged.
 
+## Administrator mutation API
+
+Only a verified `ADMINISTRATOR` may mutate Suppliers. A verified `MEMBER` receives 403 before body or precondition processing, with no database change.
+
+- `POST /api/v1/suppliers` creates an ACTIVE version-zero Supplier and returns 201 with its representation, `Location`, and strong `ETag: "v0"` headers.
+- `PUT /api/v1/suppliers/{id}` fully replaces the editable fields of either an ACTIVE or ARCHIVED Supplier. It preserves lifecycle state and returns the incremented version and ETag.
+- `DELETE /api/v1/suppliers/{id}` archives rather than deletes. The row, ID, editable fields, and categories remain stored. Repeating archive on an ARCHIVED Supplier returns an empty 204 and ignores a missing, malformed, or stale `If-Match` without changing timestamps or version.
+- `POST /api/v1/suppliers/{id}/restore` restores the same row and ID. Repeating restore with the current ETag returns the unchanged representation; a stale ETag still returns 412.
+
+Create and full update accept only the editable fields documented in `SPEC.md`. Unknown/server-owned keys, duplicate categories, invalid building/category values, unpaired coordinates, and contradictory hours are rejected with 400 and `fieldErrors`. Optional floor and coordinates may be omitted or set to `null`; blank floor becomes `null`.
+
+PUT, restore, and archive of an ACTIVE Supplier require exactly one canonical strong `If-Match` such as `"v3"`. Missing preconditions return 428, malformed/weak/list/wildcard/leading-zero tags return 400, and a well-formed stale tag returns 412; rejected calls do not mutate the row. Unknown Supplier IDs return 404.
+
+Create rejects an exact normalized duplicate across both ACTIVE and ARCHIVED rows with 409 `SUPPLIER_ALREADY_EXISTS` and `existingSupplierId`. The duplicate key uses trimmed, Unicode-NFC, case-insensitive name/floor/location text plus the canonical Building Code, treats blank floor as null, and preserves meaningful internal spaces. PostgreSQL advisory transaction locking makes concurrent equivalent creates resolve to one 201 and one 409.
+
 ## Checks
 
 From `supplier-service/`:
@@ -79,10 +102,17 @@ npm run build
 npm run test:integration
 ```
 
-`test:integration` builds a fresh disposable Compose project named `foc-supplier-smoke` on ports 3900/3901. It verifies clean migration and the 21-row seed, a second zero-insert seed that preserves an archived fixture, real MEMBER and ADMINISTRATOR login and verification, list/search/filter/stable paging/detail, the search boundary, 401/403/404/503 behavior, correlated query-redacted completion logging, request IDs, ETags, the bundled image, and recovery after User Service restarts. It removes only that project and its volumes when finished; Docker must be running and ports 3900/3901 must be free.
+For the complete demonstration—including the locked dependency install—run
+this one command from anywhere in the repository:
 
-The latest recorded check matrix is in [docs/verification/second-backend-increment.md](docs/verification/second-backend-increment.md).
+```sh
+./supplier-service/scripts/run-integration-demo.sh
+```
+
+`test:integration` builds a fresh disposable Compose project with a unique `foc-supplier-smoke-...` name on ports 3900/3901. It verifies clean migration and the 21-row seed; real MEMBER and ADMINISTRATOR login/verification; catalogue reads, logging, assets, and request correlation; mutation authorization and validation; concurrent and ACTIVE/ARCHIVED duplicate rejection; concurrent same-version update exclusion and ETag preconditions; archive/restore visibility, retention, and no-ops; SQL state; no-op migration plus zero-insert seed reruns preserving administrator edits/categories; and 503 with no write while User Service is stopped followed by recovery. It removes only that unique project and its volumes when finished; Docker must be running and ports 3900/3901 must be free. A concurrent run can fail safely on those fixed host ports but cannot remove the other run's project or data.
+
+The latest recorded check matrix is in [docs/verification/third-backend-increment.md](docs/verification/third-backend-increment.md).
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the Supplier backend foundation and authenticated catalogue-read increment from the author-approved specification, including the live integration runner and documentation. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Foundation and second-increment review were completed and approved by @ron. Course-owner approval for the strict-JSON exception is still required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the Supplier backend foundation, authenticated catalogue reads, administrator mutations, live integration runner, and documentation from the author-approved specification. The third-increment live check exposed and fixed a PostgreSQL advisory-lock parameter typing defect that mocked query tests did not reveal. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Project-author review of all three backend increments was completed and approved by @ron, and course-owner approval for the strict-JSON exception remains required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.
