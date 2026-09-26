@@ -1,0 +1,93 @@
+/**
+ * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
+ * Scope: added bearer authentication, verified-principal attachment, and
+ * role-aware NestJS route protection for issue #16; adopted shared public
+ * error factories during issue #17 review.
+ * Author review: Reviewed and approved by @ron.
+ */
+import {
+  applyDecorators,
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+  SetMetadata,
+  UseGuards,
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+
+import {
+  supplierAuthenticationUnavailableException,
+  supplierForbiddenException,
+  supplierUnauthenticatedException,
+} from "../http/supplier-http-errors";
+
+import {
+  SESSION_VERIFIER,
+  SessionVerifier,
+  UnauthenticatedSessionError,
+  UserRole,
+  VerifiedPrincipal,
+} from "./session-verifier";
+
+const REQUIRED_ROLES = Symbol("REQUIRED_ROLES");
+const BEARER_HEADER_PATTERN = /^Bearer [^\s]+$/;
+
+interface SupplierHttpRequest {
+  headers: {
+    authorization?: string | string[];
+  };
+}
+
+export interface AuthenticatedSupplierRequest extends SupplierHttpRequest {
+  principal: VerifiedPrincipal;
+}
+
+@Injectable()
+export class SupplierAuthGuard implements CanActivate {
+  constructor(
+    @Inject(SESSION_VERIFIER)
+    private readonly verifier: SessionVerifier,
+    private readonly reflector: Reflector,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<SupplierHttpRequest>();
+    const authorization = request.headers.authorization;
+    if (
+      typeof authorization !== "string" ||
+      !BEARER_HEADER_PATTERN.test(authorization)
+    ) {
+      throw supplierUnauthenticatedException();
+    }
+
+    let principal: VerifiedPrincipal;
+    try {
+      principal = await this.verifier.verify(authorization);
+    } catch (error) {
+      if (error instanceof UnauthenticatedSessionError) {
+        throw supplierUnauthenticatedException();
+      }
+      throw supplierAuthenticationUnavailableException();
+    }
+
+    (request as AuthenticatedSupplierRequest).principal = principal;
+
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
+      REQUIRED_ROLES,
+      [context.getHandler(), context.getClass()],
+    );
+    if (requiredRoles?.length && !requiredRoles.includes(principal.role)) {
+      throw supplierForbiddenException();
+    }
+
+    return true;
+  }
+}
+
+export function RequireAuthentication(...roles: UserRole[]) {
+  return applyDecorators(
+    SetMetadata(REQUIRED_ROLES, roles),
+    UseGuards(SupplierAuthGuard),
+  );
+}
