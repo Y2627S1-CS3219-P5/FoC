@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: verified generated Supplier list/detail SQL for filters, counts, pagination, and stable sorting.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { drizzle } from "drizzle-orm/node-postgres";
 

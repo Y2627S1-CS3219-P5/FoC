@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: exposed authenticated Supplier catalogue list and detail endpoints with
  * strong detail ETags for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   Controller,

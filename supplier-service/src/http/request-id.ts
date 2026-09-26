@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added server-generated request identifiers and non-sensitive,
  * correlated request-completion logging for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { ConsoleLogger, LoggerService } from "@nestjs/common";
 import { randomUUID } from "node:crypto";

@@ -6,11 +6,11 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded
 the Supplier workstream author's approved list defaults, verification deployment
 timeout, server-owned request IDs, and bundled-asset path for issue #17.
-Author review of this issue #17 edit: Required before merge.
+Author review of this issue #17 edit: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded
 the author's approved 300-character trimmed search bound and request-completion
 logging decision, then implemented the related issue #17 review remediation.
-The decisions are author-approved; implementation review is required before merge.
+The decisions and implementation were reviewed and approved by @ron.
 -->
 
 # FoC Supplier Service — D2 Specification

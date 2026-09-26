@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added non-sensitive, request-correlated Supplier HTTP error responses
  * and adopted shared fallback definitions for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   ArgumentsHost,

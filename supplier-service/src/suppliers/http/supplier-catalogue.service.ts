@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: enforced MEMBER and ADMINISTRATOR catalogue visibility for Supplier
  * list/detail reads and adopted shared public errors in issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Injectable } from "@nestjs/common";
 

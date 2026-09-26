@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested required, bounded User Service verification runtime
  * configuration for issue #16.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { getSessionVerificationConfiguration } from "./environment";
 

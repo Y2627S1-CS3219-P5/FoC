@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: packaged the Supplier catalogue read service and its Drizzle repository for later HTTP integration.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Module } from "@nestjs/common";
 

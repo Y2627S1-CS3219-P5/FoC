@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: contract-tested User Service request forwarding, response validation,
  * failure mapping, no-cache behavior, and timeout enforcement for issue #16.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   SessionVerificationUnavailableError,

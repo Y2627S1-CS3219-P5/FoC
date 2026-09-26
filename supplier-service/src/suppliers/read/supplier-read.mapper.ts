@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: mapped Drizzle Supplier rows to the specified catalogue representation.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { SupplierCategory, suppliers } from "../../database/schema";
 import { BUILDING_LABEL_BY_CODE } from "../../domain/buildings";

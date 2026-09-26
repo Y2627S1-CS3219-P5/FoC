@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented PostgreSQL-backed Supplier list/detail retrieval without duplicate rows or counts from categories.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Injectable } from "@nestjs/common";
 

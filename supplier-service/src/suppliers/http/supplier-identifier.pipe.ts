@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: added Supplier Identifier validation that accepts durable UUIDv5 seed
  * identifiers and adopted shared UUID/error helpers for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Injectable, PipeTransform } from "@nestjs/common";
 

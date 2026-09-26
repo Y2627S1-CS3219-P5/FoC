@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested server-owned request identifiers and redacted, one-shot
  * request-completion logging for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { EventEmitter } from "node:events";
 

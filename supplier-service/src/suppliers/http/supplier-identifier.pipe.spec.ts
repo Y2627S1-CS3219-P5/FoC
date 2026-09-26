@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested Supplier Identifier validation, including durable UUIDv5 seed
  * identifiers and the preserved public 400 shape, for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { BadRequestException } from "@nestjs/common";
 

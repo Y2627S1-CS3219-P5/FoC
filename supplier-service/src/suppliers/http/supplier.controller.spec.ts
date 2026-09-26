@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested Supplier controller delegation and exact strong detail ETag
  * behavior for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { GUARDS_METADATA } from "@nestjs/common/constants";
 

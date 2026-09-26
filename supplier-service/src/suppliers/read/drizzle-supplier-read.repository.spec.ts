@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested PostgreSQL read orchestration, category grouping, totals, and absent detail behavior.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { DatabaseService } from "../../database/database.service";
 import {

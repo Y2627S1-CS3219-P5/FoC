@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented parameterized Drizzle queries for filtered, stable Supplier catalogue reads.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   and,

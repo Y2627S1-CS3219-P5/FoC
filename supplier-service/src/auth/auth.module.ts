@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: wired the real User Service verifier behind the injectable
  * SessionVerifier seam for issue #16.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Module } from "@nestjs/common";
 

@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested shared UUID syntax validation during issue #17 review
  * remediation.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { isUuid } from "./uuid";
 

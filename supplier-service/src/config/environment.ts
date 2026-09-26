@@ -4,10 +4,10 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25; added User
  * Service verification endpoint and timeout parsing for issue #16.
- * Author review of additional changes: Required before merge.
+ * Author review of additional changes: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25; exposed the
  * repository/container Supplier image directory convention for issue #17.
- * Author review of issue #17 changes: Required before merge.
+ * Author review of issue #17 changes: Reviewed and approved by @ron.
  */
 import { resolve } from "node:path";
 

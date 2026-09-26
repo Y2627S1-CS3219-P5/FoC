@@ -1,5 +1,5 @@
 {
-  "//": "AI Assistance Disclosure: see AI-DISCLOSURES.md#strict-json-files. OpenAI Codex (GPT-6), 2026-09-25; Supplier backend package configuration and isolated Compose integration-check command. Foundation author review approved by @ron; second-increment author review and strict-JSON metadata exception approval are required before merge/submission respectively.",
+  "//": "AI Assistance Disclosure: see AI-DISCLOSURES.md#strict-json-files. OpenAI Codex (GPT-6), 2026-09-25; Supplier backend package configuration and isolated Compose integration-check command. Foundation and second-increment author review approved by @ron; strict-JSON metadata exception approval is still required before submission.",
   "name": "foc-supplier-service",
   "version": "0.1.0",
   "private": true,

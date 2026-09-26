@@ -5,7 +5,7 @@ Scope: Added the consolidated project AI Use Summary for the Supplier backend fo
 Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Updated the consolidated summary for the authenticated Supplier catalogue-read increment and its live verification.
-Author review of the second increment: Required before merge.
+Author review of the second increment: Reviewed and approved by @ron.
 -->
 
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
@@ -57,4 +57,4 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the first Supplier backend increment from the author-approved specification: recording the approved description/archive decisions; NestJS/Drizzle setup; the PostgreSQL schema and versioned migrations; database readiness; explicit, guarded, edit-preserving seed identities and tests; least-privilege Compose/container setup; and implementation documentation. It also resolved the post-PR-#14 integration conflicts and implemented the second backend increment's `SessionVerifier`, bearer guard, authenticated catalogue list/detail reads, role-aware archive visibility, request correlation, bundled assets, and isolated real-service integration check. No Supplier frontend, mutations, or User Service application changes were included. Foundation project-author review was completed and approved by @ron; review of the second increment is required before merge. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) record the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the first Supplier backend increment from the author-approved specification: recording the approved description/archive decisions; NestJS/Drizzle setup; the PostgreSQL schema and versioned migrations; database readiness; explicit, guarded, edit-preserving seed identities and tests; least-privilege Compose/container setup; and implementation documentation. It also resolved the post-PR-#14 integration conflicts and implemented the second backend increment's `SessionVerifier`, bearer guard, authenticated catalogue list/detail reads, role-aware archive visibility, request correlation, bundled assets, and isolated real-service integration check. No Supplier frontend, mutations, or User Service application changes were included. Foundation and second-increment project-author review were completed and approved by @ron. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) record the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.

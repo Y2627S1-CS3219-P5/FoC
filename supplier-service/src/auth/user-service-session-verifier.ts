@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented bounded, fail-closed User Service session verification
  * for issue #16 and adopted shared UUID validation during issue #17 review.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { SessionVerificationConfiguration } from "../config/environment";
 import { isUuid } from "../http/uuid";

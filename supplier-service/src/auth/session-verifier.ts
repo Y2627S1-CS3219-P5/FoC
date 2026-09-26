@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: defined the Supplier authentication seam, verified principal, and
  * transport-independent verification failures for issue #16.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 export const USER_ROLES = ["MEMBER", "ADMINISTRATOR"] as const;
 

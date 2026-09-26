@@ -5,10 +5,10 @@ Scope: Documented the implemented Supplier backend foundation, operation, verifi
 Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Documented authenticated catalogue reads and the isolated live integration check for the second Supplier backend increment.
-Author review of the second increment: Required before merge.
+Author review of the second increment: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Documented and implemented the approved search bound and non-sensitive request completion logging during issue #17 review remediation.
-The decisions are author-approved; implementation review is required before merge.
+The decisions and implementation were reviewed and approved by @ron.
 -->
 
 # Supplier Service
@@ -85,4 +85,4 @@ The latest recorded check matrix is in [docs/verification/second-backend-increme
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the Supplier backend foundation and authenticated catalogue-read increment from the author-approved specification, including the live integration runner and documentation. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Foundation review was completed and approved by @ron. Author review of the second increment is required before merge, and course-owner approval for the strict-JSON exception is still required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 with implementing the Supplier backend foundation and authenticated catalogue-read increment from the author-approved specification, including the live integration runner and documentation. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Foundation and second-increment review were completed and approved by @ron. Course-owner approval for the strict-JSON exception is still required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.

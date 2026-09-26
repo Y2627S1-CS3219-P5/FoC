@@ -2,10 +2,10 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Recorded the commands and observed results for the second Supplier backend increment.
-Author review: Required before merge.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Updated the review-remediation check matrix and live search/logging evidence.
-The decisions are author-approved; implementation review is required before merge.
+The decisions and implementation were reviewed and approved by @ron.
 -->
 
 # Second Supplier backend increment verification
@@ -42,4 +42,4 @@ Verified on 2026-09-25 from the issue #18 worktree. The run used the real Compos
 - `/assets/suppliers/PRINTER_COM2.jpeg` returning JPEG content;
 - User Service stopped causing Supplier 503 while `/health` stayed 200, followed by successful recovery after restart.
 
-The project author's review of this increment is required before merge. The separate course-owner approval for the strict-JSON disclosure convention remains pending for submission.
+The project author reviewed and approved this increment on 2026-09-26. The separate course-owner approval for the strict-JSON disclosure convention remains pending for submission.

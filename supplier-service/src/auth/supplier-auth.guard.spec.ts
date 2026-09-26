@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested Supplier bearer validation, principal attachment, role checks,
  * and exact 401/403/503 fail-closed guard behavior for issue #16.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   ExecutionContext,

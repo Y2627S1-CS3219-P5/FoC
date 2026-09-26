@@ -3,7 +3,7 @@
  * Scope: added an isolated, repeatable live integration check for the Supplier
  * authenticated read increment, including query bounds and correlated redacted
  * completion logging, against PostgreSQL and the real User Service.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";

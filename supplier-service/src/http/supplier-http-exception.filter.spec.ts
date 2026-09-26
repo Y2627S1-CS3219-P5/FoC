@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested stable, request-correlated Supplier HTTP error formatting for
  * issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { ArgumentsHost, BadRequestException } from "@nestjs/common";
 

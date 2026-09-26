@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested Supplier search normalization and explicit status, pagination, and sort forwarding.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { SupplierReadRepository } from "./supplier-read.repository";
 import { SupplierReadService } from "./supplier-read.service";

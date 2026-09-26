@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: defined the Supplier catalogue read inputs and API-ready representations from the approved specification.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { SupplierCategory, supplierStatus } from "../../database/schema";
 import { BuildingCode } from "../../domain/buildings";

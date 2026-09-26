@@ -3,7 +3,7 @@
  * Scope: added bearer authentication, verified-principal attachment, and
  * role-aware NestJS route protection for issue #16; adopted shared public
  * error factories during issue #17 review.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   applyDecorators,

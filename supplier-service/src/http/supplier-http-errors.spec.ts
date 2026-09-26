@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: regression-tested centralized Supplier public HTTP error factories
  * during issue #17 review remediation.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   DEFAULT_SUPPLIER_HTTP_ERRORS,

@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented the normalized Supplier catalogue list/detail query service.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Injectable } from "@nestjs/common";
 

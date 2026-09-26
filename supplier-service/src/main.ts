@@ -5,7 +5,7 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25; served bundled
  * Supplier assets and installed server-owned request/error handling for issue
  * #17, including a JSON ConsoleLogger for non-sensitive request completions.
- * Author review of additional changes: Required before merge.
+ * Author review of additional changes: Reviewed and approved by @ron.
  */
 import "reflect-metadata";
 

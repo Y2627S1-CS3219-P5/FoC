@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: implemented exact Supplier list query validation, approved defaults,
  * and the approved 300-character search bound for issue #17.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Injectable, PipeTransform } from "@nestjs/common";
 

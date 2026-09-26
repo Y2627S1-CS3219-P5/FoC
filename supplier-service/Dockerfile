@@ -1,5 +1,5 @@
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: containerized Supplier build and runtime seed/application startup after the separate migration job. Author review: Reviewed and approved by @ron.
-# Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: copied bundled Supplier image assets into the issue #17 runtime image. Author review of additional changes: Required before merge.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: copied bundled Supplier image assets into the issue #17 runtime image. Author review of additional changes: Reviewed and approved by @ron.
 FROM node:22-alpine AS build
 
 WORKDIR /app
