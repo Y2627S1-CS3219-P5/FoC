@@ -1,4 +1,13 @@
+/*
+ * AI Assistance Disclosure:
+ * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
+ * Scope: Mounted the profile router (/whoami) and users router (/users/:id/role).
+ *        This disclosure covers only those lines.
+ * Author review: Reviewed and approved by @t-leongchuan
+ */
 import { authRouter } from "./auth";
+import { profileRouter } from "./profile";
+import { usersRouter } from "./users";
 import { bootstrapFirstAdmin } from "./bootstrap";
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
@@ -22,6 +31,8 @@ app.get("/health", (req: Request, res: Response) => {
 });
 
 app.use("/auth", authRouter);
+app.use(profileRouter);
+app.use(usersRouter);
 
 app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   console.error("Unhandled error:", err instanceof Error ? err.message : err);

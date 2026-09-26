@@ -1,8 +1,16 @@
+/*
+ * AI Assistance Disclosure:
+ * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
+ * Scope: Refactored GET /auth/verify to reuse the authenticate middleware (same responses).
+ *        This disclosure covers only that change.
+ * Author review: Reviewed and approved by @t-leongchuan
+ */
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { pool } from "./db";
-import { signAccessToken, verifyAccessToken, ACCESS_TOKEN_TTL_SECONDS } from "./token";
+import { signAccessToken, ACCESS_TOKEN_TTL_SECONDS } from "./token";
 import { createAccount, ValidationError, ConflictError, BCRYPT_COST } from "./accounts";
+import { authenticate, currentUser } from "./authenticate";
 
 export const authRouter = Router();
 
@@ -80,30 +88,8 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 });
 
 // Called by other services, forwarding the frontend's Authorization header unchanged.
-authRouter.get("/verify", async (req: Request, res: Response) => {
-  const header = req.headers.authorization;
-  const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
-  if (!token) {
-    res.status(401).json({ error: "UNAUTHENTICATED", message: "Missing bearer token" });
-    return;
-  }
-
-  const userId = verifyAccessToken(token);
-  if (!userId) {
-    res.status(401).json({ error: "UNAUTHENTICATED", message: "Invalid or expired token" });
-    return;
-  }
-
-  // Live lookup on every call: role changes and suspensions apply immediately (US-F4.1.4)
-  const result = await pool.query(
-    "SELECT id, role, status FROM users WHERE id = $1",
-    [userId],
-  );
-  const user = result.rows[0];
-  if (!user || user.status !== "ACTIVE") {
-    res.status(401).json({ error: "UNAUTHENTICATED", message: "Account is not active" });
-    return;
-  }
-
+// Not exposed to browsers by the gateway.
+authRouter.get("/verify", authenticate, (req: Request, res: Response) => {
+  const user = currentUser(res);
   res.json({ id: user.id, role: user.role });
 });
