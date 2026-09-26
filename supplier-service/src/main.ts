@@ -6,6 +6,9 @@
  * Supplier assets and installed server-owned request/error handling for issue
  * #17, including a JSON ConsoleLogger for non-sensitive request completions.
  * Author review of additional changes: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; mounted the
+ * issue #25 Supplier Swagger UI and OpenAPI JSON document.
+ * Author review: Required before merge.
  */
 import "reflect-metadata";
 
@@ -23,6 +26,7 @@ import {
   createSupplierRequestMiddleware,
 } from "./http/request-id";
 import { SupplierHttpExceptionFilter } from "./http/supplier-http-exception.filter";
+import { configureSupplierOpenApi } from "./openapi/swagger";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -32,6 +36,7 @@ async function bootstrap(): Promise<void> {
   app.useStaticAssets(getSupplierImageDirectory(), {
     prefix: "/assets/suppliers/",
   });
+  configureSupplierOpenApi(app);
   app.enableShutdownHooks();
   await app.listen(getPort(), "0.0.0.0");
 }

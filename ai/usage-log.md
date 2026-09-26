@@ -21,6 +21,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Recorded the project author's explicit review approval for PR #24 across the relevant third-increment disclosures.
 Author review: Approval explicitly supplied by @ron; the separate course-owner strict-JSON exception remains pending.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Researched, implemented, documented, and verified issue #25 Supplier OpenAPI/Swagger documentation; no frontend or User Service application changes.
+Author review: Required before merge.
 -->
 
 # AI Usage Log
@@ -318,3 +321,18 @@ Codex added an executable Bash wrapper that resolves `supplier-service/` relativ
 ### Key response
 
 Codex changed the third-increment and integration-wrapper disclosure status from review-required to reviewed and approved by @ron, retained the separate pending course-owner strict-JSON exception, and made no application-behaviour changes.
+
+## 2026-09-26 — Supplier OpenAPI documentation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Consulting official NestJS documentation, implementing and testing developer-facing OpenAPI documentation for the existing Supplier backend contract, updating Supplier operating guidance and live verification, and creating issue #25 plus its pull request; no frontend or User Service application changes.
+- **Repository files affected:** Supplier package metadata/lockfile, bootstrap, health and Supplier HTTP annotations, OpenAPI DTO/configuration/tests under `supplier-service/src/openapi/`, live Compose verification, `supplier-service/README.md`, `supplier-service/AI-DISCLOSURES.md`, and `ai/usage-log.md`
+- **Author review:** Required before merge. The separate course-owner approval for the strict-JSON disclosure convention remains pending before submission.
+
+### Exact prompt
+
+> `does nestjs support swagger or like an api docs so other devs can refer to it, feel free to search the web and then lets create a PR for it once ure done`
+
+### Key response
+
+Codex confirmed from the official NestJS documentation that `@nestjs/swagger` generates OpenAPI documents from Nest metadata and can serve both an interactive Swagger UI and JSON specification. It added `/api/docs` and `/api/docs-json`, a bearer-token security scheme, explicit schemas for the existing interface/custom-pipe contract, operation documentation for health and every Supplier read/mutation route, focused generated-document tests, live Compose coverage, and usage guidance. The implementation changes no Supplier business behavior, frontend, User Service application code, database schema, or migration.

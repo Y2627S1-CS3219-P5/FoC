@@ -17,6 +17,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Added and documented a one-command wrapper for the existing isolated
 Supplier backend integration demonstration.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Documented the issue #25 Supplier Swagger UI, OpenAPI JSON endpoint,
+and bearer-token workflow.
+Author review: Required before merge.
 -->
 
 # Supplier Service
@@ -44,6 +48,22 @@ npm run start:dev
 The default seed source is `../data/csv/supplier-seed-data.csv`. Override it with `SUPPLIER_SEED_CSV_PATH` when needed. The import assigns each source Supplier a deterministic UUID and only inserts an ID that is absent. Repeating it therefore creates no duplicates and never overwrites later administrator edits, including category changes.
 
 The durable identity manifest in `src/database/seed/seed-identities.ts` assigns an explicit UUID to each of the 21 source rows. IDs do not depend on editable names or location descriptions, while guarded source fields outside those editable values make a reordered or unexpectedly changed CSV fail instead of silently attaching an ID to the wrong origin. Coordinates are stored as unconstrained PostgreSQL decimals and imported as strings so source precision is not rounded through JavaScript numbers.
+
+## API documentation
+
+With Supplier Service running, open the interactive Swagger UI at:
+
+```text
+http://localhost:3000/api/docs
+```
+
+The machine-readable OpenAPI document is available at:
+
+```text
+http://localhost:3000/api/docs-json
+```
+
+The document covers `/health` and every implemented Supplier read/mutation operation, including list filters, strict bodies, role restrictions, stable errors, and ETag/`If-Match` concurrency. Protected operations use the **Authorize** button: log in through User Service, then enter only the access token; Swagger UI supplies the `Bearer` prefix. User Service endpoints are intentionally not included because this document belongs to Supplier Service.
 
 ## Compose
 
@@ -109,10 +129,10 @@ this one command from anywhere in the repository:
 ./supplier-service/scripts/run-integration-demo.sh
 ```
 
-`test:integration` builds a fresh disposable Compose project with a unique `foc-supplier-smoke-...` name on ports 3900/3901. It verifies clean migration and the 21-row seed; real MEMBER and ADMINISTRATOR login/verification; catalogue reads, logging, assets, and request correlation; mutation authorization and validation; concurrent and ACTIVE/ARCHIVED duplicate rejection; concurrent same-version update exclusion and ETag preconditions; archive/restore visibility, retention, and no-ops; SQL state; no-op migration plus zero-insert seed reruns preserving administrator edits/categories; and 503 with no write while User Service is stopped followed by recovery. It removes only that unique project and its volumes when finished; Docker must be running and ports 3900/3901 must be free. A concurrent run can fail safely on those fixed host ports but cannot remove the other run's project or data.
+`test:integration` builds a fresh disposable Compose project with a unique `foc-supplier-smoke-...` name on ports 3900/3901. It verifies clean migration and the 21-row seed; live Swagger UI and OpenAPI JSON; real MEMBER and ADMINISTRATOR login/verification; catalogue reads, logging, assets, and request correlation; mutation authorization and validation; concurrent and ACTIVE/ARCHIVED duplicate rejection; concurrent same-version update exclusion and ETag preconditions; archive/restore visibility, retention, and no-ops; SQL state; no-op migration plus zero-insert seed reruns preserving administrator edits/categories; and 503 with no write while User Service is stopped followed by recovery. It removes only that unique project and its volumes when finished; Docker must be running and ports 3900/3901 must be free. A concurrent run can fail safely on those fixed host ports but cannot remove the other run's project or data.
 
 The latest recorded check matrix is in [docs/verification/third-backend-increment.md](docs/verification/third-backend-increment.md).
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the Supplier backend foundation, authenticated catalogue reads, administrator mutations, live integration runner, and documentation from the author-approved specification. The third-increment live check exposed and fixed a PostgreSQL advisory-lock parameter typing defect that mocked query tests did not reveal. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Project-author review of all three backend increments was completed and approved by @ron, and course-owner approval for the strict-JSON exception remains required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the Supplier backend foundation, authenticated catalogue reads, administrator mutations, OpenAPI documentation, live integration runner, and documentation from the author-approved specification. The third-increment live check exposed and fixed a PostgreSQL advisory-lock parameter typing defect that mocked query tests did not reveal. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Project-author review of all three backend increments was completed and approved by @ron; project-author review of the OpenAPI addition is required before merge, and course-owner approval for the strict-JSON exception remains required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.

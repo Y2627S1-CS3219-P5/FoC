@@ -13,6 +13,9 @@
  * review runner into focused scenarios and shared lifecycle-precondition checks
  * without changing the verified contract.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; verified the
+ * issue #25 Swagger UI and generated Supplier OpenAPI JSON in the live stack.
+ * Author review: Required before merge.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -128,6 +131,26 @@ async function jsonRequest(url, options = {}) {
     throw new Error(`Expected JSON from ${url}, received: ${text}`);
   }
   return { response, body, text };
+}
+
+async function verifyOpenApiDocumentation() {
+  const uiResponse = await fetch(`${supplierBaseUrl}/api/docs`);
+  assert.equal(uiResponse.status, 200);
+  assert.match(await uiResponse.text(), /FoC Supplier Service API/);
+
+  const { response, body } = await jsonRequest(
+    `${supplierBaseUrl}/api/docs-json`,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(body.info.title, "FoC Supplier Service API");
+  assert.equal(body.info.version, "1.0.0");
+  assert.equal(body.components.securitySchemes["supplier-bearer"].scheme, "bearer");
+  assert.deepEqual(Object.keys(body.paths).sort(), [
+    "/api/v1/suppliers",
+    "/api/v1/suppliers/{id}",
+    "/api/v1/suppliers/{id}/restore",
+    "/health",
+  ]);
 }
 
 function bearer(token) {
@@ -341,6 +364,7 @@ async function prepareSmokeContext() {
 
   await waitFor(`${supplierBaseUrl}/health`, "Supplier health");
   await waitFor(`${userBaseUrl}/health`, "User health");
+  await verifyOpenApiDocumentation();
 
   assert.equal(supplierCount(), 21);
   const initialPrinterSnapshot = supplierSnapshot(printerId);
@@ -1172,7 +1196,7 @@ async function run() {
     "PASS: real auth, mutation authorization, validation/preconditions, " +
       "concurrent and ACTIVE/ARCHIVED duplicate creation rejection, create/update, " +
       "archive/restore lifecycle no-ops, SQL retention, repeat-migration/seed " +
-      "preservation, catalogue reads, logging, assets, and fail-closed auth.",
+      "preservation, catalogue reads, OpenAPI docs, logging, assets, and fail-closed auth.",
   );
 }
 

@@ -6,6 +6,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; exposed the
  * administrator mutation routes, statuses, and headers for issue #22.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; attached the
+ * issue #25 Supplier OpenAPI operation descriptions.
+ * Author review: Required before merge.
  */
 import {
   Body,
@@ -29,6 +32,15 @@ import {
   RequireSupplierRoles,
 } from "../../auth/supplier-auth.guard";
 import {
+  ApiArchiveSupplier,
+  ApiCreateSupplier,
+  ApiGetSupplier,
+  ApiListSuppliers,
+  ApiRestoreSupplier,
+  ApiSupplierController,
+  ApiUpdateSupplier,
+} from "../../openapi/supplier-api.decorators";
+import {
   SupplierListPage,
   SupplierListQuery,
   SupplierReadModel,
@@ -47,6 +59,7 @@ interface HeaderResponse {
 
 @Controller("api/v1/suppliers")
 @RequireAuthentication()
+@ApiSupplierController()
 export class SupplierController {
   constructor(
     private readonly catalogue: SupplierCatalogueService,
@@ -54,6 +67,7 @@ export class SupplierController {
   ) {}
 
   @Get()
+  @ApiListSuppliers()
   list(
     @Query(SupplierListQueryPipe) query: SupplierListQuery,
     @Req() request: AuthenticatedSupplierRequest,
@@ -62,6 +76,7 @@ export class SupplierController {
   }
 
   @Get(":id")
+  @ApiGetSupplier()
   async detail(
     @Param("id", SupplierIdentifierPipe) supplierId: string,
     @Req() request: AuthenticatedSupplierRequest,
@@ -75,6 +90,7 @@ export class SupplierController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @RequireSupplierRoles("ADMINISTRATOR")
+  @ApiCreateSupplier()
   async create(
     @Body(SupplierMutationBodyPipe) values: SupplierMutationValues,
     @Res({ passthrough: true }) response: HeaderResponse,
@@ -87,6 +103,7 @@ export class SupplierController {
 
   @Put(":id")
   @RequireSupplierRoles("ADMINISTRATOR")
+  @ApiUpdateSupplier()
   async update(
     @Param("id", SupplierIdentifierPipe) supplierId: string,
     @Headers("if-match") ifMatch: unknown,
@@ -105,6 +122,7 @@ export class SupplierController {
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequireSupplierRoles("ADMINISTRATOR")
+  @ApiArchiveSupplier()
   archive(
     @Param("id", SupplierIdentifierPipe) supplierId: string,
     @Headers("if-match") ifMatch: unknown,
@@ -115,6 +133,7 @@ export class SupplierController {
   @Post(":id/restore")
   @HttpCode(HttpStatus.OK)
   @RequireSupplierRoles("ADMINISTRATOR")
+  @ApiRestoreSupplier()
   async restore(
     @Param("id", SupplierIdentifierPipe) supplierId: string,
     @Headers("if-match") ifMatch: unknown,
