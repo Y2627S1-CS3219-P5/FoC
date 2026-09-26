@@ -14,7 +14,7 @@ import {
   supplierCategories,
   suppliers,
 } from "../../database/schema";
-import { SupplierMutationValues } from "./supplier-mutation.types";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 
 export type SupplierMutationDatabase = PgDatabase<
   NodePgQueryResultHKT,

@@ -13,6 +13,7 @@ import {
 } from "../../database/schema";
 import { BUILDING_CODES, BuildingCode } from "../../domain/buildings";
 import { supplierValidationException } from "../../http/supplier-http-errors";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 
 export const SUPPLIER_NAME_MAX_LENGTH = 120;
 export const SUPPLIER_FLOOR_MAX_LENGTH = 20;
@@ -33,29 +34,18 @@ const SUPPORTED_BODY_KEYS = new Set([
 
 type SupplierHoursKind = (typeof supplierHoursKind.enumValues)[number];
 
-export interface SupplierMutationInput {
-  readonly name: string;
-  readonly categories: readonly SupplierCategory[];
-  readonly buildingCode: BuildingCode;
-  readonly floor: string | null;
-  readonly locationDescription: string;
-  readonly latitude: number | null;
-  readonly longitude: number | null;
-  readonly hoursKind: SupplierHoursKind;
-  readonly opensAt: string | null;
-  readonly closesAt: string | null;
-}
-
 @Injectable()
 export class SupplierMutationBodyPipe
-  implements PipeTransform<unknown, SupplierMutationInput>
+  implements PipeTransform<unknown, SupplierMutationValues>
 {
-  transform(raw: unknown): SupplierMutationInput {
+  transform(raw: unknown): SupplierMutationValues {
     return parseSupplierMutationBody(raw);
   }
 }
 
-export function parseSupplierMutationBody(raw: unknown): SupplierMutationInput {
+export function parseSupplierMutationBody(
+  raw: unknown,
+): SupplierMutationValues {
   if (!isRecord(raw)) {
     throw supplierValidationException("Please correct the Supplier details.", {
       body: "Provide a JSON object containing the Supplier details.",
@@ -227,7 +217,7 @@ function parseBuildingCode(
 function parseCoordinates(
   raw: Record<string, unknown>,
   errors: Map<string, string>,
-): Pick<SupplierMutationInput, "latitude" | "longitude"> {
+): Pick<SupplierMutationValues, "latitude" | "longitude"> {
   const latitudePresent = raw.latitude !== undefined && raw.latitude !== null;
   const longitudePresent = raw.longitude !== undefined && raw.longitude !== null;
 

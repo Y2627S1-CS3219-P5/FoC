@@ -19,6 +19,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: updated
 implementation-status wording after the administrator mutation API and live
 PostgreSQL verification were completed for issues #22 and #23.
 Author review of the third increment: Required before merge.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: clarified
+that database serialization protects equivalent POST requests across both
+statuses without extending duplicate rejection to PUT.
+Author review: Required before merge.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -120,7 +124,7 @@ Keep archived records for future restoration with the same ID. Physical purging 
 
 The API requires `hoursKind: UNKNOWN | ALL_DAY | INTERVAL` on create and full update. `UNKNOWN` and `ALL_DAY` require `opensAt` and `closesAt` to be absent. `INTERVAL` requires both times in `HH:mm`. Equal opening and closing times are invalid; a closing time before its opening time means the interval ends the next day. Reject contradictory fields rather than ignoring them. Interpret all clock values in `Asia/Singapore`.
 
-Reject creation with 409 when an existing ACTIVE or ARCHIVED Supplier is an exact match on name, Building Code, floor, and Location Description after duplicate-key normalization. Normalize the three text fields by trimming, Unicode NFC normalization, and case-insensitive comparison; internal whitespace remains meaningful. Use the canonical Building Code without further normalization, and treat a blank floor as null. Enforce this across both statuses with a race-safe database rule. Return `code: SUPPLIER_ALREADY_EXISTS` and `existingSupplierId` so the administrator can open the existing record. The same name remains valid at a genuinely different location.
+Reject creation with 409 when an existing ACTIVE or ARCHIVED Supplier is an exact match on name, Building Code, floor, and Location Description after duplicate-key normalization. Normalize the three text fields by trimming, Unicode NFC normalization, and case-insensitive comparison; internal whitespace remains meaningful. Use the canonical Building Code without further normalization, and treat a blank floor as null. Serialize same-normalized-key creation checks in PostgreSQL so concurrent equivalent POST requests cannot both insert, checking existing rows across both statuses. This duplicate rule applies to creation only; full PUT remains governed by its ETag precondition and does not perform duplicate rejection. Return `code: SUPPLIER_ALREADY_EXISTS` and `existingSupplierId` so the administrator can open the existing record. The same name remains valid at a genuinely different location.
 
 ### 4.2 Seed import
 
@@ -255,7 +259,7 @@ The same HTTP middleware emits exactly one JSON completion event for a normally 
 | 401 | Missing/invalid/expired bearer token or inactive account |
 | 403 | Valid user lacks permission |
 | 404 | Unknown supplier; archived detail hidden from members |
-| 409 | Exact normalized Supplier duplicate, including an archived match |
+| 409 | Exact normalized duplicate creation, including an archived match |
 | 412 | Stale `If-Match`, no mutation |
 | 428 | Required `If-Match` missing |
 | 503 | User Service validation unavailable/invalid; no mutation |

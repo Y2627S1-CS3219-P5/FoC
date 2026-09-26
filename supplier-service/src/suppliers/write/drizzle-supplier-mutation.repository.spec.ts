@@ -4,10 +4,13 @@
  * Author review: Pending review by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; tested bigint
  * persistence-boundary behavior for issue #22. Author review: Required before merge.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; verified final
+ * review's create-only scope for duplicate detection. Author review: Required before merge.
  */
 import { DatabaseService } from "../../database/database.service";
 import { SupplierCategory } from "../../database/schema";
 import { SupplierDatabaseRow } from "../read/supplier-read.mapper";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import {
   buildDuplicateIdentityLockQuery,
   buildDuplicateSupplierQuery,
@@ -22,7 +25,6 @@ import {
   SupplierMutationDatabase,
 } from "./drizzle-supplier-mutation.queries";
 import { DrizzleSupplierMutationRepository } from "./drizzle-supplier-mutation.repository";
-import { SupplierMutationValues } from "./supplier-mutation.types";
 
 jest.mock("./drizzle-supplier-mutation.queries", () => ({
   buildDuplicateIdentityLockQuery: jest.fn(),
@@ -159,7 +161,7 @@ describe("DrizzleSupplierMutationRepository", () => {
     expect(buildSupplierRestoreQuery).not.toHaveBeenCalled();
   });
 
-  it("updates an archived Supplier and atomically replaces its categories", async () => {
+  it("updates an archived Supplier and categories without a create-only duplicate check", async () => {
     const current = createRow({
       status: "ARCHIVED",
       version: 3,
@@ -210,6 +212,8 @@ describe("DrizzleSupplierMutationRepository", () => {
       supplierId,
       values.categories,
     );
+    expect(buildDuplicateIdentityLockQuery).not.toHaveBeenCalled();
+    expect(buildDuplicateSupplierQuery).not.toHaveBeenCalled();
   });
 
   it("requires a version for an ACTIVE archive without issuing an update", async () => {

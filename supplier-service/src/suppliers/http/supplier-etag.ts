@@ -1,12 +1,27 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
- * Scope: implemented the author-approved canonical strong Supplier ETag parser
- * for issue #20.
+ * Scope: implemented the author-approved canonical strong Supplier ETag parser,
+ * formatter, and response-header writer for issue #20 and final review.
  * Author review: Required before merge.
  */
 import { supplierValidationException } from "../../http/supplier-http-errors";
 
 const CANONICAL_SUPPLIER_ETAG = /^"v(0|[1-9]\d*)"$/;
+
+interface SupplierEtagResponse {
+  setHeader(name: string, value: string): void;
+}
+
+export function formatSupplierEtag(version: number): string {
+  return `"v${version}"`;
+}
+
+export function setSupplierEtag(
+  response: SupplierEtagResponse,
+  version: number,
+): void {
+  response.setHeader("ETag", formatSupplierEtag(version));
+}
 
 export function parseSupplierIfMatch(value: unknown): bigint {
   const match =

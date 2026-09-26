@@ -263,3 +263,22 @@ Codex created the issue #20–#23 task graph and draft PR #24, recorded the auth
 The issue #23 Compose runner was expanded from read-only fixtures into a full public-API mutation proof backed by SQL snapshots. It verified real MEMBER/ADMINISTRATOR sessions; authorization with no writes; representative validation; create headers/body/database/list visibility; unknown, missing, malformed, stale, and extremely large preconditions; one-201/one-409 concurrent duplicate creation; ACTIVE and ARCHIVED duplicates; exactly one successful update from two concurrent same-version administrator-session requests; full update and category replacement; archive retention/visibility and repeat no-ops; archived editing; restore and repeat restore; no-op migration and repeat seed preserving administrator edits/categories; and User Service outage returning 503 without mutation. Existing catalogue, request-correlation, redacted-log, asset, and recovery checks remain covered. The final live smoke passed and removed only its unique per-run Compose project and volumes.
 
 The first live concurrent-create run found that PostgreSQL could not infer the Building Code placeholder type inside the advisory-lock `jsonb_build_array`, although mocked SQL tests passed. Codex added an explicit `::text` cast and regression assertion; the rerun produced exactly one 201 and one 409. Final checks passed: Supplier dependency install, typecheck, 24 suites/205 tests, production build, no migration drift, strict JSON parsing, Compose validation, User Service compatibility install/build, and the live integration smoke. No frontend, User Service application code, Order Service integration, physical Supplier deletion, migration, or strict-JSON file was added or changed. Project-author review remains required before merge, and the separate course-owner approval for the existing strict-JSON disclosure convention remains pending.
+
+## 2026-09-26 — Third Supplier backend increment final review remediation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Fixing every final code-review finding on the isolated remediation branch without changing the approved API behavior, frontend, or User Service application.
+- **Repository files affected:** Supplier specification/evidence, root summary, this usage log, the Supplier mutation value/ETag/controller/persistence types and tests, and the Supplier Compose smoke runner.
+- **Author review:** Required before merge.
+
+### Triggering prompts
+
+> `got it, rest of the defaults look good, proceed with implementation`
+>
+> `seems like conversation was interrupted? continue`
+
+### Key response
+
+Codex corrected GitHub wayfinder issue #11 so closed tickets #20–#22 are checked while open verification ticket #23 remains pending. It clarified that PostgreSQL serialization protects concurrent same-normalized-key POST creation across ACTIVE and ARCHIVED rows and does not add duplicate rejection to PUT, preserving the approved 409 contract. The implementation now has one neutral editable mutation-value type and one Supplier ETag formatter/header writer. A focused persistence assertion proves update bypasses the create-only duplicate lookup, and focused ETag tests cover canonical formatting and header output.
+
+The live runner was split into focused scenario functions, with archive and restore rejection matrices sharing one parameterized precondition verifier. Final checks passed: focused 6 suites/97 tests, full 24 suites/208 tests, typecheck, production build, and the full real-service integration smoke. The unique smoke project's `finally` cleanup passed, and an independent Docker label query found no remaining containers, volumes, or network. No frontend, User Service application file, API behavior, migration, or strict-JSON file changed; the local `supplier-service/node_modules` symlink remains untracked and excluded from the commit.

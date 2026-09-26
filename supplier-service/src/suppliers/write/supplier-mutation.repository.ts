@@ -6,11 +6,11 @@
  * HTTP versions to bigint at the persistence boundary for issue #22.
  * Author review: Required before merge.
  */
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import {
   ArchiveSupplierResult,
   CreateSupplierResult,
   RestoreSupplierResult,
-  SupplierMutationValues,
   UpdateSupplierResult,
 } from "./supplier-mutation.types";
 

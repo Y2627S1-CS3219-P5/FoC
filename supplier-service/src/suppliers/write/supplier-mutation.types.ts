@@ -1,24 +1,9 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
- * Scope: defined the editable Supplier values and persistence outcomes for the approved mutation contract.
+ * Scope: defined the persistence outcomes for the approved Supplier mutation contract.
  * Author review: Pending review by @ron.
  */
-import { SupplierCategory } from "../../database/schema";
-import { BuildingCode } from "../../domain/buildings";
 import { SupplierReadModel } from "../read/supplier-read.types";
-
-export interface SupplierMutationValues {
-  readonly name: string;
-  readonly categories: readonly SupplierCategory[];
-  readonly buildingCode: BuildingCode;
-  readonly floor: string | null;
-  readonly locationDescription: string;
-  readonly latitude: number | null;
-  readonly longitude: number | null;
-  readonly hoursKind: "UNKNOWN" | "ALL_DAY" | "INTERVAL";
-  readonly opensAt: string | null;
-  readonly closesAt: string | null;
-}
 
 export type CreateSupplierResult =
   | {

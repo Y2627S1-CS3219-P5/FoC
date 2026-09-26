@@ -11,6 +11,7 @@ import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../database/database.service";
 import { SupplierCategory } from "../../database/schema";
 import { mapSupplierReadModel } from "../read/supplier-read.mapper";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import {
   buildDuplicateIdentityLockQuery,
   buildDuplicateSupplierQuery,
@@ -29,7 +30,6 @@ import {
   ArchiveSupplierResult,
   CreateSupplierResult,
   RestoreSupplierResult,
-  SupplierMutationValues,
   UpdateSupplierResult,
 } from "./supplier-mutation.types";
 

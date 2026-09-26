@@ -1,12 +1,33 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
- * Scope: tested canonical strong Supplier ETag parsing and rejection cases for
- * issue #20.
+ * Scope: tested canonical strong Supplier ETag formatting, response headers,
+ * parsing, and rejection cases for issue #20 and final review.
  * Author review: Required before merge.
  */
 import { BadRequestException } from "@nestjs/common";
 
-import { parseSupplierIfMatch } from "./supplier-etag";
+import {
+  formatSupplierEtag,
+  parseSupplierIfMatch,
+  setSupplierEtag,
+} from "./supplier-etag";
+
+describe("Supplier ETag responses", () => {
+  it.each([
+    [0, '"v0"'],
+    [7, '"v7"'],
+  ])("formats version %s as canonical strong tag %s", (version, expected) => {
+    expect(formatSupplierEtag(version)).toBe(expected);
+  });
+
+  it("sets the canonical strong ETag response header", () => {
+    const response = { setHeader: jest.fn() };
+
+    setSupplierEtag(response, 12);
+
+    expect(response.setHeader).toHaveBeenCalledWith("ETag", '"v12"');
+  });
+});
 
 describe("parseSupplierIfMatch", () => {
   it.each([

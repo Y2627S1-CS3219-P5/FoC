@@ -24,9 +24,9 @@ import {
   VerifiedPrincipal,
 } from "../../auth/session-verifier";
 import { SupplierReadModel } from "../read/supplier-read.types";
+import { SupplierMutationValues } from "../supplier-mutation.values";
 import { SupplierAdministrationService } from "./supplier-administration.service";
 import { SupplierCatalogueService } from "./supplier-catalogue.service";
-import { SupplierMutationInput } from "./supplier-mutation-body.pipe";
 import { SupplierController } from "./supplier.controller";
 
 const SUPPLIER_ID = "ac2288df-661c-5d78-bcc1-ac6bca30fe51";
@@ -34,7 +34,7 @@ const PRINCIPAL: VerifiedPrincipal = {
   id: "67ef02dc-814d-49e2-b6c2-9bdc433924c0",
   role: "MEMBER",
 };
-const MUTATION_VALUES: SupplierMutationInput = {
+const MUTATION_VALUES: SupplierMutationValues = {
   name: "Printer @ Com 2",
   categories: ["PRINTING"],
   buildingCode: "COM2",
