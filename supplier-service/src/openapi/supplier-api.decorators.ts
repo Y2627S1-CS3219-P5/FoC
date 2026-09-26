@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: attached accurate issue #25 OpenAPI operations, parameters, response
  * codes, and access rules to the existing Supplier controller.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { applyDecorators } from "@nestjs/common";
 import {

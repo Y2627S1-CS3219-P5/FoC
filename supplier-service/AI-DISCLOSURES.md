@@ -8,7 +8,7 @@ Scope: Recorded the third-increment final code-review remediation disclosure.
 Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Recorded the issue #25 `package.json` Swagger dependency disclosure.
-Author review: Required before merge.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service AI disclosures
@@ -34,4 +34,4 @@ This remediation changed no frontend, User Service application code, migration, 
 
 ## Supplier OpenAPI documentation
 
-OpenAI Codex (GPT-6) assisted on 2026-09-26 with adding the official NestJS Swagger dependency to `package.json`. The package retains its leading `"//"` disclosure metadata, npm accepts it, and full verification is recorded in the issue #25 usage-log entry. Project-author review is required before merge; the separate course-owner strict-JSON exception remains pending.
+OpenAI Codex (GPT-6) assisted on 2026-09-26 with adding the official NestJS Swagger dependency to `package.json`. The package retains its leading `"//"` disclosure metadata, npm accepts it, and full verification is recorded in the issue #25 usage-log entry. Project-author review was completed and approved by @ron; the separate course-owner strict-JSON exception remains pending.

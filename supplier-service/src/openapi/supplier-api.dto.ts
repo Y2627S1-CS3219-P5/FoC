@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: described the implemented Supplier HTTP request and response models
- * for the issue #25 OpenAPI document. Author review: Required before merge.
+ * for the issue #25 OpenAPI document. Author review: Reviewed and approved by @ron.
  */
 import {
   ApiProperty,

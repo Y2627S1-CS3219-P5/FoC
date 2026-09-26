@@ -23,7 +23,10 @@ Scope: Recorded the project author's explicit review approval for PR #24 across 
 Author review: Approval explicitly supplied by @ron; the separate course-owner strict-JSON exception remains pending.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Researched, implemented, documented, and verified issue #25 Supplier OpenAPI/Swagger documentation; no frontend or User Service application changes.
-Author review: Required before merge.
+Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
+Scope: Recorded the project author's explicit review approval for PR #26 across the relevant Supplier OpenAPI disclosures.
+Author review: Approval explicitly supplied by @ron; the separate course-owner strict-JSON exception remains pending.
 -->
 
 # AI Usage Log
@@ -327,7 +330,7 @@ Codex changed the third-increment and integration-wrapper disclosure status from
 - **Tool:** OpenAI Codex (GPT-6)
 - **Allowed-use scope:** Consulting official NestJS documentation, implementing and testing developer-facing OpenAPI documentation for the existing Supplier backend contract, updating Supplier operating guidance and live verification, and creating issue #25 plus its pull request; no frontend or User Service application changes.
 - **Repository files affected:** Supplier package metadata/lockfile, bootstrap, health and Supplier HTTP annotations, OpenAPI DTO/configuration/tests under `supplier-service/src/openapi/`, live Compose verification, `supplier-service/README.md`, `supplier-service/AI-DISCLOSURES.md`, and `ai/usage-log.md`
-- **Author review:** Required before merge. The separate course-owner approval for the strict-JSON disclosure convention remains pending before submission.
+- **Author review:** Reviewed and approved by @ron. The separate course-owner approval for the strict-JSON disclosure convention remains pending before submission.
 
 ### Exact prompt
 
@@ -336,3 +339,18 @@ Codex changed the third-increment and integration-wrapper disclosure status from
 ### Key response
 
 Codex confirmed from the official NestJS documentation that `@nestjs/swagger` generates OpenAPI documents from Nest metadata and can serve both an interactive Swagger UI and JSON specification. It added `/api/docs` and `/api/docs-json`, a bearer-token security scheme, explicit schemas for the existing interface/custom-pipe contract, operation documentation for health and every Supplier read/mutation route, focused generated-document tests, live Compose coverage, and usage guidance. The implementation changes no Supplier business behavior, frontend, User Service application code, database schema, or migration.
+
+## 2026-09-26 — PR #26 project-author approval
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Recording the project author's explicit approval of the reviewed Supplier OpenAPI documentation; no implementation or design changes.
+- **Repository files affected:** AI disclosure comments and summaries in the files changed by PR #26, plus `ai/usage-log.md`
+- **Author review:** Reviewed and approved by @ron. The separate course-owner approval for the strict-JSON disclosure convention remains pending before submission.
+
+### Exact prompt
+
+> `add my approval to the relevant files and push the changes`
+
+### Key response
+
+Codex changed the Supplier OpenAPI disclosure status from review-required to reviewed and approved by @ron, retained the separate pending course-owner strict-JSON exception, and made no application-behaviour changes.

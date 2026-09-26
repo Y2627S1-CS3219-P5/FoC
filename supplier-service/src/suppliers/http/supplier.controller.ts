@@ -8,7 +8,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; attached the
  * issue #25 Supplier OpenAPI operation descriptions.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   Body,

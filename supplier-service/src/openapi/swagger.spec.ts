@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: regression-tested the generated issue #25 Supplier OpenAPI contract.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { INestApplication, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";

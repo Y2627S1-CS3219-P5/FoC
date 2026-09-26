@@ -8,7 +8,7 @@
  * Author review of additional changes: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; mounted the
  * issue #25 Supplier Swagger UI and OpenAPI JSON document.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import "reflect-metadata";
 

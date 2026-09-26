@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: configured the issue #25 Supplier OpenAPI document, Swagger UI, JSON
- * endpoint, and bearer-token security scheme. Author review: Required before merge.
+ * endpoint, and bearer-token security scheme. Author review: Reviewed and approved by @ron.
  */
 import { INestApplication } from "@nestjs/common";
 import {

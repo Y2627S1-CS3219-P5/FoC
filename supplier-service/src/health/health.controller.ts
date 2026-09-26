@@ -4,7 +4,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; documented the
  * readiness contract in the issue #25 OpenAPI document.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Controller, Get } from "@nestjs/common";
 import {

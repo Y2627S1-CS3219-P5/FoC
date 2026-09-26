@@ -15,7 +15,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; verified the
  * issue #25 Swagger UI and generated Supplier OpenAPI JSON in the live stack.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
