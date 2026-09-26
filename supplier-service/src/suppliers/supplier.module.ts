@@ -5,7 +5,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; wired mutation
  * validation, application policy, and persistence for issue #22.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Module } from "@nestjs/common";
 

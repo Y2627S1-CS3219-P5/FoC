@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: defined the persistence outcomes for the approved Supplier mutation contract.
- * Author review: Pending review by @ron.
+ * Author review: Reviewed and approved by @ron.
  */
 import { SupplierReadModel } from "../read/supplier-read.types";
 

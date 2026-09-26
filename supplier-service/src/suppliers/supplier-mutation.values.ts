@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: centralized the validated editable Supplier value contract while
  * remediating the final review of issue #20.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   hoursKind as supplierHoursKind,

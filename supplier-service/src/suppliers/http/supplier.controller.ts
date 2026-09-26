@@ -5,7 +5,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; exposed the
  * administrator mutation routes, statuses, and headers for issue #22.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   Body,

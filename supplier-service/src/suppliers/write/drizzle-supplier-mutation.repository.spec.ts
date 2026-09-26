@@ -1,11 +1,11 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: tested transactional mutation orchestration, optimistic conflicts, duplicate results, and lifecycle no-ops.
- * Author review: Pending review by @ron.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; tested bigint
- * persistence-boundary behavior for issue #22. Author review: Required before merge.
+ * persistence-boundary behavior for issue #22. Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; verified final
- * review's create-only scope for duplicate detection. Author review: Required before merge.
+ * review's create-only scope for duplicate detection. Author review: Reviewed and approved by @ron.
  */
 import { DatabaseService } from "../../database/database.service";
 import { SupplierCategory } from "../../database/schema";

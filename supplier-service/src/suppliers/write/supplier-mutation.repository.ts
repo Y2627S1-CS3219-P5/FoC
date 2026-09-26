@@ -1,10 +1,10 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: defined the transactional persistence boundary for Supplier catalogue mutations.
- * Author review: Pending review by @ron.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; widened parsed
  * HTTP versions to bigint at the persistence boundary for issue #22.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { SupplierMutationValues } from "../supplier-mutation.values";
 import {

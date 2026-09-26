@@ -5,7 +5,7 @@ Scope: Documented the disclosure convention for strict-JSON Supplier configurati
 Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Recorded the third-increment final code-review remediation disclosure.
-Author review: Required before merge.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service AI disclosures
@@ -27,4 +27,4 @@ If the course owner does not approve this convention, the team must agree on an 
 
 OpenAI Codex (GPT-6) assisted on 2026-09-26 with final review remediation for the administrator Supplier mutation increment. The work clarified the already-approved create-only duplicate contract, centralized the editable mutation-value type and ETag response helper, added focused regression coverage, and refactored the live integration runner into focused scenarios with a shared archive/restore precondition verifier. Full Supplier tests, typecheck, build, and the real-service integration smoke passed, followed by an independent cleanup check.
 
-This remediation changed no frontend, User Service application code, migration, strict-JSON file, or API behavior. Project-author review remains required before merge; the separate course-owner exception above remains pending.
+This remediation changed no frontend, User Service application code, migration, strict-JSON file, or API behavior. Project-author review was completed and approved by @ron; the separate course-owner exception above remains pending.

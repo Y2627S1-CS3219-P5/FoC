@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: implemented the author-approved strict create/full-update Supplier
  * body validation and normalization contract for issue #20.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Injectable, PipeTransform } from "@nestjs/common";
 

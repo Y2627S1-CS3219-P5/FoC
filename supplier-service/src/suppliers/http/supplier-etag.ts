@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: implemented the author-approved canonical strong Supplier ETag parser,
  * formatter, and response-header writer for issue #20 and final review.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { supplierValidationException } from "../../http/supplier-http-errors";
 

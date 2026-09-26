@@ -5,7 +5,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; tested mutation
  * conflict and precondition error contracts for issue #22.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import {
   DEFAULT_SUPPLIER_HTTP_ERRORS,

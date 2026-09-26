@@ -18,11 +18,11 @@ Author review of these contract decisions: Approved by @ron on 2026-09-26.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: updated
 implementation-status wording after the administrator mutation API and live
 PostgreSQL verification were completed for issues #22 and #23.
-Author review of the third increment: Required before merge.
+Author review of the third increment: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: clarified
 that database serialization protects equivalent POST requests across both
 statuses without extending duplicate rejection to PUT.
-Author review: Required before merge.
+Author review: Reviewed and approved by @ron.
 -->
 
 # FoC Supplier Service — D2 Specification

@@ -12,11 +12,11 @@ The decisions and implementation were reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Documented the implemented administrator mutation API and the expanded
 real-service, PostgreSQL-backed verification for issue #23.
-Author review of the third increment: Required before merge.
+Author review of the third increment: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Added and documented a one-command wrapper for the existing isolated
 Supplier backend integration demonstration.
-Author review: Required before merge.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service
@@ -115,4 +115,4 @@ The latest recorded check matrix is in [docs/verification/third-backend-incremen
 
 ## AI Use Summary
 
-OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the Supplier backend foundation, authenticated catalogue reads, administrator mutations, live integration runner, and documentation from the author-approved specification. The third-increment live check exposed and fixed a PostgreSQL advisory-lock parameter typing defect that mocked query tests did not reveal. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Foundation and second-increment review were completed and approved by @ron. Project-author review of the third increment is required before merge, and course-owner approval for the strict-JSON exception remains required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.
+OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the Supplier backend foundation, authenticated catalogue reads, administrator mutations, live integration runner, and documentation from the author-approved specification. The third-increment live check exposed and fixed a PostgreSQL advisory-lock parameter typing defect that mocked query tests did not reveal. Strict JSON cannot contain literal comments, so `package.json` and `nest-cli.json` use a leading `"//"` metadata property linked to [AI-DISCLOSURES.md](AI-DISCLOSURES.md#strict-json-files); npm and Nest were checked with that property present. Project-author review of all three backend increments was completed and approved by @ron, and course-owner approval for the strict-JSON exception remains required before submission. The exact prompts and key-response summaries are recorded in `../ai/usage-log.md`.

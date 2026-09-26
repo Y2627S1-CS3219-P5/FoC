@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: tested Supplier mutation application policy, stable conflicts, and
  * approved lifecycle precondition behavior for issue #22.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { HttpException } from "@nestjs/common";
 

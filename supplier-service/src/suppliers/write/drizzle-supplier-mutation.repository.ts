@@ -1,10 +1,10 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: implemented transactional Supplier create, update, archive, and restore persistence with optimistic concurrency.
- * Author review: Pending review by @ron.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; compared parsed
  * bigint ETags safely before passing stored versions to SQL for issue #22.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Injectable } from "@nestjs/common";
 

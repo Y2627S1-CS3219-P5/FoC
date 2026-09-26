@@ -3,7 +3,7 @@
  * Scope: verified generated mutation SQL for normalized duplicate serialization,
  * including its explicit PostgreSQL parameter type, row locks, and atomic
  * state/version predicates.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { drizzle } from "drizzle-orm/node-postgres";
 

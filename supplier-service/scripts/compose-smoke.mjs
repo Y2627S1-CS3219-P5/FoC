@@ -8,11 +8,11 @@
  * isolated live check to cover administrator mutations, concurrency, duplicate
  * detection, lifecycle no-ops, SQL state, concurrent update exclusion,
  * edit-preserving migration/seed reruns, and collision-safe project cleanup.
- * Author review of the third increment: Required before merge.
+ * Author review of the third increment: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; split the final
  * review runner into focused scenarios and shared lifecycle-precondition checks
  * without changing the verified contract.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";

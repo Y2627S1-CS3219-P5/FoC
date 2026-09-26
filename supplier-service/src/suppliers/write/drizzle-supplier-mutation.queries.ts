@@ -3,7 +3,7 @@
  * Scope: implemented parameterized Drizzle queries for race-safe duplicate
  * detection and atomic Supplier mutations, including an explicit PostgreSQL
  * text cast found necessary by the live issue #23 concurrency check.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { and, asc, eq, sql, SQL, SQLWrapper } from "drizzle-orm";
 import { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";

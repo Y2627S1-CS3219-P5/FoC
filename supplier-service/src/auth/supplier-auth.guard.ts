@@ -6,7 +6,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; separated
  * mutation role metadata from guard installation so User verification runs
- * once per request for issue #22. Author review: Required before merge.
+ * once per request for issue #22. Author review: Reviewed and approved by @ron.
  */
 import {
   applyDecorators,

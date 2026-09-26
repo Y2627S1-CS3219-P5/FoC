@@ -4,7 +4,7 @@
  * issue #17.
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; tested duplicate
- * identifier preservation for issue #22. Author review: Required before merge.
+ * identifier preservation for issue #22. Author review: Reviewed and approved by @ron.
  */
 import {
   ArgumentsHost,

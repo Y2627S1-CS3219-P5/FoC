@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: tested the author-approved strict create/full-update Supplier body
  * validation, bounds, conditional fields, and normalization for issue #20.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { BadRequestException } from "@nestjs/common";
 

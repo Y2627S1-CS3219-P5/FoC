@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: tested canonical strong Supplier ETag formatting, response headers,
  * parsing, and rejection cases for issue #20 and final review.
- * Author review: Required before merge.
+ * Author review: Reviewed and approved by @ron.
  */
 import { BadRequestException } from "@nestjs/common";
 

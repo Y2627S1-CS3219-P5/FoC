@@ -1,7 +1,7 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: packaged the Supplier mutation persistence boundary and its Drizzle implementation.
- * Author review: Pending review by @ron.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Module } from "@nestjs/common";
 
