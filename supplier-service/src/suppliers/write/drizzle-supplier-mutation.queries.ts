@@ -1,7 +1,9 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
- * Scope: implemented parameterized Drizzle queries for race-safe duplicate detection and atomic Supplier mutations.
- * Author review: Pending review by @ron.
+ * Scope: implemented parameterized Drizzle queries for race-safe duplicate
+ * detection and atomic Supplier mutations, including an explicit PostgreSQL
+ * text cast found necessary by the live issue #23 concurrency check.
+ * Author review: Required before merge.
  */
 import { and, asc, eq, sql, SQL, SQLWrapper } from "drizzle-orm";
 import { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
@@ -31,7 +33,7 @@ export function buildDuplicateIdentityLockQuery(
         hashtextextended(
           jsonb_build_array(
             ${identity.name},
-            ${values.buildingCode},
+            ${values.buildingCode}::text,
             ${identity.floor},
             ${identity.locationDescription}
           )::text,

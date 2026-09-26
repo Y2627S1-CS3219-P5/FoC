@@ -15,6 +15,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: recorded
 the project author's approved third-increment mutation, duplicate, timestamp,
 archive no-op, and canonical strong ETag defaults for issue #20.
 Author review of these contract decisions: Approved by @ron on 2026-09-26.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: updated
+implementation-status wording after the administrator mutation API and live
+PostgreSQL verification were completed for issues #22 and #23.
+Author review of the third increment: Required before merge.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -177,7 +181,7 @@ The Supplier-to-User base URL remains runtime-configurable. The integrated Compo
 
 **Remaining integration decisions:** frontend token storage/persistence; whether refresh/logout is required for D2; and final frontend origins and routing. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
 
-## 7. HTTP API contract (proposed v1)
+## 7. HTTP API contract (implemented backend v1)
 
 Base path: `/api/v1/suppliers`. All business endpoints require a verified active user. JSON bodies; UTC ISO 8601 timestamps; UUID string IDs. Server controls IDs, timestamps, status, and versions. Commit successful mutations before responding.
 
@@ -308,7 +312,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 
 **External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; decide frontend bearer-token storage/persistence, whether refresh/logout is required for D2, final origins/routing, and deployed TLS routing. The Supplier verification deployment timeout is approved at 1,000 ms. PR #14 is the implemented backend auth contract; it has no separate service credential for `/auth/verify`. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
 
-**Suggested increments:** (1) NestJS/Drizzle schema, migrations, repeatable seed, list/detail; (2) admin create/edit/archive/restore and atomic version checks; (3) implement `SessionVerifier` against `GET /auth/verify` plus the real bearer-token/role guard, then Vite screens; (4) integrated routing, contract tests, and acceptance demo.
+**Implementation status:** the Supplier backend now implements the NestJS/Drizzle schema, migrations, repeatable seed, real User Service `SessionVerifier` and bearer/role guard, authenticated list/detail, and administrator create/full-update/archive/restore with atomic version and duplicate handling. Unit/contract tests and the isolated live Compose check cover the backend API and PostgreSQL state. Supplier frontend screens, integrated frontend routing, the performance workload, and the full responsive acceptance demo remain future work; the D1 document-alignment and frontend decisions above also remain open.
 
 ### Sources
 

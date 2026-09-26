@@ -1,7 +1,9 @@
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
- * Scope: verified generated mutation SQL for normalized duplicate serialization, row locks, and atomic state/version predicates.
- * Author review: Pending review by @ron.
+ * Scope: verified generated mutation SQL for normalized duplicate serialization,
+ * including its explicit PostgreSQL parameter type, row locks, and atomic
+ * state/version predicates.
+ * Author review: Required before merge.
  */
 import { drizzle } from "drizzle-orm/node-postgres";
 
@@ -45,6 +47,7 @@ describe("Supplier Drizzle mutation queries", () => {
     expect(lockSql).toContain("hashtextextended(");
     expect(lockSql).toContain("jsonb_build_array(");
     expect(lockSql).toContain("lower(normalize(btrim($1), NFC))");
+    expect(lockSql).toContain("$2::text");
     expect(lockSql).toContain(
       "lower(normalize(coalesce(nullif(btrim($3), ''), ''), NFC))",
     );
