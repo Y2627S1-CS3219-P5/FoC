@@ -238,14 +238,28 @@ Codex changed the second-increment disclosure status from review-required to rev
 ## 2026-09-26 — Third Supplier backend increment
 
 - **Tool:** OpenAI Codex (GPT-6)
-- **Allowed-use scope:** Implementing and verifying only the administrator Supplier mutation backend increment from `supplier-service/SPEC.md`; creating and coordinating its GitHub ticket graph and draft PR; no frontend or User Service application changes.
-- **Repository files affected:** To be completed with the final implementation record.
+- **Allowed-use scope:** Implementing and verifying only the administrator Supplier mutation backend increment from `supplier-service/SPEC.md`; creating and coordinating its GitHub ticket graph and draft PR; fixing an in-scope PostgreSQL defect found by live verification; no frontend or User Service application changes.
+- **Repository files affected:** `README.md`, `ai/usage-log.md`, `supplier-service/README.md`, `supplier-service/SPEC.md`, `supplier-service/docs/verification/third-backend-increment.md`, `supplier-service/scripts/compose-smoke.mjs`, and the Supplier mutation query implementation/test under `supplier-service/src/suppliers/write/`
 - **Author review:** Required before merge.
 
 ### Exact prompt
 
 > `ok i merged pr 19, checked out main locally and git pull origin main $implement-spec use this skill if neeeded for third increment implementation`
 
+### Exact contract-clarification follow-ups
+
+> `what do you mean by repeated archives explain simply, also what do you mean by canonical strong ETags, explain simply and give few examples of weak versions/etags`
+
+> `admin archives it with DELETE and the correct if-match, waht do you mean by correct if match explain simply and keep it short`
+
+> `got it, rest of the defaults look good, proceed with implementation`
+
+> `seems like conversation was interrupted? continue`
+
 ### Key response
 
-Implementation in progress. The final response and verification summary will replace this note before review.
+Codex created the issue #20–#23 task graph and draft PR #24, recorded the author's approved mutation defaults, and coordinated validation, persistence, HTTP, and integration work on separate branches/worktrees. The completed backend provides ADMINISTRATOR-only create, full update of ACTIVE or ARCHIVED rows, archive, and restore; strict editable-field bodies; stable 400/404/409/412/428 errors; canonical strong ETags; atomic version checks; normalized duplicate detection across lifecycle states; and harmless archive/restore repeats. MEMBER calls are rejected before mutation and every protected request uses the real User Service verifier.
+
+The issue #23 Compose runner was expanded from read-only fixtures into a full public-API mutation proof backed by SQL snapshots. It verified real MEMBER/ADMINISTRATOR sessions; authorization with no writes; representative validation; create headers/body/database/list visibility; unknown, missing, malformed, stale, and extremely large preconditions; one-201/one-409 concurrent duplicate creation; ACTIVE and ARCHIVED duplicates; exactly one successful update from two concurrent same-version administrator-session requests; full update and category replacement; archive retention/visibility and repeat no-ops; archived editing; restore and repeat restore; no-op migration and repeat seed preserving administrator edits/categories; and User Service outage returning 503 without mutation. Existing catalogue, request-correlation, redacted-log, asset, and recovery checks remain covered. The final live smoke passed and removed only its unique per-run Compose project and volumes.
+
+The first live concurrent-create run found that PostgreSQL could not infer the Building Code placeholder type inside the advisory-lock `jsonb_build_array`, although mocked SQL tests passed. Codex added an explicit `::text` cast and regression assertion; the rerun produced exactly one 201 and one 409. Final checks passed: Supplier dependency install, typecheck, 24 suites/205 tests, production build, no migration drift, strict JSON parsing, Compose validation, User Service compatibility install/build, and the live integration smoke. No frontend, User Service application code, Order Service integration, physical Supplier deletion, migration, or strict-JSON file was added or changed. Project-author review remains required before merge, and the separate course-owner approval for the existing strict-JSON disclosure convention remains pending.
