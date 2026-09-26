@@ -2,6 +2,8 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: tested transactional mutation orchestration, optimistic conflicts, duplicate results, and lifecycle no-ops.
  * Author review: Pending review by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; tested bigint
+ * persistence-boundary behavior for issue #22. Author review: Required before merge.
  */
 import { DatabaseService } from "../../database/database.service";
 import { SupplierCategory } from "../../database/schema";
@@ -132,7 +134,9 @@ describe("DrizzleSupplierMutationRepository", () => {
       .mocked(buildSupplierLockQuery)
       .mockReturnValue(Promise.resolve([createRow({ version: 4 })]) as never);
 
-    await expect(repository.update(supplierId, 3, values)).resolves.toEqual({
+    await expect(
+      repository.update(supplierId, 900719925474099100000n, values),
+    ).resolves.toEqual({
       kind: "stale",
     });
     expect(buildSupplierUpdateQuery).not.toHaveBeenCalled();
@@ -141,9 +145,9 @@ describe("DrizzleSupplierMutationRepository", () => {
   });
 
   it.each([
-    ["update", () => repository.update(supplierId, 0, values)],
-    ["archive", () => repository.archive(supplierId, 0)],
-    ["restore", () => repository.restore(supplierId, 0)],
+    ["update", () => repository.update(supplierId, 0n, values)],
+    ["archive", () => repository.archive(supplierId, 0n)],
+    ["restore", () => repository.restore(supplierId, 0n)],
   ] as const)("returns not-found before attempting a %s", async (_name, act) => {
     jest
       .mocked(buildSupplierLockQuery)
@@ -179,7 +183,7 @@ describe("DrizzleSupplierMutationRepository", () => {
     mockInsertedCategories(["COFFEE"]);
 
     await expect(
-      repository.update(supplierId, 3, values),
+      repository.update(supplierId, 3n, values),
     ).resolves.toMatchObject({
       kind: "updated",
       supplier: {
@@ -219,7 +223,7 @@ describe("DrizzleSupplierMutationRepository", () => {
     expect(buildSupplierArchiveQuery).not.toHaveBeenCalled();
   });
 
-  it.each([null, 1])(
+  it.each([null, 1n])(
     "ignores version %p for an already-ARCHIVED no-op",
     async (expectedVersion) => {
       const archivedAt = new Date("2026-09-25T09:00:00.000Z");
@@ -253,7 +257,7 @@ describe("DrizzleSupplierMutationRepository", () => {
       ]) as never,
     );
 
-    await expect(repository.archive(supplierId, 2)).resolves.toEqual({
+    await expect(repository.archive(supplierId, 2n)).resolves.toEqual({
       kind: "archived",
     });
     expect(buildSupplierArchiveQuery).toHaveBeenCalledWith(
@@ -273,7 +277,7 @@ describe("DrizzleSupplierMutationRepository", () => {
       .mocked(buildSupplierCategoriesForUpdateQuery)
       .mockReturnValue(Promise.resolve([{ category: "FOOD" }]) as never);
 
-    await expect(repository.restore(supplierId, 5)).resolves.toMatchObject({
+    await expect(repository.restore(supplierId, 5n)).resolves.toMatchObject({
       kind: "already-active",
       supplier: {
         version: 5,
@@ -295,7 +299,7 @@ describe("DrizzleSupplierMutationRepository", () => {
       ]) as never,
     );
 
-    await expect(repository.restore(supplierId, 5)).resolves.toEqual({
+    await expect(repository.restore(supplierId, 5n)).resolves.toEqual({
       kind: "stale",
     });
     expect(buildSupplierRestoreQuery).not.toHaveBeenCalled();
@@ -322,7 +326,7 @@ describe("DrizzleSupplierMutationRepository", () => {
       .mocked(buildSupplierCategoriesForUpdateQuery)
       .mockReturnValue(Promise.resolve([{ category: "FOOD" }]) as never);
 
-    await expect(repository.restore(supplierId, 2)).resolves.toMatchObject({
+    await expect(repository.restore(supplierId, 2n)).resolves.toMatchObject({
       kind: "restored",
       supplier: {
         status: "ACTIVE",
