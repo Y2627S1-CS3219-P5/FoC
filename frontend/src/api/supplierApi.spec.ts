@@ -12,6 +12,7 @@ import type { Supplier, SupplierMutation, SupplierPage } from '../suppliers/type
 import {
   archiveSupplier,
   createSupplier,
+  getSupplierMetadata,
   getSupplier,
   listSuppliers,
   restoreSupplier,
@@ -77,6 +78,17 @@ describe('Supplier API', () => {
     await expect(getSupplier(supplier.id)).resolves.toEqual({ supplier, etag: '"v0"' })
     expect(fetch).toHaveBeenCalledWith(
       `/api/v1/suppliers/${supplier.id}`,
+      expect.objectContaining({ headers: { Authorization: 'Bearer member-token' } }),
+    )
+  })
+
+  it('loads backend-owned building code metadata', async () => {
+    const metadata = { buildingCodes: [{ code: 'COM2' as const, label: 'COM2' }] }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(metadata))
+
+    await expect(getSupplierMetadata()).resolves.toEqual(metadata)
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/suppliers/metadata',
       expect.objectContaining({ headers: { Authorization: 'Bearer member-token' } }),
     )
   })

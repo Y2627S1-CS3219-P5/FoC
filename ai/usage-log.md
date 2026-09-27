@@ -549,3 +549,30 @@ Claude noted that the 409 rule cannot be triggered in D2, because self-changes a
 ### Key response
 
 Codex implemented authenticated `GET /api/v1/suppliers/metadata` with the approved extensible response shape `{ "buildingCodes": [{ "code", "label" }] }`. The endpoint serves the complete stable option set directly from the backend-owned building registry to both MEMBER and ADMINISTRATOR callers, without exposing seed aliases or introducing database state. It is covered by focused controller and generated OpenAPI tests plus the real-service Compose integration check, including unauthenticated rejection and exact MEMBER/ADMINISTRATOR responses. No existing Supplier CRUD behavior, frontend file, or User Service application code was changed.
+
+## 2026-09-27 — Supplier member catalogue and detail UI
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing and testing GitHub issue #29 from the approved
+  Supplier UI specification; no administrator mutations, backend, or User Service changes.
+- **Repository files affected:** `frontend/src/App.tsx`, Supplier frontend API/types and
+  UI components/tests under `frontend/src/suppliers/`, frontend test setup, README and
+  `frontend/AI-DISCLOSURES.md`.
+- **Author review:** Pending project-author review.
+
+### Exact prompt
+
+> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
+
+> `yes for long-term consistency lets add metadata endpoitn`
+
+### Key response
+
+Codex implemented the authenticated member catalogue and detail experience using live
+Supplier APIs. Search, metadata-backed building/category filters, sorting, page size and
+pagination are URL-backed; new requests cancel and ignore stale responses. Responsive
+cards and detail show backend labels, Location Description, typical hours, coordinates
+and accessible image fallback, with loading, empty, not-found, service/network and retry
+states. Focused tests verify live-data rendering at the API boundary, member-only controls,
+query behavior, stale-response protection, image fallback and detail concealment. No
+administrator management UI or future Order Service action was added.
