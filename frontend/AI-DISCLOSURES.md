@@ -6,6 +6,12 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: recorded
 the issue #28 test-tooling and generated lockfile changes below.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: implemented
+and tested the issue #29 Supplier member catalogue and detail UI described below.
+Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: implemented
+and tested the issue #30 Supplier administrator UI described below.
+Author review: Pending project-author review.
 -->
 
 # Frontend AI disclosures
@@ -65,3 +71,21 @@ typical-hours and coordinate presentation, missing-image fallback, loading/empty
 and retry states, cancellation of superseded requests, and component/API tests. It did
 not add administrator mutation controls, an Order Service action, mock production data,
 or changes to backend and User Service code.
+
+## 2026-09-27 — Supplier administrator management UI
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementation, tests, and documentation from the approved Supplier
+  UI specification and GitHub issue #30.
+- **Repository files affected:** `frontend/src/App.tsx`, `frontend/src/components/TopBar.tsx`,
+  the Supplier API/types helpers, `frontend/src/suppliers/admin/**`, focused frontend tests,
+  and frontend documentation.
+- **Author review:** Pending project-author review.
+
+Codex added administrator-only routes and navigation; a live ACTIVE/ARCHIVED management
+view; backend-metadata-backed create/full-edit forms; detail ETag acquisition before edit,
+archive, and restore; accessible confirmations; success/refresh feedback; and actionable
+400/409/412/428/401/403/503/network states. Stale updates retain the administrator's
+draft and show the separately fetched latest values before an explicit reload. The UI
+uses Archive terminology and does not add physical deletion, images to the mutation body,
+or changes to User/Order/Supplier backend application code.

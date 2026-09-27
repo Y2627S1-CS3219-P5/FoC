@@ -6,6 +6,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: replaced
  * the placeholder route with protected Supplier catalogue and detail routes for
  * issue #29. Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added
+ * protected Supplier administrator routes for issue #30.
+ * Author review: Pending project-author review.
  */
 import { Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from './components/RequireAuth'
@@ -14,8 +17,10 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { SupplierDetailPage } from './suppliers/SupplierDetailPage'
 import { SupplierListPage } from './suppliers/SupplierListPage'
+import { SupplierAdminPage } from './suppliers/admin/SupplierAdminPage'
+import { SupplierFormPage } from './suppliers/admin/SupplierFormPage'
 
-// URL -> page table. Supplier pages can be added here later, wrapped in <RequireAuth>.
+// URL -> page table. Every Supplier page requires an authenticated session.
 export default function App() {
   return (
     <Routes>
@@ -24,6 +29,9 @@ export default function App() {
       <Route path="/" element={<RequireAuth><Navigate to="/suppliers" replace /></RequireAuth>} />
       <Route path="/suppliers" element={<RequireAuth><SupplierListPage /></RequireAuth>} />
       <Route path="/suppliers/:id" element={<RequireAuth><SupplierDetailPage /></RequireAuth>} />
+      <Route path="/suppliers/admin" element={<RequireAuth><SupplierAdminPage /></RequireAuth>} />
+      <Route path="/suppliers/new" element={<RequireAuth><SupplierFormPage mode="create" /></RequireAuth>} />
+      <Route path="/suppliers/:id/edit" element={<RequireAuth><SupplierFormPage mode="edit" /></RequireAuth>} />
       {/* Unknown URLs return to the protected catalogue. */}
       <Route path="*" element={<Navigate to="/suppliers" replace />} />
     </Routes>

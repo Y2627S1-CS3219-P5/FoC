@@ -9,13 +9,16 @@ Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the responsive live member Supplier catalogue and detail routes added for
 issue #29. Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
+the Supplier administrator routes and lifecycle/form boundaries for issue #30.
+Author review: Pending project-author review.
 -->
 
 # Frontend
 
 React + TypeScript + Vite, Tailwind, React Router. D2 scope includes sign in,
 create account, log out, session-expiry toasts, and live Supplier catalogue and
-detail screens for authenticated members.
+detail screens for authenticated members, plus administrator Supplier management.
 
 ## Running it
 
@@ -73,10 +76,18 @@ Docker. It forwards API calls:
 | `src/suppliers/presentation.ts` | Shared category and typical-hours formatting |
 | `src/suppliers/SupplierListPage.tsx` | URL-backed live search, filters, sorting, pagination, loading, empty and retry states |
 | `src/suppliers/SupplierDetailPage.tsx` | Live Supplier detail, coordinates, typical hours and image fallback |
+| `src/suppliers/admin/SupplierAdminPage.tsx` | Administrator ACTIVE/ARCHIVED management, archive and restore |
+| `src/suppliers/admin/SupplierFormPage.tsx` | Metadata-backed create/edit and stale-ETag recovery |
 | `src/App.tsx` | URL → page table |
 
 Authenticated users land on `/suppliers`; `/suppliers/:id` shows detail. Catalogue
 query state stays in the URL so refresh and browser navigation preserve it. The UI
 gets building labels from the authenticated Supplier metadata endpoint and reads all
-catalogue records from live Supplier APIs. The shared client still attaches the token
-and logs the user out after an authenticated 401.
+catalogue records from live Supplier APIs.
+
+Administrator routes are `/suppliers/admin`, `/suppliers/new`, and
+`/suppliers/:id/edit`. Forms intentionally do not accept `imagePath`, `status`, `version`,
+or timestamps because those fields are server-owned. Archive retains the Supplier record
+and ID; there is no physical-delete control. Conditional writes use the ETags retained by
+`src/api/supplierApi.ts`. The shared client attaches the token and logs the user out after
+an authenticated 401.
