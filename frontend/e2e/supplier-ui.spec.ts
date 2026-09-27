@@ -8,6 +8,9 @@
  * Scope: Added live mobile form/confirmation, backend validation, two-editor
  * stale-ETag recovery, and missing-precondition evidence for issue #34.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: Added browser regressions for sticky navigation and aligned time fields.
+ * Author review: Pending project-author review.
  */
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
 
@@ -33,6 +36,7 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
   await expect(page.getByRole('link', { name: 'Add Supplier' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
   await assertNoHorizontalOverflow(page, 'desktop member catalogue')
+  await assertStickyNavigation(page)
 
   await page.getByRole('searchbox', { name: 'Search name or location' }).fill('printer')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
@@ -62,9 +66,19 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
   await expect(page).toHaveURL(/page=1/)
   await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText('Page 2 of 2')
 
+  const firstPageResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/v1/suppliers'
+      && url.searchParams.get('page') === '0'
+  })
   await page.getByRole('button', { name: 'Previous' }).click()
-  const firstSupplierName = await page.locator('article h2').first().innerText()
-  await page.getByRole('link', { name: `View details for ${firstSupplierName}` }).click()
+  await firstPageResponse
+  await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText('Page 1 of 2')
+  const firstSupplierCard = page.locator('article').first()
+  await expect(firstSupplierCard).toBeVisible()
+  const firstSupplierName = await firstSupplierCard.locator('h2').innerText()
+  await firstSupplierCard.getByRole('link', { name: `View details for ${firstSupplierName}` }).click()
   await expect(page.getByRole('heading', { name: firstSupplierName, exact: true })).toBeVisible()
   await expect(page.getByText('Typical hours', { exact: true })).toBeVisible()
   await expect(page.getByText('Coordinates', { exact: true })).toBeVisible()
@@ -93,9 +107,12 @@ test('ADMINISTRATOR handles responsive forms, validation, concurrency and lifecy
   await expect(page.getByRole('heading', { name: 'Supplier management' })).toBeVisible()
   await assertNoHorizontalOverflow(page, 'desktop administrator management')
 
-  await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('link', { name: 'Add Supplier' }).click()
   await expect(page.getByRole('heading', { name: 'Add Supplier' })).toBeVisible()
+  await page.getByRole('radio', { name: 'Typical hours', exact: true }).check()
+  await assertTimeControlsAligned(page)
+
+  await page.setViewportSize({ width: 390, height: 844 })
   await assertNoHorizontalOverflow(page, 'mobile administrator create form')
   await page.getByLabel('Supplier name').fill(createdName)
   await page.getByLabel('Building').selectOption('COM3')
@@ -274,6 +291,24 @@ async function assertNoHorizontalOverflow(page: Page, context: string) {
   }))
   expect(dimensions.documentScrollWidth, `${context}: document overflow`).toBeLessThanOrEqual(dimensions.documentClientWidth)
   expect(dimensions.bodyScrollWidth, `${context}: body overflow`).toBeLessThanOrEqual(dimensions.bodyClientWidth)
+}
+
+async function assertStickyNavigation(page: Page) {
+  const header = page.getByRole('banner')
+  await page.evaluate(() => window.scrollTo(0, 600))
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  await expect.poll(async () => (await header.boundingBox())?.y).toBe(0)
+  await page.evaluate(() => window.scrollTo(0, 0))
+}
+
+async function assertTimeControlsAligned(page: Page) {
+  const [opensAt, closesAt] = await Promise.all([
+    page.getByLabel('Opens at').boundingBox(),
+    page.getByLabel('Closes at').boundingBox(),
+  ])
+  expect(opensAt).not.toBeNull()
+  expect(closesAt).not.toBeNull()
+  expect(Math.abs(opensAt!.y - closesAt!.y)).toBeLessThanOrEqual(1)
 }
 
 async function captureEvidence(page: Page, testInfo: TestInfo, filename: string) {

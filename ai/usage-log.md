@@ -679,3 +679,26 @@ It corrected stale specification language about implemented `sessionStorage`, cl
 logout, and same-origin routing, and updated observed verification evidence. Frontend
 tests/lint/build, focused Supplier compatibility checks, and the disposable live workflow
 passed, with filtered Docker cleanup empty afterward.
+
+## 2026-09-27 — Supplier UI layout corrections
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Diagnose, implement, test, and push the two visual corrections
+  requested for Supplier UI PR #32.
+- **Repository files affected:** Shared frontend navigation, Supplier administrator form,
+  focused component tests, Playwright regression coverage, frontend disclosure records,
+  and this usage log.
+- **Author review:** Pending project-author review.
+
+### Exact prompt
+
+> `two small issues, the opens and closes at is not aligned, and the nav bar should be sticky so that as user scrolls vertically up and down nav bar should be visble, make the fixes and push changes to PR`
+
+### Key response
+
+Codex reproduced both issues with focused failing tests. The closing-time guidance occupied
+extra vertical space above its control, while the opening-time field had no corresponding
+space; shared field groups now use flex growth to bottom-align their controls. The shared
+authenticated header now uses sticky top positioning with a stacking layer. Component
+regressions and live Chromium assertions verify the form positions and header position
+after scrolling. No backend or other service was changed.

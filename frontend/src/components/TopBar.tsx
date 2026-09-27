@@ -7,6 +7,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added the
  * administrator Supplier management navigation entry for issue #30.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: kept the
+ * shared navigation visible while Supplier pages scroll.
+ * Author review: Pending project-author review.
  */
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext'
@@ -24,7 +27,7 @@ export function TopBar() {
   if (!user) return null
 
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
         <div className="flex shrink-0 items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy-800 text-sm font-bold text-white" aria-hidden="true">

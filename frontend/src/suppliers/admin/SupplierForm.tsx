@@ -4,6 +4,9 @@
  * Scope: Added the metadata-backed, full-replacement Supplier administrator
  * form for issue #30.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: aligned
+ * paired form controls when one field includes guidance text.
+ * Author review: Pending project-author review.
  */
 import type { FormEvent } from 'react'
 import {
@@ -256,12 +259,12 @@ interface FormGroupProps {
 
 function FormGroup({ label, htmlFor, error, hint, children }: FormGroupProps) {
   return (
-    <div>
+    <div className="flex flex-col">
       <label htmlFor={htmlFor} className="block text-sm font-semibold text-navy-900">
         {label}
       </label>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
-      <div className="mt-2">{children}</div>
+      <div className="mt-auto pt-2">{children}</div>
       <FieldError id={`${htmlFor}-error`} message={error} />
     </div>
   )

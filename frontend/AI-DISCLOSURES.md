@@ -18,6 +18,9 @@ Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: resolved
 the Supplier UI final-review findings and expanded live evidence for issue #34.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: fixed and
+tested Supplier form-control alignment and persistent navigation for PR #32.
+Author review: Pending project-author review.
 -->
 
 # Frontend AI disclosures
@@ -136,3 +139,20 @@ two editor tabs sharing one original ETag with visible 412 compare/reload recove
 gateway mutation without `If-Match` returning 428. It also corrected stale specification
 text about the already-implemented session storage, client-side logout, and routing choices.
 No User or Order application file was changed.
+
+## 2026-09-27 — Supplier UI layout corrections
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Diagnose, fix, and test the two PR #32 visual issues reported
+  by the project author.
+- **Repository files affected:** `frontend/src/components/TopBar.tsx`,
+  `frontend/src/suppliers/admin/SupplierForm.tsx`, focused component tests, the
+  Supplier Playwright journey, and AI usage records.
+- **Author review:** Pending project-author review.
+
+Codex made the shared authenticated navigation sticky with an explicit stacking layer.
+It also bottom-aligned controls inside paired form-field grid rows so optional guidance
+text no longer pushes one input below its neighbour. Focused component regressions cover
+both CSS contracts, while the real-browser journey checks the header after scrolling and
+compares the rendered opening/closing input positions. No backend or other service was
+changed.
