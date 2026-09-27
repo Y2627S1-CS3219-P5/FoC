@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added administrator validation, duplicate, missing/stale ETag, and
-# unknown-Supplier API scenarios. Author review: Pending project-author review.
+# unknown-Supplier API scenarios. Author review: Reviewed and approved by @ron.
 
 set -euo pipefail
 

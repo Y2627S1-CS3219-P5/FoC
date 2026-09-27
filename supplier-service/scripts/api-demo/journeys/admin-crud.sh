@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added the complete administrator Supplier create, read, update,
-# archive, archived-read, and restore journey. Author review: Pending project-author review.
+# archive, archived-read, and restore journey. Author review: Reviewed and approved by @ron.
 
 set -euo pipefail
 

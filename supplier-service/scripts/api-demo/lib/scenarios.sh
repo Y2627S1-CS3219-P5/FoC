@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added reusable public-API setup for unique MEMBER accounts,
-# administrator sessions, and Supplier fixtures. Author review: Pending project-author review.
+# administrator sessions, and Supplier fixtures. Author review: Reviewed and approved by @ron.
 
 scenario_lib_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=api.sh

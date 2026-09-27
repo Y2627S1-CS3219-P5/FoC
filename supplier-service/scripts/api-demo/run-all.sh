@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added a one-command runner for every isolated endpoint check and API
-# user journey. Author review: Pending project-author review.
+# user journey. Author review: Reviewed and approved by @ron.
 
 set -euo pipefail
 

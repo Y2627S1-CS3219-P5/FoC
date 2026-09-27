@@ -14,7 +14,7 @@ Scope: Recorded the issue #33 metadata-endpoint implementation disclosure.
 Contract decision and implementation reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Recorded the standalone Bash API endpoint and journey collection disclosure.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service AI disclosures
@@ -55,4 +55,4 @@ prerequisites, and MEMBER/ADMINISTRATOR journeys for reads, authorization, compl
 archive-based CRUD, visibility, validation, and ETag concurrency. The scripts read local
 credentials from the ignored `.env`, keep tokens in process memory, use temporary response
 files, and do not change application code, database schema, Compose configuration, or User
-Service files. Project-author review is pending.
+Service files. Project-author review was completed and approved by @ron.

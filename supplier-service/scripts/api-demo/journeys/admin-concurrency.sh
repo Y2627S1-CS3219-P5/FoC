@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added two concurrent administrator-session updates proving optimistic
-# ETag conflict protection. Author review: Pending project-author review.
+# ETag conflict protection. Author review: Reviewed and approved by @ron.
 
 set -euo pipefail
 

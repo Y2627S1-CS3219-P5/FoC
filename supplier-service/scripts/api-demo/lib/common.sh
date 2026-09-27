@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added shared configuration, HTTP capture, redaction, and assertions for
-# the local Bash API demonstrations. Author review: Pending project-author review.
+# the local Bash API demonstrations. Author review: Reviewed and approved by @ron.
 
 api_demo_fail() {
   printf 'FAIL: %s\n' "$*" >&2

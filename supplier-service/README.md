@@ -26,7 +26,7 @@ Scope: Documented the integrated responsive Supplier UI verification for issue #
 Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Documented the standalone Bash endpoint collection and user-journey demonstrations.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier Service

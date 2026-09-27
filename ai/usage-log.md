@@ -53,7 +53,7 @@ Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented and verified the standalone Supplier API Bash endpoint collection,
 self-contained endpoint checks, and MEMBER/ADMINISTRATOR journeys.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # AI Usage Log
@@ -720,7 +720,7 @@ prompts. No implementation, specification, or earlier approval record changed.
   schema, Compose configuration, frontend, or User Service code.
 - **Repository files affected:** `supplier-service/scripts/api-demo/`, Supplier documentation,
   Supplier AI disclosure records, and this usage log.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompts
 

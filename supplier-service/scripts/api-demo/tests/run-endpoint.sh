@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added self-contained public-API checks that prepare the authentication,
-# Supplier, and ETag prerequisites for one selected endpoint. Author review: Pending project-author review.
+# Supplier, and ETag prerequisites for one selected endpoint. Author review: Reviewed and approved by @ron.
 
 set -euo pipefail
 

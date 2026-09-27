@@ -3,7 +3,7 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Documented the Bash endpoint collection, self-contained endpoint checks,
 user journeys, prerequisites, state handling, and cleanup.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Supplier API Bash demonstrations

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added the shared command-line adapter used by the individual API
-# endpoint scripts. Author review: Pending project-author review.
+# endpoint scripts. Author review: Reviewed and approved by @ron.
 
 endpoint_cli_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=api.sh

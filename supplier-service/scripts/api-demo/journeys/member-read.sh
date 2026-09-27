@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added the self-contained MEMBER register, login, catalogue, detail,
-# and local sign-out API journey. Author review: Pending project-author review.
+# and local sign-out API journey. Author review: Reviewed and approved by @ron.
 
 set -euo pipefail
 

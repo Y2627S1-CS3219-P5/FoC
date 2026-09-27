@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added reusable request functions for User authentication and every
-# Supplier Service endpoint. Author review: Pending project-author review.
+# Supplier Service endpoint. Author review: Reviewed and approved by @ron.
 
 api_lib_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
