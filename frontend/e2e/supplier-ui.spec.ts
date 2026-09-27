@@ -4,6 +4,10 @@
  * Scope: Added real-browser member and administrator Supplier journeys against
  * the disposable live Compose stack for issue #31.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: Added live mobile form/confirmation, backend validation, two-editor
+ * stale-ETag recovery, and missing-precondition evidence for issue #34.
+ * Author review: Pending project-author review.
  */
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
 
@@ -78,9 +82,10 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
   await assertNoHorizontalOverflow(page, 'mobile member detail')
 })
 
-test('ADMINISTRATOR creates, edits, archives, inspects and restores the same live Supplier', async ({ page }, testInfo) => {
+test('ADMINISTRATOR handles responsive forms, validation, concurrency and lifecycle actions', async ({ page, request }, testInfo) => {
   const createdName = 'Browser Verification Cafe'
-  const editedName = 'Browser Verification Hub'
+  const firstEditorName = 'Browser Verification Hub A'
+  const secondEditorDraft = 'Browser Verification Hub B draft'
 
   await login(page, adminUsername, adminPassword)
   await expect(page.getByRole('link', { name: 'Manage Suppliers' })).toBeVisible()
@@ -88,13 +93,41 @@ test('ADMINISTRATOR creates, edits, archives, inspects and restores the same liv
   await expect(page.getByRole('heading', { name: 'Supplier management' })).toBeVisible()
   await assertNoHorizontalOverflow(page, 'desktop administrator management')
 
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('link', { name: 'Add Supplier' }).click()
+  await expect(page.getByRole('heading', { name: 'Add Supplier' })).toBeVisible()
+  await assertNoHorizontalOverflow(page, 'mobile administrator create form')
   await page.getByLabel('Supplier name').fill(createdName)
   await page.getByLabel('Building').selectOption('COM3')
   await page.getByRole('checkbox', { name: 'Food' }).check()
   await page.getByLabel('Location description').fill('Level 1 beside the browser verification desk')
   await page.getByLabel('Floor (optional)').fill('1')
   await page.getByRole('radio', { name: 'Open all day' }).check()
+
+  // Deliberately alter the rendered select to prove that backend validation is
+  // authoritative even if a browser client submits a value absent from metadata.
+  await page.getByLabel('Building').evaluate((element) => {
+    const select = element as HTMLSelectElement
+    select.add(new Option('Unsupported test building', 'NOT_FROM_METADATA'))
+    select.value = 'NOT_FROM_METADATA'
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  const validationResponsePromise = page.waitForResponse((response) =>
+    response.request().method() === 'POST'
+      && new URL(response.url()).pathname === '/api/v1/suppliers'
+      && response.status() === 400,
+  )
+  await page.getByRole('button', { name: 'Create Supplier' }).click()
+  const validationResponse = await validationResponsePromise
+  await expect(page.getByText('Select a supported Building Code.')).toBeVisible()
+  await expect(page.getByLabel('Supplier name')).toHaveValue(createdName)
+  await expect(page.getByLabel('Location description')).toHaveValue('Level 1 beside the browser verification desk')
+  expect(await validationResponse.json()).toMatchObject({
+    code: 'SUPPLIER_VALIDATION_FAILED',
+    fieldErrors: { buildingCode: 'Select a supported Building Code.' },
+  })
+
+  await page.getByLabel('Building').selectOption('COM3')
   await page.getByRole('button', { name: 'Create Supplier' }).click()
 
   await expect(page).toHaveURL(/\/suppliers\/admin/)
@@ -102,25 +135,78 @@ test('ADMINISTRATOR creates, edits, archives, inspects and restores the same liv
   await expect(createdCard).toBeVisible()
   const supplierHref = await createdCard.getByRole('link', { name: 'View' }).getAttribute('href')
   expect(supplierHref).toMatch(/^\/suppliers\/[0-9a-f-]+$/)
+  const supplierId = supplierHref!.split('/').at(-1)!
+  const detailApiPath = `/api/v1/suppliers/${supplierId}`
+  const editPath = `${supplierHref}/edit`
 
+  const firstDetailPromise = page.waitForResponse((response) => isSupplierDetailResponse(response.url(), response.request().method(), detailApiPath))
   await createdCard.getByRole('link', { name: 'Edit' }).click()
-  await page.getByLabel('Supplier name').fill(editedName)
-  await page.getByLabel('Location description').fill('Level 2 beside the live verification desk')
+  const firstDetailResponse = await firstDetailPromise
+  await expect(page.getByRole('heading', { name: 'Edit Supplier' })).toBeVisible()
+  await assertNoHorizontalOverflow(page, 'mobile administrator edit form')
+  await page.getByLabel('Supplier name').fill(firstEditorName)
+  await page.getByLabel('Location description').fill('Level 2 beside the first editor desk')
+
+  const secondEditor = await page.context().newPage()
+  await login(secondEditor, adminUsername, adminPassword)
+  const secondDetailPromise = secondEditor.waitForResponse((response) =>
+    isSupplierDetailResponse(response.url(), response.request().method(), detailApiPath),
+  )
+  await secondEditor.goto(editPath)
+  const secondDetailResponse = await secondDetailPromise
+  await expect(secondEditor.getByRole('heading', { name: 'Edit Supplier' })).toBeVisible()
+  const originalEtag = firstDetailResponse.headers().etag
+  expect(originalEtag).toMatch(/^"v\d+"$/)
+  expect(secondDetailResponse.headers().etag).toBe(originalEtag)
+  await secondEditor.getByLabel('Supplier name').fill(secondEditorDraft)
+  await secondEditor.getByLabel('Location description').fill('Unsaved second editor location')
+
   await page.getByRole('button', { name: 'Save changes' }).click()
 
-  const editedCard = page.locator('article').filter({ has: page.getByRole('heading', { name: editedName, exact: true }) })
+  const editedCard = page.locator('article').filter({ has: page.getByRole('heading', { name: firstEditorName, exact: true }) })
   await expect(editedCard).toBeVisible()
-  await expect(editedCard).toContainText('Level 2 beside the live verification desk')
+  await expect(editedCard).toContainText('Level 2 beside the first editor desk')
   await expect(editedCard.getByRole('link', { name: 'View' })).toHaveAttribute('href', supplierHref!)
+
+  const staleResponsePromise = secondEditor.waitForResponse((response) =>
+    response.request().method() === 'PUT'
+      && new URL(response.url()).pathname === detailApiPath
+      && response.status() === 412,
+  )
+  await secondEditor.getByRole('button', { name: 'Save changes' }).click()
+  await staleResponsePromise
+  await expect(secondEditor.getByText('This Supplier changed on the server')).toBeVisible()
+  await expect(secondEditor.getByLabel('Supplier name')).toHaveValue(secondEditorDraft)
+  await expect(secondEditor.getByLabel('Location description')).toHaveValue('Unsaved second editor location')
+  await secondEditor.getByRole('button', { name: 'Compare with latest' }).click()
+  await expect(secondEditor.getByRole('heading', { name: 'Your draft compared with latest' })).toBeVisible()
+  await expect(secondEditor.getByText(firstEditorName)).toBeVisible()
+  await secondEditor.getByRole('button', { name: 'Reload latest' }).click()
+  await expect(secondEditor.getByLabel('Supplier name')).toHaveValue(firstEditorName)
+  await secondEditor.close()
+
+  const token = await page.evaluate(() => window.sessionStorage.getItem('foc.accessToken'))
+  expect(token).toBeTruthy()
+  const missingPrecondition = await request.put(detailApiPath, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: supplierMutation(firstEditorName, 'Level 2 beside the first editor desk'),
+  })
+  const missingPreconditionBody = await missingPrecondition.json()
+  expect(missingPrecondition.status(), JSON.stringify(missingPreconditionBody)).toBe(428)
+  expect(missingPreconditionBody).toMatchObject({ code: 'SUPPLIER_PRECONDITION_REQUIRED' })
 
   await editedCard.getByRole('button', { name: 'Archive' }).click()
   const archiveDialog = page.getByRole('alertdialog', { name: 'Archive Supplier?' })
   await expect(archiveDialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await assertNoHorizontalOverflow(page, 'mobile archive confirmation')
+  await page.keyboard.press('Escape')
+  await expect(archiveDialog).toHaveCount(0)
+  await editedCard.getByRole('button', { name: 'Archive' }).click()
   await archiveDialog.getByRole('button', { name: 'Archive Supplier' }).click()
   await expect(editedCard).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Archived' }).click()
-  const archivedCard = page.locator('article').filter({ has: page.getByRole('heading', { name: editedName, exact: true }) })
+  const archivedCard = page.locator('article').filter({ has: page.getByRole('heading', { name: firstEditorName, exact: true }) })
   await expect(archivedCard).toBeVisible()
   await expect(archivedCard).toContainText('ARCHIVED')
   await expect(archivedCard.getByRole('link', { name: 'View' })).toHaveAttribute('href', supplierHref!)
@@ -128,18 +214,35 @@ test('ADMINISTRATOR creates, edits, archives, inspects and restores the same liv
 
   await archivedCard.getByRole('button', { name: 'Restore' }).click()
   const restoreDialog = page.getByRole('alertdialog', { name: 'Restore Supplier?' })
+  await expect(restoreDialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await assertNoHorizontalOverflow(page, 'mobile restore confirmation')
   await restoreDialog.getByRole('button', { name: 'Restore Supplier' }).click()
   await expect(archivedCard).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Active' }).click()
-  const restoredCard = page.locator('article').filter({ has: page.getByRole('heading', { name: editedName, exact: true }) })
+  const restoredCard = page.locator('article').filter({ has: page.getByRole('heading', { name: firstEditorName, exact: true }) })
   await expect(restoredCard).toBeVisible()
   await expect(restoredCard).toContainText('ACTIVE')
   await expect(restoredCard.getByRole('link', { name: 'View' })).toHaveAttribute('href', supplierHref!)
-
-  await page.setViewportSize({ width: 390, height: 844 })
   await assertNoHorizontalOverflow(page, 'mobile administrator management')
 })
+
+function isSupplierDetailResponse(url: string, method: string, path: string): boolean {
+  return method === 'GET' && new URL(url).pathname === path
+}
+
+function supplierMutation(name: string, locationDescription: string) {
+  return {
+    name,
+    categories: ['FOOD'],
+    buildingCode: 'COM3',
+    floor: '1',
+    locationDescription,
+    latitude: null,
+    longitude: null,
+    hoursKind: 'ALL_DAY',
+  }
+}
 
 async function createMember(request: APIRequestContext) {
   const response = await request.post('/api/v1/auth/register', {

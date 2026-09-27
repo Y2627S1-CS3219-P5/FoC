@@ -7,6 +7,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: covered the metadata helper required by the administrator form in
  * issue #30. Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: proved future metadata codes need no frontend allowlist edit for
+ * issue #34. Author review: Pending project-author review.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -85,8 +88,8 @@ describe('Supplier API', () => {
     )
   })
 
-  it('loads backend-owned building code metadata', async () => {
-    const metadata = { buildingCodes: [{ code: 'COM2' as const, label: 'COM2' }] }
+  it('loads backend-owned building code metadata without a duplicated frontend allowlist', async () => {
+    const metadata = { buildingCodes: [{ code: 'FUTURE_BUILDING', label: 'Future Building' }] }
     vi.mocked(fetch).mockResolvedValue(jsonResponse(metadata))
 
     await expect(getSupplierMetadata()).resolves.toEqual(metadata)

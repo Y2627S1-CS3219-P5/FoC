@@ -42,6 +42,10 @@ Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Added and ran isolated real-browser Supplier UI verification for issue #31, updated evidence and implementation-status documentation, and preserved API-only verification.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Resolved Supplier UI final-review findings for issue #34 and expanded
+real-service validation, concurrency, precondition, and mobile evidence.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
@@ -645,3 +649,33 @@ focused component/API tests and the existing API-only real-service integration s
 rather than overstating the two-browser-journey scope. The API-only runner remains usable
 without the frontend. No User Service application file or Order Service integration was
 changed or claimed.
+
+## 2026-09-27 — Supplier UI final review remediation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Resolving GitHub issue #34 findings on the Supplier UI branch;
+  no approved product-behavior change and no User/Order Service application changes.
+- **Repository files affected:** Supplier frontend types and tests, shared administrator
+  layout, Playwright journey, Supplier specification/evidence, frontend documentation,
+  and this usage log.
+- **Author review:** Pending project-author review.
+
+### Exact prompts
+
+> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
+
+> `yes for long-term consistency lets add metadata endpoitn`
+
+### Key response
+
+Codex replaced the duplicated frontend Building Code allowlist with a named string domain
+type whose valid options remain supplied by authenticated backend metadata, and added a
+future-code contract fixture. It extracted the shared administrator page shell. The live
+Chromium workflow now performs create/edit forms and archive/restore confirmations at 390
+pixels, surfaces a genuine backend 400 while preserving form values, proves two editor tabs
+loaded the same original ETag before one succeeds and the stale one visibly receives 412
+with draft-preserving compare/reload, and calls the gateway without `If-Match` to prove 428.
+It corrected stale specification language about implemented `sessionStorage`, client-side
+logout, and same-origin routing, and updated observed verification evidence. Frontend
+tests/lint/build, focused Supplier compatibility checks, and the disposable live workflow
+passed, with filtered Docker cleanup empty afterward.

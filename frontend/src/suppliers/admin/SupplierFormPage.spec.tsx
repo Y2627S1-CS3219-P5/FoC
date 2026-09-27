@@ -4,6 +4,9 @@
  * Scope: Tested administrator duplicate handling and stale-draft recovery for
  * issue #30.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: aligned metadata fixtures with the open Building Code domain type for
+ * issue #34. Author review: Pending project-author review.
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -123,7 +126,7 @@ function renderForm(mode: 'create' | 'edit') {
   )
 }
 
-const metadata = { buildingCodes: [{ code: 'COM2' as const, label: 'COM2' }] }
+const metadata = { buildingCodes: [{ code: 'COM2', label: 'COM2' }] }
 
 function withEtag(value: Supplier, etag: string): SupplierWithEtag {
   return { supplier: value, etag }

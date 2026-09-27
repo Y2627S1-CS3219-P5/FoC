@@ -4,6 +4,9 @@
  * Scope: Added responsive administrator Supplier management, archive, restore,
  * pagination, refresh, and lifecycle feedback for issue #30.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: adopted the shared administrator page shell for issue #34.
+ * Author review: Pending project-author review.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
@@ -14,11 +17,11 @@ import {
   restoreSupplier,
 } from '../../api/supplierApi'
 import { useAuth } from '../../auth/authContext'
-import { TopBar } from '../../components/TopBar'
 import { useToast } from '../../components/toast/toastContext'
 import { formatSupplierCategories, formatTypicalHours } from '../presentation'
 import type { Supplier, SupplierPage, SupplierStatus, SupplierWithEtag } from '../types'
 import { ConfirmSupplierAction } from './ConfirmSupplierAction'
+import { SupplierAdminPageShell } from './SupplierAdminPageShell'
 import { SupplierFeedback } from './SupplierFeedback'
 
 interface PendingAction {
@@ -123,18 +126,18 @@ export function SupplierAdminPage() {
 
   if (!isAdmin) {
     return (
-      <PageShell>
+      <SupplierAdminPageShell>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6" role="alert">
           <h1 className="text-xl font-bold text-navy-900">Administrator access required</h1>
           <p className="mt-2 text-sm text-slate-700">The backend also checks your role for every management action.</p>
           <Link to="/suppliers" className="mt-4 inline-flex font-semibold text-navy-800 underline">Return to Suppliers</Link>
         </div>
-      </PageShell>
+      </SupplierAdminPageShell>
     )
   }
 
   return (
-    <PageShell>
+    <SupplierAdminPageShell>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Link to="/suppliers" className="text-sm font-semibold text-navy-700 hover:underline">← Member catalogue</Link>
@@ -222,7 +225,7 @@ export function SupplierAdminPage() {
           onConfirm={() => void confirmAction()}
         />
       )}
-    </PageShell>
+    </SupplierAdminPageShell>
   )
 }
 
@@ -268,10 +271,6 @@ function AdminSupplierCard({
       </div>
     </article>
   )
-}
-
-function PageShell({ children }: { readonly children: React.ReactNode }) {
-  return <><TopBar /><main className="mx-auto max-w-5xl px-4 py-6 sm:py-10">{children}</main></>
 }
 
 const secondaryActionClass =

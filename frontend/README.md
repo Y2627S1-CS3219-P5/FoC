@@ -15,6 +15,9 @@ Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the isolated real-browser Supplier UI verification and D2 rehearsal for issue #31.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
+the expanded live validation, concurrency, and mobile administrator checks for
+issue #34. Author review: Pending project-author review.
 -->
 
 # Frontend
@@ -70,8 +73,10 @@ and live browser workflow together from anywhere in the repository:
 Compose project. It starts the real nginx frontend, User Service, Supplier Service,
 and both PostgreSQL databases with non-secret test-only credentials. Chromium then
 checks the MEMBER catalogue/detail journey and the ADMINISTRATOR
-create/edit/archive/restore journey at desktop and mobile widths, including horizontal
-overflow assertions. The project and its volumes are removed after success or failure.
+create/edit/archive/restore journey at desktop and mobile widths. It also exercises a
+real backend 400 in the form, two stale editor tabs with 412 recovery, missing `If-Match`
+428, mobile confirmations, and horizontal overflow assertions. The project and its
+volumes are removed after success or failure.
 Failure traces, screenshots, and videos are written under the ignored `test-results/`;
 an HTML report is written under ignored `playwright-report/`.
 
