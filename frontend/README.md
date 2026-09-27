@@ -3,6 +3,9 @@ AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
 Scope: Documented how to run the frontend and how requests are routed.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
+the Supplier API foundation and frontend test commands added for issue #28.
+Author review: Pending project-author review.
 -->
 
 # Frontend
@@ -28,6 +31,15 @@ npm run dev
 # open http://localhost:5173
 ```
 
+## Checking it
+
+```bash
+cd frontend
+npm test
+npm run lint
+npm run build
+```
+
 ## How requests reach the services
 
 The browser only talks to one origin: the Vite dev server in development, or nginx in
@@ -49,11 +61,15 @@ Docker. It forwards API calls:
 | Path | What it does |
 | --- | --- |
 | `src/api/client.ts` | `apiRequest()`: every backend call. Adds the login token and turns error replies into `ApiError` |
+| `src/api/supplierApi.ts` | Typed Supplier list/detail/mutation calls, including ETag handling |
 | `src/auth/tokenStorage.ts` | The only place the token is stored (sessionStorage) |
 | `src/auth/AuthProvider.tsx` | Who is logged in, login/logout, expiry notices |
 | `src/components/RequireAuth.tsx` | Wrap a page in `<RequireAuth>` to make it members-only |
+| `src/suppliers/types.ts` | Supplier API models and controlled values |
+| `src/suppliers/presentation.ts` | Shared category and typical-hours formatting |
 | `src/App.tsx` | URL → page table |
 
-**Adding a logged-in page (e.g. suppliers):** add a `<Route>` in `App.tsx` wrapped in
-`<RequireAuth>`, and call the backend with `apiRequest('/suppliers?...')`. The token is
-attached automatically, and a 401 logs the user out.
+**Adding a logged-in Supplier page:** add a `<Route>` in `App.tsx` wrapped in
+`<RequireAuth>`, then use the functions in `src/api/supplierApi.ts`. They keep Supplier
+ETags available for conditional writes; the shared client still attaches the token and
+logs the user out after an authenticated 401.
