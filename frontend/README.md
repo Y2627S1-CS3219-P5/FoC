@@ -6,12 +6,16 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the Supplier API foundation and frontend test commands added for issue #28.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
+the responsive live member Supplier catalogue and detail routes added for
+issue #29. Author review: Pending project-author review.
 -->
 
 # Frontend
 
-React + TypeScript + Vite, Tailwind, React Router. D2 scope: sign in, create account,
-log out, placeholder landing page, and session-expiry toasts (5 and 2 minutes before).
+React + TypeScript + Vite, Tailwind, React Router. D2 scope includes sign in,
+create account, log out, session-expiry toasts, and live Supplier catalogue and
+detail screens for authenticated members.
 
 ## Running it
 
@@ -67,9 +71,12 @@ Docker. It forwards API calls:
 | `src/components/RequireAuth.tsx` | Wrap a page in `<RequireAuth>` to make it members-only |
 | `src/suppliers/types.ts` | Supplier API models and controlled values |
 | `src/suppliers/presentation.ts` | Shared category and typical-hours formatting |
+| `src/suppliers/SupplierListPage.tsx` | URL-backed live search, filters, sorting, pagination, loading, empty and retry states |
+| `src/suppliers/SupplierDetailPage.tsx` | Live Supplier detail, coordinates, typical hours and image fallback |
 | `src/App.tsx` | URL → page table |
 
-**Adding a logged-in Supplier page:** add a `<Route>` in `App.tsx` wrapped in
-`<RequireAuth>`, then use the functions in `src/api/supplierApi.ts`. They keep Supplier
-ETags available for conditional writes; the shared client still attaches the token and
-logs the user out after an authenticated 401.
+Authenticated users land on `/suppliers`; `/suppliers/:id` shows detail. Catalogue
+query state stays in the URL so refresh and browser navigation preserve it. The UI
+gets building labels from the authenticated Supplier metadata endpoint and reads all
+catalogue records from live Supplier APIs. The shared client still attaches the token
+and logs the user out after an authenticated 401.

@@ -9,6 +9,7 @@ import { apiRequest, apiRequestWithMeta } from './client'
 import type {
   Supplier,
   SupplierListQuery,
+  SupplierMetadata,
   SupplierMutation,
   SupplierPage,
   SupplierWithEtag,
@@ -18,6 +19,10 @@ const SUPPLIER_PATH = '/suppliers'
 
 export function listSuppliers(query: SupplierListQuery = {}, signal?: AbortSignal): Promise<SupplierPage> {
   return apiRequest<SupplierPage>(supplierListPath(query), { signal })
+}
+
+export function getSupplierMetadata(signal?: AbortSignal): Promise<SupplierMetadata> {
+  return apiRequest<SupplierMetadata>(`${SUPPLIER_PATH}/metadata`, { signal })
 }
 
 export async function getSupplier(id: string, signal?: AbortSignal): Promise<SupplierWithEtag> {

@@ -48,3 +48,20 @@ centralised category/typical-hours presentation values, established Vitest and T
 Library, and made the bare Supplier asset path consistent between nginx and Vite. It did
 not add Supplier screens, duplicate the server's building-code label mapping, or change a
 backend service.
+
+## 2026-09-27 — Supplier member catalogue and detail UI
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementation and focused tests from the approved Supplier
+  specification and GitHub issue #29.
+- **Repository files affected:** `frontend/src/App.tsx`, `frontend/src/api/supplierApi.ts`,
+  `frontend/src/suppliers/**`, `frontend/src/test/setup.ts`, and frontend documentation.
+- **Author review:** Pending project-author review.
+
+Codex replaced the authenticated placeholder with protected `/suppliers` and
+`/suppliers/:id` routes. It implemented live URL-backed search, metadata-backed
+building and category filters, sorting, pagination, responsive cards and detail,
+typical-hours and coordinate presentation, missing-image fallback, loading/empty/error
+and retry states, cancellation of superseded requests, and component/API tests. It did
+not add administrator mutation controls, an Order Service action, mock production data,
+or changes to backend and User Service code.

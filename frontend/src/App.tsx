@@ -3,13 +3,17 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
  * Scope: Page routes for the author's D2 auth scope (login, register, WIP landing page).
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: replaced
+ * the placeholder route with protected Supplier catalogue and detail routes for
+ * issue #29. Author review: Pending project-author review.
  */
 import { Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from './components/RequireAuth'
 import { RedirectIfLoggedIn } from './components/RedirectIfLoggedIn'
-import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { SupplierDetailPage } from './suppliers/SupplierDetailPage'
+import { SupplierListPage } from './suppliers/SupplierListPage'
 
 // URL -> page table. Supplier pages can be added here later, wrapped in <RequireAuth>.
 export default function App() {
@@ -17,9 +21,11 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<RedirectIfLoggedIn><LoginPage /></RedirectIfLoggedIn>} />
       <Route path="/register" element={<RedirectIfLoggedIn><RegisterPage /></RedirectIfLoggedIn>} />
-      <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
-      {/* Any unknown URL goes to the landing page (which sends logged-out users to /login) */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/" element={<RequireAuth><Navigate to="/suppliers" replace /></RequireAuth>} />
+      <Route path="/suppliers" element={<RequireAuth><SupplierListPage /></RequireAuth>} />
+      <Route path="/suppliers/:id" element={<RequireAuth><SupplierDetailPage /></RequireAuth>} />
+      {/* Unknown URLs return to the protected catalogue. */}
+      <Route path="*" element={<Navigate to="/suppliers" replace />} />
     </Routes>
   )
 }

@@ -40,6 +40,15 @@ export type BuildingCode =
   | 'AS8'
   | 'INNOVATION_4_0'
 
+export interface SupplierBuildingOption {
+  readonly code: BuildingCode
+  readonly label: string
+}
+
+export interface SupplierMetadata {
+  readonly buildingCodes: readonly SupplierBuildingOption[]
+}
+
 export interface Supplier {
   readonly id: string
   readonly name: string
