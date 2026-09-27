@@ -4,17 +4,25 @@
  * Scope: Added typed Supplier v1 API calls with query serialization and ETag
  * handling for issue #28.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: added the authenticated Supplier metadata helper for issue #30.
+ * Author review: Pending project-author review.
  */
 import { apiRequest, apiRequestWithMeta } from './client'
 import type {
   Supplier,
   SupplierListQuery,
   SupplierMutation,
+  SupplierMetadata,
   SupplierPage,
   SupplierWithEtag,
 } from '../suppliers/types'
 
 const SUPPLIER_PATH = '/suppliers'
+
+export function getSupplierMetadata(signal?: AbortSignal): Promise<SupplierMetadata> {
+  return apiRequest<SupplierMetadata>(`${SUPPLIER_PATH}/metadata`, { signal })
+}
 
 export function listSuppliers(query: SupplierListQuery = {}, signal?: AbortSignal): Promise<SupplierPage> {
   return apiRequest<SupplierPage>(supplierListPath(query), { signal })

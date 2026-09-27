@@ -4,6 +4,9 @@
  * Scope: Defined frontend Supplier API types from the implemented v1 contract
  * for issue #28.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: added backend-owned Building Code metadata types for issue #30.
+ * Author review: Pending project-author review.
  */
 
 export const SUPPLIER_CATEGORIES = ['FOOD', 'COFFEE', 'PRINTING', 'SHOPPING', 'PICKUP_POINT'] as const
@@ -39,6 +42,15 @@ export type BuildingCode =
   | 'MED_SCI_LIBRARY'
   | 'AS8'
   | 'INNOVATION_4_0'
+
+export interface SupplierBuildingOption {
+  readonly code: BuildingCode
+  readonly label: string
+}
+
+export interface SupplierMetadata {
+  readonly buildingCodes: readonly SupplierBuildingOption[]
+}
 
 export interface Supplier {
   readonly id: string

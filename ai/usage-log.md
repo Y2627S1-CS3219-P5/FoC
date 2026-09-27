@@ -33,9 +33,38 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented the shared Supplier frontend API and test foundation for issue #28 from the approved specification and ticket.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Implemented and tested the Supplier administrator management UI for issue #30 from the approved specification and ticket.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
+
+## 2026-09-27 — Supplier administrator management UI
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing and testing GitHub issue #30 from the approved
+  Supplier UI specification.
+- **Repository files affected:** Supplier frontend administrator routes, navigation,
+  metadata API/types, management/form/concurrency components, focused tests, frontend
+  documentation, and this usage log.
+- **Author review:** Pending project-author review.
+
+### Exact prompts
+
+> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
+
+> `yes for long-term consistency lets add metadata endpoitn`
+
+### Key response
+
+Codex implemented the administrator Supplier UI on the dedicated Supplier UI workstream:
+live ACTIVE/ARCHIVED management, metadata-backed create/full-edit forms, detail ETag use
+for every conditional mutation, accessible archive/restore confirmation, refresh and
+success feedback, duplicate navigation, and stale-draft compare/reload recovery. Focused
+tests cover the exact mutation body, duplicate creation, 412 draft preservation, current-
+ETag archive, and member exclusion. It did not implement physical deletion, mock Supplier
+data, Order Service functionality, or User/Supplier backend application changes.
 
 ## 2026-09-27 — Supplier frontend API and test foundation
 

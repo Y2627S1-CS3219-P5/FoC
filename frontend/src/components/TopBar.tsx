@@ -4,7 +4,11 @@
  * Scope: Top navigation bar showing display name, @username, the admin-only marker
  *        and a logout button (author decisions).
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added the
+ * administrator Supplier management navigation entry for issue #30.
+ * Author review: Pending project-author review.
  */
+import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext'
 import { APP_NAME } from '../config'
 
@@ -31,6 +35,14 @@ export function TopBar() {
         </div>
 
         <div className="flex min-w-0 items-center gap-3">
+          {user.role === 'ADMINISTRATOR' && (
+            <Link
+              to="/suppliers/admin"
+              className="hidden shrink-0 rounded-lg border border-navy-100 px-3 py-1.5 text-sm font-semibold text-navy-800 hover:bg-navy-50 sm:inline-flex"
+            >
+              Manage Suppliers
+            </Link>
+          )}
           <div className="min-w-0 text-right">
             <p className="truncate text-sm font-semibold text-navy-900">
               {user.displayName}

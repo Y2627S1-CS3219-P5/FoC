@@ -4,6 +4,9 @@
  * Scope: Added contract-focused tests for Supplier query, mutation, and ETag
  * API helpers in issue #28.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: covered the metadata helper required by the administrator form in
+ * issue #30. Author review: Pending project-author review.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -13,6 +16,7 @@ import {
   archiveSupplier,
   createSupplier,
   getSupplier,
+  getSupplierMetadata,
   listSuppliers,
   restoreSupplier,
   updateSupplier,
@@ -77,6 +81,17 @@ describe('Supplier API', () => {
     await expect(getSupplier(supplier.id)).resolves.toEqual({ supplier, etag: '"v0"' })
     expect(fetch).toHaveBeenCalledWith(
       `/api/v1/suppliers/${supplier.id}`,
+      expect.objectContaining({ headers: { Authorization: 'Bearer member-token' } }),
+    )
+  })
+
+  it('loads backend-owned Building Code metadata', async () => {
+    const metadata = { buildingCodes: [{ code: 'COM2', label: 'COM2' }] }
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(metadata))
+
+    await expect(getSupplierMetadata()).resolves.toEqual(metadata)
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/suppliers/metadata',
       expect.objectContaining({ headers: { Authorization: 'Bearer member-token' } }),
     )
   })

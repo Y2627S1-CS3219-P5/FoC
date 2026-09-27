@@ -6,12 +6,15 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the Supplier API foundation and frontend test commands added for issue #28.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
+the Supplier administrator routes and lifecycle/form boundaries for issue #30.
+Author review: Pending project-author review.
 -->
 
 # Frontend
 
-React + TypeScript + Vite, Tailwind, React Router. D2 scope: sign in, create account,
-log out, placeholder landing page, and session-expiry toasts (5 and 2 minutes before).
+React + TypeScript + Vite, Tailwind, React Router. The current D2 increment includes
+authentication and the administrator Supplier management experience.
 
 ## Running it
 
@@ -67,9 +70,16 @@ Docker. It forwards API calls:
 | `src/components/RequireAuth.tsx` | Wrap a page in `<RequireAuth>` to make it members-only |
 | `src/suppliers/types.ts` | Supplier API models and controlled values |
 | `src/suppliers/presentation.ts` | Shared category and typical-hours formatting |
+| `src/suppliers/admin/SupplierAdminPage.tsx` | Administrator ACTIVE/ARCHIVED management, archive and restore |
+| `src/suppliers/admin/SupplierFormPage.tsx` | Metadata-backed create/edit and stale-ETag recovery |
 | `src/App.tsx` | URL → page table |
 
 **Adding a logged-in Supplier page:** add a `<Route>` in `App.tsx` wrapped in
 `<RequireAuth>`, then use the functions in `src/api/supplierApi.ts`. They keep Supplier
 ETags available for conditional writes; the shared client still attaches the token and
 logs the user out after an authenticated 401.
+
+Administrator routes are `/suppliers/admin`, `/suppliers/new`, and
+`/suppliers/:id/edit`. Forms intentionally do not accept `imagePath`, `status`, `version`,
+or timestamps because those fields are server-owned. Archive retains the Supplier record
+and ID; there is no physical-delete control.
