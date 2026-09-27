@@ -209,6 +209,27 @@ api_print_response() {
   fi
 }
 
+api_print_cli_response() {
+  local etag
+  local location
+  local request_id
+  etag="$(api_header ETag)"
+  location="$(api_header Location)"
+  request_id="$(api_header X-Request-Id)"
+
+  printf 'HTTP %s\n' "${API_RESPONSE_STATUS}" >&2
+  [[ -z "${etag}" ]] || printf 'ETag: %s\n' "${etag}" >&2
+  [[ -z "${location}" ]] || printf 'Location: %s\n' "${location}" >&2
+  [[ -z "${request_id}" ]] || printf 'X-Request-Id: %s\n' "${request_id}" >&2
+  if [[ -n "${API_RESPONSE_BODY}" ]]; then
+    if jq -e . >/dev/null 2>&1 <<<"${API_RESPONSE_BODY}"; then
+      jq . <<<"${API_RESPONSE_BODY}"
+    else
+      printf '%s\n' "${API_RESPONSE_BODY}"
+    fi
+  fi
+}
+
 api_require_running_stack() {
   api_request GET "${API_USER_BASE_URL}/health"
   [[ "${API_RESPONSE_STATUS}" == "200" ]] || api_demo_fail "User Service is not healthy at ${API_USER_BASE_URL}. Run 'docker compose up --build -d' first."
