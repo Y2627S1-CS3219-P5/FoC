@@ -1,0 +1,38 @@
+/*
+ * AI Assistance Disclosure:
+ * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
+ * Scope: Added Tailwind and the development reverse-proxy rules that implement the
+ *        author's gateway decisions (data-named /api/v1 paths, rewrites to service routes,
+ *        /auth/verify not exposed). Mirrors frontend/nginx.conf used in Docker.
+ * Author review: Reviewed and approved by @t-leongchuan
+ */
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vite'
+
+// Where the services run during local development (`npm run dev`).
+// Defaults match the published ports in compose.yaml.
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL ?? 'http://localhost:3001'
+const SUPPLIER_SERVICE_URL = process.env.SUPPLIER_SERVICE_URL ?? 'http://localhost:3000'
+
+// "/api/v1/whoami" -> "/whoami", "/api/v1/auth/login" -> "/auth/login"
+const stripApiPrefix = (path: string) => path.replace(/^\/api\/v1/, '')
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    // Dev gateway; keep in sync with nginx.conf. Keys starting with "^" are regexes.
+    proxy: {
+      // user-service: public paths are rewritten to the service's own routes
+      '^/api/v1/auth/(login|register)$': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
+      '^/api/v1/whoami$': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
+      '^/api/v1/users/[^/]+/role$': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
+      // (user-service's /auth/verify is intentionally NOT listed: it is for services only)
+
+      // supplier-service: its routes already match the public paths, so no rewrite
+      '/api/v1/suppliers': { target: SUPPLIER_SERVICE_URL },
+      '/assets/suppliers': { target: SUPPLIER_SERVICE_URL },
+    },
+  },
+})

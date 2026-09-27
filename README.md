@@ -14,6 +14,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Clarified that race-safe duplicate rejection applies to creation and
 recorded the final code-review remediation.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-09-26
+Scope: Added the User Service author's AI Use Summary paragraph.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
@@ -66,3 +69,19 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 ## AI Use Summary
 
 OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the first three Supplier backend increments from the author-approved specification: NestJS/Drizzle and PostgreSQL foundations; guarded, edit-preserving seed identities; least-privilege Compose setup; real User Service bearer verification; authenticated catalogue reads; request correlation and bundled assets; and administrator-only create/full-update/archive/restore with strict bodies, normalized race-safe duplicate creation rejection, and ETag concurrency. The isolated real-service integration runner now verifies API and SQL mutation state, concurrent stale-write rejection, lifecycle no-ops, repeat-migration/seed preservation, and fail-closed authentication. No Supplier frontend, User Service application changes, Order Service integration, or physical Supplier deletion were included. Project-author review of all three backend increments was completed and approved by @ron. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) retain the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.
+
+Claude Code (Claude Opus 5.5) assisted on 2026-09-26 with implementing the User Service
+author's D2 work from the author's own design decisions:
+- the React/Vite frontend authentication pages (sign in, create account, logout,
+  session-expiry toasts)
+- the nginx/Vite reverse-proxy gateway with data-named `/api/v1` paths
+- User Service `authenticate`/`requireRole` middleware, `GET`/`PATCH /whoami`, and
+  administrator role changes serialised by a database lock
+- endpoint documentation
+
+Claude also explained general concepts (JWT, browser storage, CORS vs reverse proxy,
+PATCH vs PUT, idempotency, locking) used by the author to make those decisions.
+Prohibited phases were avoided: the author chose the routing, storage, endpoint,
+status-code and concurrency designs. All output was reviewed and tested by the author.
+Prompts and key responses are in `ai/usage-log.md`; per-file attributions are in the
+file headers and `frontend/AI-DISCLOSURES.md`.

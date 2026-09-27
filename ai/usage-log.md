@@ -27,6 +27,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Recorded the project author's explicit review approval for PR #26 across the relevant Supplier OpenAPI disclosures.
 Author review: Approval explicitly supplied by @ron; the separate course-owner strict-JSON exception remains pending.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-09-26
+Scope: Drafted the User Service author's three entries below from the author's prompts; the author edited and approved them.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
@@ -354,3 +357,153 @@ Codex confirmed from the official NestJS documentation that `@nestjs/swagger` ge
 ### Key response
 
 Codex changed the Supplier OpenAPI disclosure status from review-required to reviewed and approved by @ron, retained the separate pending course-owner strict-JSON exception, and made no application-behaviour changes.
+
+## 2026-09-26 — User Service requirements review and frontend authentication planning
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:**
+  - Interpreting requirements from the project, D1 and D2 documents
+  - Comparing the existing User Service against the D1 backlog
+  - Learning support: general explanations of JWT access tokens, browser token storage,
+    CORS and reverse proxies, REST naming conventions, and check-then-act race conditions
+- **Repository files affected:** none (planning only)
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> "[...] tasked with the authentication pages for frontend. [...] tell me what's going on, what I actually need to do on my own"
+
+> "[...] refresh on what the token actually is for before i make the decision. [...] what is CORS to make a sensible decision"
+
+> [Token storage] "I am thinking something like sessionStorage [...] Refreshing the page logs us out just feels ridiculous from a UX perspective [...] closing the tab is already some form of intention that user is done with our application."
+
+> [Routing] "the way I think about it is more on [a reverse proxy], since [...] (it was mentioned in lecture 5 [...]) microservices are reasonably done [...] This gives us more fine control than CORS"
+
+> [URL layout] "Is there a way of approach that allows both at the same time? [clear endpoints for developers while hiding services from clients]"
+
+> [URL layout] "uniformity, use v1, and rewrite public paths as necessary"
+
+### Key response
+
+Claude summarised the D2 rubric against the implemented User Service and identified the
+missing items. On request, it explained general concepts and presented standard
+alternatives with brief, neutral trade-offs:
+- in-memory vs sessionStorage vs localStorage for the token
+- CORS vs a reverse proxy
+- service-named vs data-named URL paths
+- check-then-act races
+
+The author chose:
+- sessionStorage
+- a reverse proxy
+- data-named `/api/v1` paths with gateway rewrites
+
+The reasoning quoted above is the author's own. Claude did not select any option.
+
+## 2026-09-26 — Frontend authentication pages, gateway, and User Service `/whoami`
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** Implementation code and boilerplate after the author finalised the design:
+  - Vite project scaffolding
+  - React pages and components
+  - dev-proxy and nginx gateway configuration
+  - Dockerfile and compose entry
+  - User Service authentication middleware and the `GET /whoami` handler
+- **Repository files affected:**
+  - `frontend/**` (new)
+  - `user-service/src/authenticate.ts` and `user-service/src/profile.ts` (new)
+  - `user-service/src/auth.ts` and `user-service/src/index.ts` (small edits)
+  - `compose.yaml`, `.env.example`
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> "[...] tasked with the authentication pages for frontend. [...] respect AI usage policies."
+
+> [Top bar] "It should show name [...] A main display name, and perhaps a 'handle' for the actual user name. [...] Only if you are Admin does it have a little UI thingy [...] (ADMIN). My thinking is just to show what we want to show: Members do not need to know that an admin role exists"
+
+> [Expiry warnings] "Toast for Each." / "one at 5 minutes for gentle alert, and at 2 minutes the warning"
+
+> [Tooling] "name is frontend/. [...] Let's use Tailwind [...] React Router, yes."
+
+> [Gateway] "don't expose what clients dont need to know. /auth/verify should only be meant for those that need to see and access it."
+
+> [Current-user endpoint] "i like to use whoami actually. it's a common unix command"
+
+> [After sign-up, option selected from Claude's multiple-choice question] "Go to Login page" / [After login, option selected] "WIP landing page"
+
+### Key response
+
+Claude implemented the author's decisions:
+- a React + TypeScript + Vite frontend with Tailwind and React Router, following the D1 mockup
+- sessionStorage token handling isolated in one module
+- expiry toasts at 5 and 2 minutes, and a redirect to login on expiry, logout or a 401
+- a Vite dev proxy and an nginx gateway that forward only the public `/api/v1` paths and
+  do not expose `/auth/verify`
+- in the User Service, an `authenticate` middleware, reused by `/auth/verify` with
+  unchanged responses, and `GET /whoami` returning `username`, `displayName` and `role`
+
+Verification:
+- type-checked, built and linted
+- run on the full Docker Compose stack
+- API routing and gateway exposure checked
+- 13 browser checks: registration and login errors, member vs admin top bar,
+  refresh/new-tab behaviour, logout, expiry toasts
+
+## 2026-09-26 — User Service profile update and administrator role changes (D2 points 5 and 6)
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:**
+  - Implementation code after the author decided the endpoint behaviour, status codes and
+    concurrency approach
+  - Learning support: PATCH vs PUT, idempotency, transaction isolation vs locking
+  - Endpoint documentation
+- **Repository files affected:**
+  - `user-service/src/profile.ts`, `roles.ts` (new), `users.ts` (new), `authenticate.ts`,
+    `index.ts`, `README.md`
+  - Gateway rules in `frontend/vite.config.ts`, `frontend/nginx.conf`, `frontend/README.md`
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> "Let's work on point 5 and 6 then."
+
+> [Profile update method] "[PATCH] seems to be the most intuitive"
+
+> [Extra fields in a profile update] "we should only do what we allow it to do so if they mess around and send protected fields, we do want to provide the capability they want to do [...] ([...] change their displayName ONLY [...]), but we also want to ignore the other fields"
+
+> [Identifying the target of a role change] "by account id for now for D2 purposes, though i imagine this might be incovenient later on so make it to be extensible."
+
+> [Concurrency] "Thinking [lock-then-check] is the most obvious, but would like you to expand on what [serializable isolation] means [...] would this affect other operations to be slower?"
+
+> [Lock-then-check] "yes" / [Profile update without displayName] "do nothing? [...] it's the idea of a contract: I allow you to change displayName and provided you the UI and code for it [...] there should be no expectation by you for your request to suceed if it doesn't follow what we hae specified."
+
+> [HTTP status codes: admin changing own role; change leaving no active admin] "a) 403 b) 409" / [Changing to the same role] "Harmless success [...] We just allow you to do it but if it is already an admin we are not going to change things"
+
+### Key response
+
+For each open question, Claude presented standard alternatives with brief, neutral
+trade-offs:
+- PATCH vs PUT
+- rejecting vs ignoring extra fields
+- identifying the target by username vs account id
+- a database lock vs serializable isolation
+
+On request, it explained what each option means (isolation levels apply per transaction;
+an advisory lock only delays other role changes). The author chose each option, with the
+reasoning quoted above.
+
+Claude then implemented:
+- `requireRole` RBAC middleware
+- `PATCH /whoami` (displayName 1–50 characters)
+- `changeRole()`, separate from the HTTP route: a transaction that takes an advisory lock,
+  re-checks the acting admin, and enforces the last-admin rule
+- `PUT /users/:id/role` and the gateway rules
+
+Verified on the Docker stack with 26 API checks, including:
+- ignored protected fields
+- member 403 and self-change 403
+- role changes taking effect immediately in the Supplier Service
+- 20 rounds of two admins demoting each other at the same time, where both never succeed
+
+Claude noted that the 409 rule cannot be triggered in D2, because self-changes are forbidden.
