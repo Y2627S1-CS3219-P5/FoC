@@ -24,6 +24,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Documented the integrated responsive Supplier UI verification for issue #31.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Documented the standalone Bash endpoint collection and user-journey demonstrations.
+Author review: Pending project-author review.
 -->
 
 # Supplier Service
@@ -135,6 +138,21 @@ this one command from anywhere in the repository:
 `test:integration` builds a fresh disposable Compose project with a unique `foc-supplier-smoke-...` name on ports 3900/3901. It verifies clean migration and the 21-row seed; live Swagger UI and OpenAPI JSON; real MEMBER and ADMINISTRATOR login/verification; catalogue reads, logging, assets, and request correlation; mutation authorization and validation; concurrent and ACTIVE/ARCHIVED duplicate rejection; concurrent same-version update exclusion and ETag preconditions; archive/restore visibility, retention, and no-ops; SQL state; no-op migration plus zero-insert seed reruns preserving administrator edits/categories; and 503 with no write while User Service is stopped followed by recovery. It removes only that unique project and its volumes when finished; Docker must be running and ports 3900/3901 must be free. A concurrent run can fail safely on those fixed host ports but cannot remove the other run's project or data.
 
 The latest recorded check matrix is in [docs/verification/third-backend-increment.md](docs/verification/third-backend-increment.md).
+
+### Interactive Bash API collection
+
+With the normal Compose services already running, the Bash collection can exercise one
+endpoint with automatic prerequisites, run a complete MEMBER/ADMINISTRATOR journey, or
+run the full collection:
+
+```sh
+./supplier-service/scripts/api-demo/tests/run-endpoint.sh update
+./supplier-service/scripts/api-demo/journeys/admin-crud.sh
+./supplier-service/scripts/api-demo/run-all.sh
+```
+
+It uses only public HTTP APIs and does not require the frontend. See the
+[Bash API demonstration guide](scripts/api-demo/README.md) for every endpoint and journey.
 
 ## Integrated responsive UI verification
 

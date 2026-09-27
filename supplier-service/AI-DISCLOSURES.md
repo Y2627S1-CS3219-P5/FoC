@@ -12,6 +12,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Recorded the issue #33 metadata-endpoint implementation disclosure.
 Contract decision and implementation reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Recorded the standalone Bash API endpoint and journey collection disclosure.
+Author review: Pending project-author review.
 -->
 
 # Supplier Service AI disclosures
@@ -42,3 +45,14 @@ OpenAI Codex (GPT-6) assisted on 2026-09-26 with adding the official NestJS Swag
 ## Supplier Building Code metadata
 
 OpenAI Codex (GPT-6) assisted on 2026-09-27 with implementing issue #33 after @ron explicitly approved a backend-owned runtime metadata endpoint for long-term frontend consistency. The work derives a complete `{ code, label }` option set from the existing Supplier building registry, exposes it to authenticated MEMBER and ADMINISTRATOR callers, documents it in OpenAPI and the Supplier specification, and adds focused controller, generated-contract, and live Compose coverage. It changes no database state, Supplier CRUD behavior, frontend file, or User Service application code. The contract decision and implementation were reviewed and approved by @ron.
+
+## Bash API demonstrations
+
+OpenAI Codex (GPT-6) assisted on 2026-09-27 with adding a standalone Bash collection for
+the existing User authentication and Supplier APIs. It includes thin commands for manual
+endpoint calls, self-contained endpoint checks that prepare their own public-API
+prerequisites, and MEMBER/ADMINISTRATOR journeys for reads, authorization, complete
+archive-based CRUD, visibility, validation, and ETag concurrency. The scripts read local
+credentials from the ignored `.env`, keep tokens in process memory, use temporary response
+files, and do not change application code, database schema, Compose configuration, or User
+Service files. Project-author review is pending.

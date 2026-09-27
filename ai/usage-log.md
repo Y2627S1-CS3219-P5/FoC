@@ -50,6 +50,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Removed repeated exact-prompt quotations while preserving canonical prompt copies,
 distinct work entries, and their review records.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Implemented and verified the standalone Supplier API Bash endpoint collection,
+self-contained endpoint checks, and MEMBER/ADMINISTRATOR journeys.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
@@ -707,3 +711,35 @@ kept them. It retained one canonical quotation of each shared Supplier UI prompt
 the repeated third-increment remediation quotations with a link to their original entry,
 and added a single cross-reference explaining which Supplier UI entries share the canonical
 prompts. No implementation, specification, or earlier approval record changed.
+
+## 2026-09-27 — Supplier API Bash endpoint collection and journeys
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Adding standalone Bash demonstrations for the already-implemented
+  User authentication and Supplier APIs without changing application behavior, database
+  schema, Compose configuration, frontend, or User Service code.
+- **Repository files affected:** `supplier-service/scripts/api-demo/`, Supplier documentation,
+  Supplier AI disclosure records, and this usage log.
+- **Author review:** Pending project-author review.
+
+### Exact prompts
+
+> `merged to main, remember the postman api test suite i asked you about, can we do it with simple bash scripts instead to test each API or like a user journye flow, eg user creates account, user logs in, user views a supplier as one flow, dont implemetn anything yet`
+
+> `for member journeys it should also contain other journeys like member tries to access a protected api admin side, admin-jouney should also include other journeys now we only have create we should also have update, archive, restore right? also does it make sense to have a bash script for each of the api endpoitns (kind like postman api collection) so that we can run each endpoitn in isolation? show me the udpated structure`
+
+> `so if some of them need administrator tokens and other prerequisites whats the workaroudn, do we run som prerequsitie before that script such as udpate.sh or is there another mechanism which you recommend`
+
+> `ok i checkout to main and pull from origin main to update our local main with the supplier UI changes, lets proceed with the implementation in a separate branch, making incremental commits and once you are done create a PR, no need for tracking gtihub issue for this`
+
+### Key response
+
+Codex added thin Postman-like commands for User health/register/login/profile/role and every
+Supplier health/metadata/list/detail/create/update/archive/restore endpoint. One isolated
+endpoint runner automatically establishes each selected operation's public-API prerequisites.
+Six complete journeys cover MEMBER reads and local sign-out, MEMBER mutation rejection,
+administrator CRUD, validation and ETag preconditions, lifecycle visibility by role, and
+concurrent administrator updates. Shared helpers read ignored local configuration without
+executing it, keep tokens in memory, capture responses in temporary files, redact tokens
+from assertion failures, and archive successful mutation fixtures. Live Compose runs passed
+for every endpoint and journey; no frontend or service implementation file changed.
