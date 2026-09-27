@@ -30,9 +30,36 @@ Author review: Approval explicitly supplied by @ron; the separate course-owner s
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-09-26
 Scope: Drafted the User Service author's three entries below from the author's prompts; the author edited and approved them.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Implemented the shared Supplier frontend API and test foundation for issue #28 from the approved specification and ticket.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
+
+## 2026-09-27 — Supplier frontend API and test foundation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing code, tests, and documentation from the approved
+  Supplier UI specification and GitHub issue #28.
+- **Repository files affected:** Frontend API client and Supplier modules, frontend test
+  setup and focused tests, nginx gateway parity, dependency metadata, frontend docs, and
+  this usage log.
+- **Author review:** Pending project-author review.
+
+### Exact prompt
+
+> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
+
+### Key response
+
+Codex implemented the shared typed foundation required before Supplier screens: list,
+detail, create, full update, archive, and restore API helpers; ETag propagation;
+Supplier field-error, request-ID, and duplicate-ID metadata; shared category and typical-
+hours formatting; and Vitest/Testing Library setup with focused contract tests. The nginx
+gateway now handles the bare `/assets/suppliers` path consistently with Vite. This ticket
+did not add UI screens, duplicate the backend-owned building-label mapping, or modify
+Supplier/User Service application code.
 
 ## 2026-09-25 — Supplier specification requirements review
 
