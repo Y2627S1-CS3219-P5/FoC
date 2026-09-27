@@ -30,6 +30,10 @@ review required.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: updated
 frontend decisions, implementation status, and verification evidence after issue #31.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: removed
+stale integration-decision text after implemented session storage, client-side
+logout, and same-origin routing were verified for issue #34.
+Author review: Pending project-author review.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -189,13 +193,13 @@ PR #14 establishes the User Service contract that Supplier builds against:
 
 Encapsulate the call in a NestJS guard plus the planned `SessionVerifier` interface seam. Local tests may use a verifier test double, but the integrated environment and D2 demo use the real User Service endpoint. Do not deploy a bypass.
 
-The bearer token is manually attached rather than browser-managed cookie authentication, so the earlier cookie-specific CSRF-token proposal does not apply to this implemented contract. The final frontend token storage/persistence policy is not defined by PR #14 and must be agreed before frontend integration.
+The bearer token is manually attached rather than browser-managed cookie authentication, so the earlier cookie-specific CSRF-token proposal does not apply to this implemented contract. The shared frontend stores it in per-tab `sessionStorage`, preserving the session across refreshes while clearing it when the tab closes.
 
 PR #14 does not implement refresh tokens, logout, an access-token revocation list, or a separate service credential for `/auth/verify`. Account role/status changes take effect on the next verification call because the endpoint reads the User database. The `JWT_REFRESH_TOKEN_TTL` example variable is currently unused by User Service.
 
 The Supplier-to-User base URL remains runtime-configurable. The integrated Compose deployment uses `http://user-service:3001` with a 1,000 ms verification timeout. Deployed TLS routing remains an environment concern rather than a hard-coded application URL.
 
-**Remaining integration decisions:** frontend token storage/persistence; whether refresh/logout is required for D2; and final frontend origins and routing. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
+The shared frontend implements client-side logout by clearing `sessionStorage`, because User Service has no revocation endpoint. Development and Compose use the implemented same-origin Vite/nginx gateway rules. Final deployed TLS routing remains an infrastructure decision. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
 
 ## 7. HTTP API contract (implemented backend v1)
 

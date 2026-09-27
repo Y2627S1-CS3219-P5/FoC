@@ -15,6 +15,9 @@ Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added the
 issue #31 real-browser integration tooling, evidence, and documentation below.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: resolved
+the Supplier UI final-review findings and expanded live evidence for issue #34.
+Author review: Pending project-author review.
 -->
 
 # Frontend AI disclosures
@@ -115,3 +118,21 @@ The browser workflow does not duplicate every backend edge case. Focused compone
 cover retained 400/409/412/428/503/network feedback and stale-draft recovery; the existing
 API-only integration suite remains the database/concurrency/role authority. No User
 Service application code or Order integration was added.
+
+## 2026-09-27 — Supplier UI final review remediation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Resolve GitHub issue #34 review findings without changing approved
+  product behavior or User/Order Service application code.
+- **Repository files affected:** Supplier frontend types/tests and administrator layout,
+  the Playwright journey, frontend/Supplier documentation, and AI usage records.
+- **Author review:** Pending project-author review.
+
+Codex removed the frontend's duplicated closed Building Code union while retaining a named
+string domain type whose valid options come from live Supplier metadata. It extracted the
+shared administrator page shell and expanded the disposable live-browser journey to cover
+390-pixel create/edit and confirmation usability, a real backend 400 retained in the UI,
+two editor tabs sharing one original ETag with visible 412 compare/reload recovery, and a
+gateway mutation without `If-Match` returning 428. It also corrected stale specification
+text about the already-implemented session storage, client-side logout, and routing choices.
+No User or Order application file was changed.

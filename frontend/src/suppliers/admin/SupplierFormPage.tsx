@@ -4,6 +4,9 @@
  * Scope: Added create/edit orchestration, ETag concurrency recovery, and error
  * feedback for the administrator Supplier form in issue #30.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: adopted the shared administrator page shell for issue #34.
+ * Author review: Pending project-author review.
  */
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -15,11 +18,11 @@ import {
   updateSupplier,
 } from '../../api/supplierApi'
 import { useAuth } from '../../auth/authContext'
-import { TopBar } from '../../components/TopBar'
 import { useToast } from '../../components/toast/toastContext'
 import type { SupplierBuildingOption, SupplierWithEtag } from '../types'
 import { SupplierFeedback } from './SupplierFeedback'
 import { SupplierForm } from './SupplierForm'
+import { SupplierAdminPageShell } from './SupplierAdminPageShell'
 import {
   EMPTY_SUPPLIER_DRAFT,
   draftFromSupplier,
@@ -139,18 +142,18 @@ export function SupplierFormPage({ mode }: { readonly mode: 'create' | 'edit' })
 
   if (!isAdmin) {
     return (
-      <PageShell>
+      <SupplierAdminPageShell>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6" role="alert">
           <h1 className="text-xl font-bold text-navy-900">Administrator access required</h1>
           <p className="mt-2 text-sm text-slate-700">Supplier management is available only to administrators.</p>
           <Link className="mt-4 inline-flex font-semibold text-navy-800 underline" to="/suppliers">Return to Suppliers</Link>
         </div>
-      </PageShell>
+      </SupplierAdminPageShell>
     )
   }
 
   return (
-    <PageShell>
+    <SupplierAdminPageShell>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link to="/suppliers/admin" className="text-sm font-semibold text-navy-700 hover:underline">← Supplier management</Link>
@@ -207,7 +210,7 @@ export function SupplierFormPage({ mode }: { readonly mode: 'create' | 'edit' })
           </section>
         </div>
       )}
-    </PageShell>
+    </SupplierAdminPageShell>
   )
 }
 
@@ -245,8 +248,4 @@ function hoursSummary(draft: SupplierFormDraft): string {
   return draft.hoursKind === 'INTERVAL'
     ? `${draft.opensAt || '—'}–${draft.closesAt || '—'}`
     : draft.hoursKind
-}
-
-function PageShell({ children }: { readonly children: React.ReactNode }) {
-  return <><TopBar /><main className="mx-auto max-w-5xl px-4 py-6 sm:py-10">{children}</main></>
 }

@@ -7,6 +7,10 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: added backend-owned Building Code metadata types for issue #30.
  * Author review: Pending project-author review.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
+ * Scope: replaced the duplicated closed Building Code union with the
+ * metadata-driven named string domain type for issue #34.
+ * Author review: Pending project-author review.
  */
 
 export const SUPPLIER_CATEGORIES = ['FOOD', 'COFFEE', 'PRINTING', 'SHOPPING', 'PICKUP_POINT'] as const
@@ -25,23 +29,9 @@ export const SUPPLIER_LIST_DEFAULT_PAGE = 0
 export const SUPPLIER_LIST_DEFAULT_SIZE = 12
 export const SUPPLIER_LIST_MAX_SIZE = 100
 
-// The API owns code-to-label mapping. UI display must use `buildingLabel` from responses.
-export type BuildingCode =
-  | 'COM2'
-  | 'COM3'
-  | 'CENTRAL_LIBRARY'
-  | 'ENG_E3'
-  | 'ENG_E4'
-  | 'ENG_EA'
-  | 'FRONTIER'
-  | 'TERRACE'
-  | 'THE_RIDGE'
-  | 'YIH'
-  | 'PGP'
-  | 'HSSML'
-  | 'MED_SCI_LIBRARY'
-  | 'AS8'
-  | 'INNOVATION_4_0'
+// The API owns the valid code set and code-to-label mapping. Keeping a named
+// string type documents the domain without duplicating the backend registry.
+export type BuildingCode = string
 
 export interface SupplierBuildingOption {
   readonly code: BuildingCode
