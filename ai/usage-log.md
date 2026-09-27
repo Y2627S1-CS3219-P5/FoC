@@ -46,9 +46,19 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Resolved Supplier UI final-review findings for issue #34 and expanded
 real-service validation, concurrency, precondition, and mobile evidence.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Removed repeated exact-prompt quotations while preserving canonical prompt copies,
+distinct work entries, and their review records.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
+
+The Supplier UI entries for issues #29, #30, #31, and #34 continue the same workstream.
+To avoid duplicating prompt text, their initiating implementation request is quoted once
+under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend-api-and-test-foundation),
+and the approved metadata follow-up is quoted once under
+[Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
 
 ## 2026-09-27 — Supplier administrator management UI
 
@@ -59,12 +69,6 @@ Author review: Reviewed and approved by @ron.
   metadata API/types, management/form/concurrency components, focused tests, frontend
   documentation, and this usage log.
 - **Author review:** Reviewed and approved by @ron.
-
-### Exact prompts
-
-> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
-
-> `yes for long-term consistency lets add metadata endpoitn`
 
 ### Key response
 
@@ -352,11 +356,10 @@ The first live concurrent-create run found that PostgreSQL could not infer the B
 - **Repository files affected:** Supplier specification/evidence, root summary, this usage log, the Supplier mutation value/ETag/controller/persistence types and tests, and the Supplier Compose smoke runner.
 - **Author review:** Reviewed and approved by @ron.
 
-### Triggering prompts
+### Prompt context
 
-> `got it, rest of the defaults look good, proceed with implementation`
->
-> `seems like conversation was interrupted? continue`
+This remediation continued the approval and resume prompts already recorded under
+[Third Supplier backend increment](#2026-09-26--third-supplier-backend-increment).
 
 ### Key response
 
@@ -599,12 +602,6 @@ Codex implemented authenticated `GET /api/v1/suppliers/metadata` with the approv
   `frontend/AI-DISCLOSURES.md`.
 - **Author review:** Reviewed and approved by @ron.
 
-### Exact prompt
-
-> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
-
-> `yes for long-term consistency lets add metadata endpoitn`
-
 ### Key response
 
 Codex implemented the authenticated member catalogue and detail experience using live
@@ -626,12 +623,6 @@ administrator management UI or future Order Service action was added.
   `frontend/`, frontend dependency/test metadata and documentation,
   `supplier-service/SPEC.md`, Supplier README/verification evidence, and this log.
 - **Author review:** Reviewed and approved by @ron.
-
-### Exact prompts
-
-> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
-
-> `yes for long-term consistency lets add metadata endpoitn`
 
 ### Key response
 
@@ -659,12 +650,6 @@ changed or claimed.
   layout, Playwright journey, Supplier specification/evidence, frontend documentation,
   and this usage log.
 - **Author review:** Reviewed and approved by @ron.
-
-### Exact prompts
-
-> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
-
-> `yes for long-term consistency lets add metadata endpoitn`
 
 ### Key response
 
@@ -702,3 +687,23 @@ space; shared field groups now use flex growth to bottom-align their controls. T
 authenticated header now uses sticky top positioning with a stacking layer. Component
 regressions and live Chromium assertions verify the form positions and header position
 after scrolling. No backend or other service was changed.
+
+## 2026-09-27 — AI usage-log prompt deduplication
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Removing repeated prompt quotations from this log without
+  deleting distinct work, result, or approval records.
+- **Repository files affected:** `ai/usage-log.md`
+- **Author review:** Pending project-author review.
+
+### Exact prompt
+
+> `in usage-log.md there are some duplicates check and remove them and push changes to PR`
+
+### Key response
+
+Codex confirmed that the similarly named Supplier UI records describe separate issues and
+kept them. It retained one canonical quotation of each shared Supplier UI prompt, replaced
+the repeated third-increment remediation quotations with a link to their original entry,
+and added a single cross-reference explaining which Supplier UI entries share the canonical
+prompts. No implementation, specification, or earlier approval record changed.
