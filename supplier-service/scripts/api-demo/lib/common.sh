@@ -188,27 +188,6 @@ api_pass() {
   printf '\nPASS: %s\n' "$1"
 }
 
-api_print_response() {
-  local etag
-  local location
-  local request_id
-  etag="$(api_header ETag)"
-  location="$(api_header Location)"
-  request_id="$(api_header X-Request-Id)"
-
-  printf 'HTTP %s\n' "${API_RESPONSE_STATUS}"
-  [[ -z "${etag}" ]] || printf 'ETag: %s\n' "${etag}"
-  [[ -z "${location}" ]] || printf 'Location: %s\n' "${location}"
-  [[ -z "${request_id}" ]] || printf 'X-Request-Id: %s\n' "${request_id}"
-  if [[ -n "${API_RESPONSE_BODY}" ]]; then
-    if jq -e . >/dev/null 2>&1 <<<"${API_RESPONSE_BODY}"; then
-      jq . <<<"${API_RESPONSE_BODY}"
-    else
-      printf '%s\n' "${API_RESPONSE_BODY}"
-    fi
-  fi
-}
-
 api_print_cli_response() {
   local etag
   local location
