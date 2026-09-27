@@ -4,7 +4,14 @@
  * Scope: Top navigation bar showing display name, @username, the admin-only marker
  *        and a logout button (author decisions).
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added the
+ * administrator Supplier management navigation entry for issue #30.
+ * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: kept the
+ * shared navigation visible while Supplier pages scroll.
+ * Author review: Reviewed and approved by @ron.
  */
+import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext'
 import { APP_NAME } from '../config'
 
@@ -20,7 +27,7 @@ export function TopBar() {
   if (!user) return null
 
   return (
-    <header className="border-b border-slate-200 bg-white">
+    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
         <div className="flex shrink-0 items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-navy-800 text-sm font-bold text-white" aria-hidden="true">
@@ -31,6 +38,15 @@ export function TopBar() {
         </div>
 
         <div className="flex min-w-0 items-center gap-3">
+          {user.role === 'ADMINISTRATOR' && (
+            <Link
+              to="/suppliers/admin"
+              className="inline-flex shrink-0 rounded-lg border border-navy-100 px-2 py-1.5 text-sm font-semibold text-navy-800 hover:bg-navy-50 sm:px-3"
+            >
+              <span className="sm:hidden">Manage</span>
+              <span className="hidden sm:inline">Manage Suppliers</span>
+            </Link>
+          )}
           <div className="min-w-0 text-right">
             <p className="truncate text-sm font-semibold text-navy-900">
               {user.displayName}

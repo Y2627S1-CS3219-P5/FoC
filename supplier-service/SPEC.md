@@ -23,6 +23,17 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: clarified
 that database serialization protects equivalent POST requests across both
 statuses without extending duplicate rejection to PUT.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: recorded
+the Supplier workstream author's approved backend-owned Building Code metadata
+endpoint for issue #33. Contract decision approved by @ron; implementation
+review completed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: updated
+frontend decisions, implementation status, and verification evidence after issue #31.
+Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: removed
+stale integration-decision text after implemented session storage, client-side
+logout, and same-origin routing were verified for issue #34.
+Author review: Reviewed and approved by @ron.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -46,7 +57,9 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | Backend | NestJS + TypeScript with default Express adapter | Selected |
 | Database | PostgreSQL, private to Supplier Service, instantiated in a Docker Instance | Selected |
 | Database access | Drizzle ORM and versioned migrations | Selected |
-| Frontend | Shared React + TypeScript app using Vite | Selected for D2 |
+| Frontend | Shared responsive React + TypeScript app using Vite | Implemented for Supplier D2 scope |
+| Browser routing | Same-origin nginx in Compose and matching Vite development proxies | Implemented |
+| Browser session | Bearer token isolated in per-tab `sessionStorage`; logout clears it client-side | Implemented by the shared frontend |
 | User credential | Short-lived HS256 JWT access token returned by login and sent as `Authorization: Bearer` | Implemented by User Service in PR #14 |
 | User validation | `GET /auth/verify` with the caller's bearer header, including a live account lookup | Implemented by User Service in PR #14; no separate service credential |
 | Verification deployment | Configurable User Service base URL; Compose uses `http://user-service:3001`; 1,000 ms timeout | Approved by Supplier workstream author |
@@ -56,6 +69,7 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | Request correlation | Server generates each request ID and does not trust a client-supplied ID | Approved by Supplier workstream author |
 | Request completion logging | Nest middleware plus the built-in JSON `ConsoleLogger`; no tracing/APM SDK or external exporter in this increment | Approved by Supplier workstream author on 2026-09-25 |
 | Bundled images | Supplier serves repository `data/images` at `/assets/suppliers` | Approved by Supplier workstream author |
+| Building options | Authenticated `GET /api/v1/suppliers/metadata` returns backend-owned `{ code, label }` options | Approved by Supplier workstream author on 2026-09-27 |
 | Description | Use `locationDescription` as the only displayed Supplier description | Approved by team; replaces the separate D1 general-description field |
 | Removal | Archive, retain record, allow administrator restoration | Approved by team; replaces the D1 deletion restriction |
 | Edit conflicts | DB integer version exposed as ETag; `If-Match` and 412/428 | Selected |
@@ -68,7 +82,7 @@ Supplier Service owns supplier metadata and ACTIVE/ARCHIVED state under the appr
 
 A Supplier ID identifies one physical errand origin. Moving an outlet to another building creates a new Supplier record and archives the old record. Correcting directions within the same physical location retains the ID.
 
-User Service currently supports configured frontend origins through CORS. After login, the browser receives an access token and sends it in the `Authorization` header on protected Supplier requests. Final frontend token storage/persistence and whether the integrated deployment uses direct service URLs or a same-origin proxy remain frontend integration decisions; do not infer either from the backend contract.
+User Service supports configured frontend origins through CORS. After login, the browser stores the access token in per-tab `sessionStorage` and sends it in the `Authorization` header on protected Supplier requests. Logout clears that local token because User Service has no revocation endpoint. Development and Compose use matching same-origin Vite/nginx gateway rules; final deployed TLS routing remains an infrastructure decision. These browser choices do not alter Supplier's bearer-token backend contract.
 
 ## 4. Data model and seed data
 
@@ -117,6 +131,8 @@ User Service currently supports configured frontend origins through CORS. After 
 Reject an unknown building code with 400 for D2. Add a new building to this controlled mapping deliberately rather than accepting free text.
 
 Requests identify a building using `buildingCode` only. Responses return both `buildingCode` and the corresponding `buildingLabel`; clients do not maintain their own code-to-label mapping.
+
+For long-term client consistency, the Supplier workstream author approved an authenticated metadata endpoint as the runtime source of every selectable Building Code and label. `GET /api/v1/suppliers/metadata` returns `{ "buildingCodes": [{ "code": "COM2", "label": "COM2" }, ...] }`, sourced from the same backend registry used for request validation and response labels. Both MEMBER and ADMINISTRATOR may call it. It exposes no seed aliases or mutable configuration.
 
 Index the primary key, status/building code, and category membership. Sort names with ID as a stable tiebreaker. Use ordinary case-insensitive substring search over the small catalogue; measure before adding specialist indexes. Do not create cross-service foreign keys.
 
@@ -177,13 +193,13 @@ PR #14 establishes the User Service contract that Supplier builds against:
 
 Encapsulate the call in a NestJS guard plus the planned `SessionVerifier` interface seam. Local tests may use a verifier test double, but the integrated environment and D2 demo use the real User Service endpoint. Do not deploy a bypass.
 
-The bearer token is manually attached rather than browser-managed cookie authentication, so the earlier cookie-specific CSRF-token proposal does not apply to this implemented contract. The final frontend token storage/persistence policy is not defined by PR #14 and must be agreed before frontend integration.
+The bearer token is manually attached rather than browser-managed cookie authentication, so the earlier cookie-specific CSRF-token proposal does not apply to this implemented contract. The shared frontend stores it in per-tab `sessionStorage`, preserving the session across refreshes while clearing it when the tab closes.
 
 PR #14 does not implement refresh tokens, logout, an access-token revocation list, or a separate service credential for `/auth/verify`. Account role/status changes take effect on the next verification call because the endpoint reads the User database. The `JWT_REFRESH_TOKEN_TTL` example variable is currently unused by User Service.
 
 The Supplier-to-User base URL remains runtime-configurable. The integrated Compose deployment uses `http://user-service:3001` with a 1,000 ms verification timeout. Deployed TLS routing remains an environment concern rather than a hard-coded application URL.
 
-**Remaining integration decisions:** frontend token storage/persistence; whether refresh/logout is required for D2; and final frontend origins and routing. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
+The shared frontend implements client-side logout by clearing `sessionStorage`, because User Service has no revocation endpoint. Development and Compose use the implemented same-origin Vite/nginx gateway rules. Final deployed TLS routing remains an infrastructure decision. Supplier does not consume AccountActivated events or call `GET /users/{id}/public` in D2.
 
 ## 7. HTTP API contract (implemented backend v1)
 
@@ -192,6 +208,7 @@ Base path: `/api/v1/suppliers`. All business endpoints require a verified active
 | Method and path | Behaviour | Success |
 | --- | --- | --- |
 | `GET /api/v1/suppliers` | Search/filter/sort/page; ACTIVE by default; admin can request ARCHIVED | 200 page |
+| `GET /api/v1/suppliers/metadata` | Complete backend-owned Building Code options; both roles | 200 `{ "buildingCodes": [{ "code", "label" }] }` |
 | `GET /api/v1/suppliers/{id}` | Detail; archived detail for admin only | 200 body and `ETag` |
 | `POST /api/v1/suppliers` | Validate and create ACTIVE row | 201 body, `Location`, `ETag` |
 | `PUT /api/v1/suppliers/{id}` | Replace editable fields, require `If-Match` | 200 body, new `ETag` |
@@ -285,6 +302,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 - **Performance:** Measure D1's p95 under two seconds using 100 Suppliers, 20 concurrent clients, approximately 10 requests per second for five minutes, with an 80% list and 20% detail mix. Include synchronous User Service validation in the measured response time.
 - **Security:** parameterized Drizzle queries, sort allowlist, bounded input, bearer-token and role guards, least-privilege DB user, bounded User timeout, and no token logging.
 - **Observability:** server-generated request ID returned in `X-Request-Id` and error bodies; one request-correlated, query-redacted JSON completion event with status/result/duration; and non-sensitive `/health`.
+- **Responsive verification:** Playwright exercises the production nginx frontend with real User/Supplier services and fresh PostgreSQL volumes at representative 1280-pixel desktop and 390-pixel mobile widths. Both document and body scroll widths must remain within their viewport widths.
 
 ### 9.1 Acceptance scenarios
 
@@ -303,6 +321,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 | A11 | API works while frontend process is stopped. |
 | A12 | Real login, role checks, mutation, database state, and responsive UI appear in integrated demo. |
 | A13 | Creating an exact normalized duplicate of an ACTIVE or ARCHIVED Supplier returns 409 and identifies the existing record without mutation. |
+| A14 | Authenticated members and administrators receive every canonical Building Code and label from Supplier metadata; unauthenticated access returns 401. |
 
 ### 9.2 D2 demo
 
@@ -314,9 +333,9 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 
 ## 10. Coordination and implementation sequence
 
-**External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; decide frontend bearer-token storage/persistence, whether refresh/logout is required for D2, final origins/routing, and deployed TLS routing. The Supplier verification deployment timeout is approved at 1,000 ms. PR #14 is the implemented backend auth contract; it has no separate service credential for `/auth/verify`. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
+**External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria, and decide final deployed TLS routing. The shared frontend has implemented per-tab `sessionStorage`, client-side logout, and matching same-origin Vite/nginx gateway rules. The Supplier verification deployment timeout is approved at 1,000 ms. PR #14 is the implemented backend auth contract; it has no separate service credential for `/auth/verify`. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
 
-**Implementation status:** the Supplier backend now implements the NestJS/Drizzle schema, migrations, repeatable seed, real User Service `SessionVerifier` and bearer/role guard, authenticated list/detail, and administrator create/full-update/archive/restore with atomic version and duplicate handling. Unit/contract tests and the isolated live Compose check cover the backend API and PostgreSQL state. Supplier frontend screens, integrated frontend routing, the performance workload, and the full responsive acceptance demo remain future work; the D1 document-alignment and frontend decisions above also remain open.
+**Implementation status:** the Supplier backend implements the NestJS/Drizzle schema, migrations, repeatable seed, real User Service `SessionVerifier` and bearer/role guard, authenticated Building Code metadata and list/detail, and administrator create/full-update/archive/restore with atomic version and duplicate handling. The shared frontend implements responsive MEMBER catalogue/search/filter/sort/page/detail and ADMINISTRATOR create/edit/archive/archived/restore screens using live APIs. Unit/component/contract tests, the API-only isolated Compose check, and the real-browser isolated Compose check cover the implemented backend, database, gateway, and responsive UI. The performance workload, manual presentation rehearsal, D1 document alignment, and deployed TLS routing remain outstanding; no Order integration is claimed.
 
 ### Sources
 

@@ -9,6 +9,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; attached the
  * issue #25 Supplier OpenAPI operation descriptions.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; exposed the
+ * authenticated issue #33 Building Code metadata route.
+ * Contract decision and implementation reviewed and approved by @ron.
  */
 import {
   Body,
@@ -32,8 +35,13 @@ import {
   RequireSupplierRoles,
 } from "../../auth/supplier-auth.guard";
 import {
+  BUILDING_OPTIONS,
+  BuildingOption,
+} from "../../domain/buildings";
+import {
   ApiArchiveSupplier,
   ApiCreateSupplier,
+  ApiGetSupplierMetadata,
   ApiGetSupplier,
   ApiListSuppliers,
   ApiRestoreSupplier,
@@ -73,6 +81,12 @@ export class SupplierController {
     @Req() request: AuthenticatedSupplierRequest,
   ): Promise<SupplierListPage> {
     return this.catalogue.list(query, request.principal);
+  }
+
+  @Get("metadata")
+  @ApiGetSupplierMetadata()
+  metadata(): { readonly buildingCodes: readonly BuildingOption[] } {
+    return { buildingCodes: BUILDING_OPTIONS };
   }
 
   @Get(":id")

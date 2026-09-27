@@ -30,9 +30,79 @@ Author review: Approval explicitly supplied by @ron; the separate course-owner s
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-09-26
 Scope: Drafted the User Service author's three entries below from the author's prompts; the author edited and approved them.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Implemented the shared Supplier frontend API and test foundation for issue #28 from the approved specification and ticket.
+Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Implemented and tested the Supplier member catalogue and detail UI for issue #29 from the approved specification and ticket.
+Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Implemented and tested the Supplier administrator management UI for issue #30 from the approved specification and ticket.
+Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Added and ran isolated real-browser Supplier UI verification for issue #31, updated evidence and implementation-status documentation, and preserved API-only verification.
+Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Resolved Supplier UI final-review findings for issue #34 and expanded
+real-service validation, concurrency, precondition, and mobile evidence.
+Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Removed repeated exact-prompt quotations while preserving canonical prompt copies,
+distinct work entries, and their review records.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
+
+The Supplier UI entries for issues #29, #30, #31, and #34 continue the same workstream.
+To avoid duplicating prompt text, their initiating implementation request is quoted once
+under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend-api-and-test-foundation),
+and the approved metadata follow-up is quoted once under
+[Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
+
+## 2026-09-27 — Supplier administrator management UI
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing and testing GitHub issue #30 from the approved
+  Supplier UI specification.
+- **Repository files affected:** Supplier frontend administrator routes, navigation,
+  metadata API/types, management/form/concurrency components, focused tests, frontend
+  documentation, and this usage log.
+- **Author review:** Reviewed and approved by @ron.
+
+### Key response
+
+Codex implemented the administrator Supplier UI on the dedicated Supplier UI workstream:
+live ACTIVE/ARCHIVED management, metadata-backed create/full-edit forms, detail ETag use
+for every conditional mutation, accessible archive/restore confirmation, refresh and
+success feedback, duplicate navigation, and stale-draft compare/reload recovery. Focused
+tests cover the exact mutation body, duplicate creation, 412 draft preservation, current-
+ETag archive, and member exclusion. It did not implement physical deletion, mock Supplier
+data, Order Service functionality, or User/Supplier backend application changes.
+
+## 2026-09-27 — Supplier frontend API and test foundation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing code, tests, and documentation from the approved
+  Supplier UI specification and GitHub issue #28.
+- **Repository files affected:** Frontend API client and Supplier modules, frontend test
+  setup and focused tests, nginx gateway parity, dependency metadata, frontend docs, and
+  this usage log.
+- **Author review:** Reviewed and approved by @ron.
+
+### Exact prompt
+
+> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
+
+### Key response
+
+Codex implemented the shared typed foundation required before Supplier screens: list,
+detail, create, full update, archive, and restore API helpers; ETag propagation;
+Supplier field-error, request-ID, and duplicate-ID metadata; shared category and typical-
+hours formatting; and Vitest/Testing Library setup with focused contract tests. The nginx
+gateway now handles the bare `/assets/suppliers` path consistently with Vite. This ticket
+did not add UI screens, duplicate the backend-owned building-label mapping, or modify
+Supplier/User Service application code.
 
 ## 2026-09-25 — Supplier specification requirements review
 
@@ -286,11 +356,10 @@ The first live concurrent-create run found that PostgreSQL could not infer the B
 - **Repository files affected:** Supplier specification/evidence, root summary, this usage log, the Supplier mutation value/ETag/controller/persistence types and tests, and the Supplier Compose smoke runner.
 - **Author review:** Reviewed and approved by @ron.
 
-### Triggering prompts
+### Prompt context
 
-> `got it, rest of the defaults look good, proceed with implementation`
->
-> `seems like conversation was interrupted? continue`
+This remediation continued the approval and resume prompts already recorded under
+[Third Supplier backend increment](#2026-09-26--third-supplier-backend-increment).
 
 ### Key response
 
@@ -507,3 +576,134 @@ Verified on the Docker stack with 26 API checks, including:
 - 20 rounds of two admins demoting each other at the same time, where both never succeed
 
 Claude noted that the 409 rule cannot be triggered in D2, because self-changes are forbidden.
+
+## 2026-09-27 — Supplier Building Code metadata endpoint
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing the project-author-approved authenticated runtime metadata contract for issue #33, documenting it, and adding focused verification; no Supplier CRUD behavior, database state, frontend files, or User Service application code changes.
+- **Repository files affected:** `supplier-service/SPEC.md`, `supplier-service/AI-DISCLOSURES.md`, `supplier-service/src/domain/buildings.ts`, Supplier controller/OpenAPI source and tests, `supplier-service/scripts/compose-smoke.mjs`, and `ai/usage-log.md`
+- **Author review:** The metadata-endpoint contract decision and implementation were reviewed and approved by @ron on 2026-09-27.
+
+### Exact prompt
+
+> `yes for long-term consistency lets add metadata endpoitn`
+
+### Key response
+
+Codex implemented authenticated `GET /api/v1/suppliers/metadata` with the approved extensible response shape `{ "buildingCodes": [{ "code", "label" }] }`. The endpoint serves the complete stable option set directly from the backend-owned building registry to both MEMBER and ADMINISTRATOR callers, without exposing seed aliases or introducing database state. It is covered by focused controller and generated OpenAPI tests plus the real-service Compose integration check, including unauthenticated rejection and exact MEMBER/ADMINISTRATOR responses. No existing Supplier CRUD behavior, frontend file, or User Service application code was changed.
+
+## 2026-09-27 — Supplier member catalogue and detail UI
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing and testing GitHub issue #29 from the approved
+  Supplier UI specification; no administrator mutations, backend, or User Service changes.
+- **Repository files affected:** `frontend/src/App.tsx`, Supplier frontend API/types and
+  UI components/tests under `frontend/src/suppliers/`, frontend test setup, README and
+  `frontend/AI-DISCLOSURES.md`.
+- **Author review:** Reviewed and approved by @ron.
+
+### Key response
+
+Codex implemented the authenticated member catalogue and detail experience using live
+Supplier APIs. Search, metadata-backed building/category filters, sorting, page size and
+pagination are URL-backed; new requests cancel and ignore stale responses. Responsive
+cards and detail show backend labels, Location Description, typical hours, coordinates
+and accessible image fallback, with loading, empty, not-found, service/network and retry
+states. Focused tests verify live-data rendering at the API boundary, member-only controls,
+query behavior, stale-response protection, image fallback and detail concealment. No
+administrator management UI or future Order Service action was added.
+
+## 2026-09-27 — Integrated responsive Supplier UI verification
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing GitHub issue #31 from the approved Supplier UI
+  specification: real-browser/Compose verification, responsive evidence, current docs,
+  and course disclosure records. No User Service application changes or Order integration.
+- **Repository files affected:** Playwright test/configuration and orchestration under
+  `frontend/`, frontend dependency/test metadata and documentation,
+  `supplier-service/SPEC.md`, Supplier README/verification evidence, and this log.
+- **Author review:** Reviewed and approved by @ron.
+
+### Key response
+
+Codex added a repeatable isolated Chromium verification against the production nginx
+frontend, real User and Supplier services, migrations/seed, and fresh PostgreSQL volumes.
+It demonstrates a MEMBER using live search, building/category filters, sorting, pagination,
+and detail without administrator controls, plus an ADMINISTRATOR creating, editing,
+archiving, inspecting, and restoring one stable Supplier ID. Desktop and 390-pixel mobile
+views assert that neither the document nor body overflows horizontally. The orchestration
+uses available ports, a unique Compose project, non-secret test-only credentials, ignored
+failure artifacts, and unconditional project/volume cleanup.
+
+The evidence records that representative UI error/concurrency behavior is covered by
+focused component/API tests and the existing API-only real-service integration suite,
+rather than overstating the two-browser-journey scope. The API-only runner remains usable
+without the frontend. No User Service application file or Order Service integration was
+changed or claimed.
+
+## 2026-09-27 — Supplier UI final review remediation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Resolving GitHub issue #34 findings on the Supplier UI branch;
+  no approved product-behavior change and no User/Order Service application changes.
+- **Repository files affected:** Supplier frontend types and tests, shared administrator
+  layout, Playwright journey, Supplier specification/evidence, frontend documentation,
+  and this usage log.
+- **Author review:** Reviewed and approved by @ron.
+
+### Key response
+
+Codex replaced the duplicated frontend Building Code allowlist with a named string domain
+type whose valid options remain supplied by authenticated backend metadata, and added a
+future-code contract fixture. It extracted the shared administrator page shell. The live
+Chromium workflow now performs create/edit forms and archive/restore confirmations at 390
+pixels, surfaces a genuine backend 400 while preserving form values, proves two editor tabs
+loaded the same original ETag before one succeeds and the stale one visibly receives 412
+with draft-preserving compare/reload, and calls the gateway without `If-Match` to prove 428.
+It corrected stale specification language about implemented `sessionStorage`, client-side
+logout, and same-origin routing, and updated observed verification evidence. Frontend
+tests/lint/build, focused Supplier compatibility checks, and the disposable live workflow
+passed, with filtered Docker cleanup empty afterward.
+
+## 2026-09-27 — Supplier UI layout corrections
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Diagnose, implement, test, and push the two visual corrections
+  requested for Supplier UI PR #32.
+- **Repository files affected:** Shared frontend navigation, Supplier administrator form,
+  focused component tests, Playwright regression coverage, frontend disclosure records,
+  and this usage log.
+- **Author review:** Reviewed and approved by @ron.
+
+### Exact prompt
+
+> `two small issues, the opens and closes at is not aligned, and the nav bar should be sticky so that as user scrolls vertically up and down nav bar should be visble, make the fixes and push changes to PR`
+
+### Key response
+
+Codex reproduced both issues with focused failing tests. The closing-time guidance occupied
+extra vertical space above its control, while the opening-time field had no corresponding
+space; shared field groups now use flex growth to bottom-align their controls. The shared
+authenticated header now uses sticky top positioning with a stacking layer. Component
+regressions and live Chromium assertions verify the form positions and header position
+after scrolling. No backend or other service was changed.
+
+## 2026-09-27 — AI usage-log prompt deduplication
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Removing repeated prompt quotations from this log without
+  deleting distinct work, result, or approval records.
+- **Repository files affected:** `ai/usage-log.md`
+- **Author review:** Pending project-author review.
+
+### Exact prompt
+
+> `in usage-log.md there are some duplicates check and remove them and push changes to PR`
+
+### Key response
+
+Codex confirmed that the similarly named Supplier UI records describe separate issues and
+kept them. It retained one canonical quotation of each shared Supplier UI prompt, replaced
+the repeated third-increment remediation quotations with a link to their original entry,
+and added a single cross-reference explaining which Supplier UI entries share the canonical
+prompts. No implementation, specification, or earlier approval record changed.

@@ -16,6 +16,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; verified the
  * issue #25 Swagger UI and generated Supplier OpenAPI JSON in the live stack.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; added live
+ * authentication and complete-response coverage for issue #33 metadata.
+ * Contract decision and implementation reviewed and approved by @ron.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -30,6 +33,23 @@ const supplierBaseUrl = `http://127.0.0.1:${supplierPort}`;
 const userBaseUrl = `http://127.0.0.1:${userPort}`;
 const printerId = "ac2288df-661c-5d78-bcc1-ac6bca30fe51";
 const unknownSupplierId = "00000000-0000-4000-8000-000000000023";
+const buildingCodeOptions = [
+  { code: "COM2", label: "COM2" },
+  { code: "COM3", label: "COM3" },
+  { code: "CENTRAL_LIBRARY", label: "Central Library" },
+  { code: "ENG_E3", label: "Engineering Block E3" },
+  { code: "ENG_E4", label: "Engineering Block E4" },
+  { code: "ENG_EA", label: "Engineering Block EA" },
+  { code: "FRONTIER", label: "Frontier" },
+  { code: "TERRACE", label: "Terrace" },
+  { code: "THE_RIDGE", label: "The Ridge" },
+  { code: "YIH", label: "Yusof Ishak House" },
+  { code: "PGP", label: "Prince George's Park" },
+  { code: "HSSML", label: "Hon Sui Sen Memorial Library" },
+  { code: "MED_SCI_LIBRARY", label: "Medicine + Science Library" },
+  { code: "AS8", label: "Block AS8" },
+  { code: "INNOVATION_4_0", label: "innovation4.0" },
+];
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const hugeEtag = `"v${"9".repeat(200)}"`;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -147,6 +167,7 @@ async function verifyOpenApiDocumentation() {
   assert.equal(body.components.securitySchemes["supplier-bearer"].scheme, "bearer");
   assert.deepEqual(Object.keys(body.paths).sort(), [
     "/api/v1/suppliers",
+    "/api/v1/suppliers/metadata",
     "/api/v1/suppliers/{id}",
     "/api/v1/suppliers/{id}/restore",
     "/health",
@@ -422,6 +443,25 @@ async function verifyCatalogueReadScenarios({
     invalid.response.headers.get("x-request-id"),
     "client-chosen-id",
   );
+
+  const missingMetadataAuthentication = await jsonRequest(
+    `${supplierBaseUrl}/api/v1/suppliers/metadata`,
+  );
+  assertError(missingMetadataAuthentication, 401, "UNAUTHENTICATED");
+
+  const memberMetadata = await supplierRequest(
+    "/api/v1/suppliers/metadata",
+    memberToken,
+  );
+  assert.equal(memberMetadata.response.status, 200);
+  assert.deepEqual(memberMetadata.body, { buildingCodes: buildingCodeOptions });
+
+  const adminMetadata = await supplierRequest(
+    "/api/v1/suppliers/metadata",
+    adminToken,
+  );
+  assert.equal(adminMetadata.response.status, 200);
+  assert.deepEqual(adminMetadata.body, memberMetadata.body);
 
   const defaultList = await supplierRequest("/api/v1/suppliers", memberToken);
   assert.equal(defaultList.response.status, 200);
@@ -1196,7 +1236,8 @@ async function run() {
     "PASS: real auth, mutation authorization, validation/preconditions, " +
       "concurrent and ACTIVE/ARCHIVED duplicate creation rejection, create/update, " +
       "archive/restore lifecycle no-ops, SQL retention, repeat-migration/seed " +
-      "preservation, catalogue reads, OpenAPI docs, logging, assets, and fail-closed auth.",
+      "preservation, metadata/catalogue reads, OpenAPI docs, logging, assets, " +
+      "and fail-closed auth.",
   );
 }
 

@@ -3,6 +3,10 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
  * Scope: Shared HTTP helper for calling backend services through the gateway.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: preserved
+ * response metadata and Supplier error details while retaining the existing
+ * authentication and body-only client behaviour for issue #28.
+ * Author review: Reviewed and approved by @ron.
  */
 import { API_BASE } from '../config'
 import { getToken } from '../auth/tokenStorage'
@@ -14,12 +18,29 @@ export class ApiError extends Error {
   readonly status: number
   readonly code: string
   readonly details: Record<string, string>
+  readonly fieldErrors: Record<string, string>
+  readonly requestId?: string
+  readonly existingSupplierId?: string
 
-  constructor(status: number, code: string, message: string, details: Record<string, string> = {}) {
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    details: Record<string, string> = {},
+    metadata: {
+      fieldErrors?: Record<string, string>
+      requestId?: string
+      existingSupplierId?: string
+    } = {},
+  ) {
     super(message)
+    this.name = 'ApiError'
     this.status = status
     this.code = code
     this.details = details
+    this.fieldErrors = metadata.fieldErrors ?? {}
+    this.requestId = metadata.requestId
+    this.existingSupplierId = metadata.existingSupplierId
   }
 }
 
@@ -36,12 +57,19 @@ export function setUnauthorizedHandler(handler: (() => void) | null): void {
   onUnauthorized = handler
 }
 
-interface RequestOptions {
+export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   /** Attach the logged-in user's token. Default true. Login/register pass false. */
   auth?: boolean
   headers?: Record<string, string>
+  signal?: AbortSignal
+}
+
+export interface ApiResponse<T> {
+  readonly data: T
+  readonly status: number
+  readonly headers: Headers
 }
 
 /**
@@ -49,7 +77,19 @@ interface RequestOptions {
  * Resolves with the parsed JSON body; throws ApiError or NetworkError otherwise.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, auth = true, headers = {} } = options
+  const response = await apiRequestWithMeta<T>(path, options)
+  return response.data
+}
+
+/**
+ * Call the backend and retain HTTP response metadata needed by conditional APIs.
+ * Prefer `apiRequest()` when a caller only needs the JSON body.
+ */
+export async function apiRequestWithMeta<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<ApiResponse<T>> {
+  const { method = 'GET', body, auth = true, headers = {}, signal } = options
 
   const requestHeaders: Record<string, string> = { ...headers }
   if (body !== undefined) requestHeaders['Content-Type'] = 'application/json'
@@ -62,8 +102,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       method,
       headers: requestHeaders,
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
     throw new NetworkError()
   }
 
@@ -82,14 +124,24 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     if (response.status === 401 && token && onUnauthorized) onUnauthorized()
     throw toApiError(response.status, data)
   }
-  return data as T
+  return { data: data as T, status: response.status, headers: response.headers }
 }
 
 function toApiError(status: number, data: unknown): ApiError {
   const body = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>
   const code = typeof body.error === 'string' ? body.error : typeof body.code === 'string' ? body.code : 'UNKNOWN'
   const message = typeof body.message === 'string' ? body.message : 'Something went wrong. Please try again.'
-  const detailsSource = body.details ?? body.fieldErrors
-  const details = typeof detailsSource === 'object' && detailsSource !== null ? (detailsSource as Record<string, string>) : {}
-  return new ApiError(status, code, message, details)
+  const fieldErrors = stringRecord(body.fieldErrors)
+  const details = stringRecord(body.details) ?? fieldErrors ?? {}
+  return new ApiError(status, code, message, details, {
+    fieldErrors: fieldErrors ?? {},
+    requestId: typeof body.requestId === 'string' ? body.requestId : undefined,
+    existingSupplierId: typeof body.existingSupplierId === 'string' ? body.existingSupplierId : undefined,
+  })
+}
+
+function stringRecord(value: unknown): Record<string, string> | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
+  if (!Object.values(value).every((item) => typeof item === 'string')) return undefined
+  return value as Record<string, string>
 }

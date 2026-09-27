@@ -2,6 +2,9 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: regression-tested the generated issue #25 Supplier OpenAPI contract.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; covered the
+ * issue #33 metadata operation and schemas. Contract decision and
+ * implementation reviewed and approved by @ron.
  */
 import { INestApplication, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
@@ -77,6 +80,7 @@ describe("Supplier OpenAPI document", () => {
     });
     expect(Object.keys(document.paths).sort()).toEqual([
       "/api/v1/suppliers",
+      "/api/v1/suppliers/metadata",
       "/api/v1/suppliers/{id}",
       "/api/v1/suppliers/{id}/restore",
       "/health",
@@ -102,6 +106,9 @@ describe("Supplier OpenAPI document", () => {
     );
     expect(document.paths["/health"]?.get?.security).toBeUndefined();
     expect(document.paths["/api/v1/suppliers"]?.get?.security).toEqual([
+      { [SUPPLIER_BEARER_AUTH_NAME]: [] },
+    ]);
+    expect(document.paths["/api/v1/suppliers/metadata"]?.get?.security).toEqual([
       { [SUPPLIER_BEARER_AUTH_NAME]: [] },
     ]);
   });
@@ -151,6 +158,8 @@ describe("Supplier OpenAPI document", () => {
     expect(schemas).toHaveProperty("SupplierMutationRequestDto");
     expect(schemas).toHaveProperty("SupplierResponseDto");
     expect(schemas).toHaveProperty("SupplierListResponseDto");
+    expect(schemas).toHaveProperty("SupplierBuildingOptionDto");
+    expect(schemas).toHaveProperty("SupplierMetadataResponseDto");
     expect(schemas).toHaveProperty("SupplierErrorResponseDto");
     expect(schemas).toHaveProperty("HealthResponseDto");
     expect(schemas?.SupplierMutationRequestDto).toMatchObject({
@@ -161,6 +170,24 @@ describe("Supplier OpenAPI document", () => {
         "locationDescription",
         "hoursKind",
       ],
+    });
+    expect(schemas?.SupplierBuildingOptionDto).toMatchObject({
+      required: ["code", "label"],
+      properties: {
+        code: {
+          allOf: [{ $ref: "#/components/schemas/BuildingCode" }],
+        },
+        label: { type: "string" },
+      },
+    });
+    expect(schemas?.SupplierMetadataResponseDto).toMatchObject({
+      required: ["buildingCodes"],
+      properties: {
+        buildingCodes: {
+          type: "array",
+          items: { $ref: "#/components/schemas/SupplierBuildingOptionDto" },
+        },
+      },
     });
   });
 });
