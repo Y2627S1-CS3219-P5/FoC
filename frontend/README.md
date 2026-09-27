@@ -12,6 +12,9 @@ issue #29. Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the Supplier administrator routes and lifecycle/form boundaries for issue #30.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
+the isolated real-browser Supplier UI verification and D2 rehearsal for issue #31.
+Author review: Pending project-author review.
 -->
 
 # Frontend
@@ -42,10 +45,50 @@ npm run dev
 
 ```bash
 cd frontend
+npm ci
 npm test
 npm run lint
 npm run build
 ```
+
+For the repeatable integrated browser check, install its Chromium once and run:
+
+```bash
+cd frontend
+npx playwright install chromium
+npm run test:e2e
+```
+
+Or run the dependency install, browser setup, lint, component tests, production build,
+and live browser workflow together from anywhere in the repository:
+
+```bash
+./frontend/scripts/run-supplier-ui-demo.sh
+```
+
+`test:e2e` chooses available host ports and creates a uniquely named disposable
+Compose project. It starts the real nginx frontend, User Service, Supplier Service,
+and both PostgreSQL databases with non-secret test-only credentials. Chromium then
+checks the MEMBER catalogue/detail journey and the ADMINISTRATOR
+create/edit/archive/restore journey at desktop and mobile widths, including horizontal
+overflow assertions. The project and its volumes are removed after success or failure.
+Failure traces, screenshots, and videos are written under the ignored `test-results/`;
+an HTML report is written under ignored `playwright-report/`.
+
+This browser check complements, rather than replaces, the API-only verification:
+
+```bash
+cd supplier-service
+npm run test:integration
+```
+
+That command remains usable with the frontend stopped and covers direct MEMBER 403s,
+ETag races/preconditions, database state, repeatable seed behavior, and service outages.
+
+For a presentation rehearsal, start the ordinary stack with `docker compose up --build`,
+open `http://localhost:8080`, and follow the MEMBER then ADMINISTRATOR flow in
+`supplier-service/SPEC.md` section 9.2. Use Archive as the approved delete behavior;
+do not claim physical deletion or Order Service integration.
 
 ## How requests reach the services
 

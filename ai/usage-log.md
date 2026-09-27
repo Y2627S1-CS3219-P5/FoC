@@ -39,6 +39,9 @@ Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented and tested the Supplier administrator management UI for issue #30 from the approved specification and ticket.
 Author review: Pending project-author review.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Added and ran isolated real-browser Supplier UI verification for issue #31, updated evidence and implementation-status documentation, and preserved API-only verification.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
@@ -608,3 +611,37 @@ and accessible image fallback, with loading, empty, not-found, service/network a
 states. Focused tests verify live-data rendering at the API boundary, member-only controls,
 query behavior, stale-response protection, image fallback and detail concealment. No
 administrator management UI or future Order Service action was added.
+
+## 2026-09-27 — Integrated responsive Supplier UI verification
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing GitHub issue #31 from the approved Supplier UI
+  specification: real-browser/Compose verification, responsive evidence, current docs,
+  and course disclosure records. No User Service application changes or Order integration.
+- **Repository files affected:** Playwright test/configuration and orchestration under
+  `frontend/`, frontend dependency/test metadata and documentation,
+  `supplier-service/SPEC.md`, Supplier README/verification evidence, and this log.
+- **Author review:** Pending project-author review.
+
+### Exact prompts
+
+> `$implement-spec Lets implemetn the Supplier UI as a separate branch`
+
+> `yes for long-term consistency lets add metadata endpoitn`
+
+### Key response
+
+Codex added a repeatable isolated Chromium verification against the production nginx
+frontend, real User and Supplier services, migrations/seed, and fresh PostgreSQL volumes.
+It demonstrates a MEMBER using live search, building/category filters, sorting, pagination,
+and detail without administrator controls, plus an ADMINISTRATOR creating, editing,
+archiving, inspecting, and restoring one stable Supplier ID. Desktop and 390-pixel mobile
+views assert that neither the document nor body overflows horizontally. The orchestration
+uses available ports, a unique Compose project, non-secret test-only credentials, ignored
+failure artifacts, and unconditional project/volume cleanup.
+
+The evidence records that representative UI error/concurrency behavior is covered by
+focused component/API tests and the existing API-only real-service integration suite,
+rather than overstating the two-browser-journey scope. The API-only runner remains usable
+without the frontend. No User Service application file or Order Service integration was
+changed or claimed.

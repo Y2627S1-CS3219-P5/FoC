@@ -21,13 +21,16 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Documented the issue #25 Supplier Swagger UI, OpenAPI JSON endpoint,
 and bearer-token workflow.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Documented the integrated responsive Supplier UI verification for issue #31.
+Author review: Pending project-author review.
 -->
 
 # Supplier Service
 
-The backend currently provides NestJS/Express, a private PostgreSQL database through Drizzle, versioned migrations, database-backed readiness, a repeatable 21-row Supplier import, authenticated catalogue reads, and administrator create/update/archive/restore operations. Every business request uses the real User Service `GET /auth/verify` contract.
+The Supplier workstream provides a NestJS/Express backend, a private PostgreSQL database through Drizzle, versioned migrations, database-backed readiness, a repeatable 21-row Supplier import, authenticated catalogue reads, administrator create/update/archive/restore operations, and a responsive React UI in `../frontend`. Every business request uses the real User Service `GET /auth/verify` contract.
 
-This increment remains backend-only. It adds no frontend code and does not modify User Service application code.
+The integrated UI uses the Supplier APIs through the shared nginx/Vite gateway; it does not contain a hard-coded catalogue. The verification addition modifies no User Service application code and adds no Order Service integration.
 
 ## Local development
 
@@ -132,6 +135,34 @@ this one command from anywhere in the repository:
 `test:integration` builds a fresh disposable Compose project with a unique `foc-supplier-smoke-...` name on ports 3900/3901. It verifies clean migration and the 21-row seed; live Swagger UI and OpenAPI JSON; real MEMBER and ADMINISTRATOR login/verification; catalogue reads, logging, assets, and request correlation; mutation authorization and validation; concurrent and ACTIVE/ARCHIVED duplicate rejection; concurrent same-version update exclusion and ETag preconditions; archive/restore visibility, retention, and no-ops; SQL state; no-op migration plus zero-insert seed reruns preserving administrator edits/categories; and 503 with no write while User Service is stopped followed by recovery. It removes only that unique project and its volumes when finished; Docker must be running and ports 3900/3901 must be free. A concurrent run can fail safely on those fixed host ports but cannot remove the other run's project or data.
 
 The latest recorded check matrix is in [docs/verification/third-backend-increment.md](docs/verification/third-backend-increment.md).
+
+## Integrated responsive UI verification
+
+After installing frontend dependencies and Chromium, run the isolated live browser flow:
+
+```sh
+cd frontend
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+The equivalent one-command check from anywhere in the repository is:
+
+```sh
+./frontend/scripts/run-supplier-ui-demo.sh
+```
+
+It starts a uniquely named disposable Compose stack on available host ports, using
+non-secret test-only credentials and fresh private database volumes. Chromium verifies
+the MEMBER live catalogue/search/filter/sort/page/detail flow, absence of administrator
+controls, the ADMINISTRATOR create/edit/archive/archived/restore flow, and no horizontal
+overflow at representative desktop/mobile widths. Cleanup runs after success or failure.
+
+The existing `npm run test:integration` remains the API-only authority for direct role
+rejections, ETag concurrency, database state, migration/seed repeatability, and outage
+behavior while no frontend is running. Exact UI and compatibility evidence is recorded
+in [docs/verification/supplier-ui.md](docs/verification/supplier-ui.md).
 
 ## AI Use Summary
 
