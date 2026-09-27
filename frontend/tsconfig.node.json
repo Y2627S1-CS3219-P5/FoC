@@ -1,6 +1,6 @@
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27. Scope: included
 // the Vitest configuration in Node-side TypeScript checks for issue #28.
-// Author review: Pending project-author review.
+// Author review: Reviewed and approved by @ron.
 {
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",

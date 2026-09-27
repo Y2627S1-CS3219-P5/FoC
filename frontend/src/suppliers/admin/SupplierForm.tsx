@@ -3,10 +3,10 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added the metadata-backed, full-replacement Supplier administrator
  * form for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: aligned
  * paired form controls when one field includes guidance text.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import type { FormEvent } from 'react'
 import {

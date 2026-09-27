@@ -32,20 +32,20 @@ Scope: Drafted the User Service author's three entries below from the author's p
 Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented the shared Supplier frontend API and test foundation for issue #28 from the approved specification and ticket.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented and tested the Supplier member catalogue and detail UI for issue #29 from the approved specification and ticket.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented and tested the Supplier administrator management UI for issue #30 from the approved specification and ticket.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Added and ran isolated real-browser Supplier UI verification for issue #31, updated evidence and implementation-status documentation, and preserved API-only verification.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Resolved Supplier UI final-review findings for issue #34 and expanded
 real-service validation, concurrency, precondition, and mobile evidence.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # AI Usage Log
@@ -58,7 +58,7 @@ Author review: Pending project-author review.
 - **Repository files affected:** Supplier frontend administrator routes, navigation,
   metadata API/types, management/form/concurrency components, focused tests, frontend
   documentation, and this usage log.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompts
 
@@ -84,7 +84,7 @@ data, Order Service functionality, or User/Supplier backend application changes.
 - **Repository files affected:** Frontend API client and Supplier modules, frontend test
   setup and focused tests, nginx gateway parity, dependency metadata, frontend docs, and
   this usage log.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompt
 
@@ -579,7 +579,7 @@ Claude noted that the 409 rule cannot be triggered in D2, because self-changes a
 - **Tool:** OpenAI Codex (GPT-6)
 - **Allowed-use scope:** Implementing the project-author-approved authenticated runtime metadata contract for issue #33, documenting it, and adding focused verification; no Supplier CRUD behavior, database state, frontend files, or User Service application code changes.
 - **Repository files affected:** `supplier-service/SPEC.md`, `supplier-service/AI-DISCLOSURES.md`, `supplier-service/src/domain/buildings.ts`, Supplier controller/OpenAPI source and tests, `supplier-service/scripts/compose-smoke.mjs`, and `ai/usage-log.md`
-- **Author review:** The metadata-endpoint contract decision was approved by @ron on 2026-09-27; implementation review is required.
+- **Author review:** The metadata-endpoint contract decision and implementation were reviewed and approved by @ron on 2026-09-27.
 
 ### Exact prompt
 
@@ -597,7 +597,7 @@ Codex implemented authenticated `GET /api/v1/suppliers/metadata` with the approv
 - **Repository files affected:** `frontend/src/App.tsx`, Supplier frontend API/types and
   UI components/tests under `frontend/src/suppliers/`, frontend test setup, README and
   `frontend/AI-DISCLOSURES.md`.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompt
 
@@ -625,7 +625,7 @@ administrator management UI or future Order Service action was added.
 - **Repository files affected:** Playwright test/configuration and orchestration under
   `frontend/`, frontend dependency/test metadata and documentation,
   `supplier-service/SPEC.md`, Supplier README/verification evidence, and this log.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompts
 
@@ -658,7 +658,7 @@ changed or claimed.
 - **Repository files affected:** Supplier frontend types and tests, shared administrator
   layout, Playwright journey, Supplier specification/evidence, frontend documentation,
   and this usage log.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompts
 
@@ -688,7 +688,7 @@ passed, with filtered Docker cleanup empty afterward.
 - **Repository files affected:** Shared frontend navigation, Supplier administrator form,
   focused component tests, Playwright regression coverage, frontend disclosure records,
   and this usage log.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 ### Exact prompt
 

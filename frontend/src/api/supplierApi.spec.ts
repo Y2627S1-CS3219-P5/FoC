@@ -3,13 +3,13 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added contract-focused tests for Supplier query, mutation, and ETag
  * API helpers in issue #28.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: covered the metadata helper required by the administrator form in
- * issue #30. Author review: Pending project-author review.
+ * issue #30. Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: proved future metadata codes need no frontend allowlist edit for
- * issue #34. Author review: Pending project-author review.
+ * issue #34. Author review: Reviewed and approved by @ron.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

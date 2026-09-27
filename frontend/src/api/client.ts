@@ -6,7 +6,7 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: preserved
  * response metadata and Supplier error details while retaining the existing
  * authentication and body-only client behaviour for issue #28.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { API_BASE } from '../config'
 import { getToken } from '../auth/tokenStorage'

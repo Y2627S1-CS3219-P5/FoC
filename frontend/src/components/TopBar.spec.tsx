@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: Added a regression test for the persistent Supplier navigation bar.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'

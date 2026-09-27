@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Tested distinct administrator authorization, precondition, service,
  * and network feedback for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'

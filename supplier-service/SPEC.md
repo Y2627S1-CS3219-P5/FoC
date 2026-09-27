@@ -26,14 +26,14 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: recorded
 the Supplier workstream author's approved backend-owned Building Code metadata
 endpoint for issue #33. Contract decision approved by @ron; implementation
-review required.
+review completed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: updated
 frontend decisions, implementation status, and verification evidence after issue #31.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: removed
 stale integration-decision text after implemented session storage, client-side
 logout, and same-origin routing were verified for issue #34.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # FoC Supplier Service — D2 Specification

@@ -3,8 +3,8 @@
  * Scope: described the implemented Supplier HTTP request and response models
  * for the issue #25 OpenAPI document. Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; described the
- * issue #33 Building Code metadata response. Contract decision approved by
- * @ron; implementation review required.
+ * issue #33 Building Code metadata response. Contract decision and
+ * implementation reviewed and approved by @ron.
  */
 import {
   ApiProperty,

@@ -3,14 +3,14 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added real-browser member and administrator Supplier journeys against
  * the disposable live Compose stack for issue #31.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: Added live mobile form/confirmation, backend validation, two-editor
  * stale-ETag recovery, and missing-precondition evidence for issue #34.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: Added browser regressions for sticky navigation and aligned time fields.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
 

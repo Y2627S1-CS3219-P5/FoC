@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Implemented metadata-backed Supplier search, filter, sort, and page
  * size controls for issue #29.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { useState, type FormEvent } from 'react'
 import {

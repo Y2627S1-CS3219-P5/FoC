@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Tested current-ETag archive confirmation and member route protection
  * for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

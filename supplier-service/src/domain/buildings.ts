@@ -4,7 +4,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; derived the
  * public issue #33 code/label options from the existing backend registry.
- * Contract decision approved by @ron; implementation review required.
+ * Contract decision and implementation reviewed and approved by @ron.
  */
 export const BUILDINGS = [
   { code: "COM2", label: "COM2", seedAliases: ["Com 2", "Com2"] },

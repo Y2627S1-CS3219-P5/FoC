@@ -3,11 +3,11 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Recorded the commands, observed results, coverage boundaries, and cleanup
 for the integrated responsive Supplier UI verification in issue #31.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
 Scope: Recorded the expanded live validation, two-editor concurrency, missing
 precondition, and mobile administrator evidence for issue #34.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Integrated responsive Supplier UI verification

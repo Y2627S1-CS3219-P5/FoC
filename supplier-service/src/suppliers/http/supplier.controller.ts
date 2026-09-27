@@ -11,7 +11,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; exposed the
  * authenticated issue #33 Building Code metadata route.
- * Contract decision approved by @ron; implementation review required.
+ * Contract decision and implementation reviewed and approved by @ron.
  */
 import {
   Body,

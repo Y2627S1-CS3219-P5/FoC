@@ -5,19 +5,19 @@ Scope: Documented how to run the frontend and how requests are routed.
 Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the Supplier API foundation and frontend test commands added for issue #28.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the responsive live member Supplier catalogue and detail routes added for
-issue #29. Author review: Pending project-author review.
+issue #29. Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the Supplier administrator routes and lifecycle/form boundaries for issue #30.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the isolated real-browser Supplier UI verification and D2 rehearsal for issue #31.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the expanded live validation, concurrency, and mobile administrator checks for
-issue #34. Author review: Pending project-author review.
+issue #34. Author review: Reviewed and approved by @ron.
 -->
 
 # Frontend

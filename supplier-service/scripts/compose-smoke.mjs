@@ -18,7 +18,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; added live
  * authentication and complete-response coverage for issue #33 metadata.
- * Contract decision approved by @ron; implementation review required.
+ * Contract decision and implementation reviewed and approved by @ron.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";

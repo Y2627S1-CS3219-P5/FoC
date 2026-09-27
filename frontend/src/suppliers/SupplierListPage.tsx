@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Implemented the live, URL-backed, responsive member Supplier
  * catalogue for issue #29.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'

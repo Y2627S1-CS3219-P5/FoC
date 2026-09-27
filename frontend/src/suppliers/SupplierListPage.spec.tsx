@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added focused member catalogue component tests for issue #29.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

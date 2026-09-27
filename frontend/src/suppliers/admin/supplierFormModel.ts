@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Modelled the administrator Supplier form draft and exact mutation
  * conversion for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import type {
   BuildingCode,

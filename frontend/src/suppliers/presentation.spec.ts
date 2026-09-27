@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added focused tests for shared Supplier presentation helpers in issue #28.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { describe, expect, it } from 'vitest'
 

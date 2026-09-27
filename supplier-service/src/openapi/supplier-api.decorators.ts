@@ -5,7 +5,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; documented the
  * authenticated issue #33 Supplier metadata operation.
- * Contract decision approved by @ron; implementation review required.
+ * Contract decision and implementation reviewed and approved by @ron.
  */
 import { applyDecorators } from "@nestjs/common";
 import {

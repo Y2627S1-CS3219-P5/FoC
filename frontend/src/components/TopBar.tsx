@@ -6,10 +6,10 @@
  * Author review: Reviewed and approved by @t-leongchuan
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added the
  * administrator Supplier management navigation entry for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: kept the
  * shared navigation visible while Supplier pages scroll.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Link } from 'react-router'
 import { useAuth } from '../auth/authContext'

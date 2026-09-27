@@ -11,7 +11,7 @@ Scope: Recorded the issue #25 `package.json` Swagger dependency disclosure.
 Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Recorded the issue #33 metadata-endpoint implementation disclosure.
-Contract decision approved by @ron; implementation review required.
+Contract decision and implementation reviewed and approved by @ron.
 -->
 
 # Supplier Service AI disclosures
@@ -41,4 +41,4 @@ OpenAI Codex (GPT-6) assisted on 2026-09-26 with adding the official NestJS Swag
 
 ## Supplier Building Code metadata
 
-OpenAI Codex (GPT-6) assisted on 2026-09-27 with implementing issue #33 after @ron explicitly approved a backend-owned runtime metadata endpoint for long-term frontend consistency. The work derives a complete `{ code, label }` option set from the existing Supplier building registry, exposes it to authenticated MEMBER and ADMINISTRATOR callers, documents it in OpenAPI and the Supplier specification, and adds focused controller, generated-contract, and live Compose coverage. It changes no database state, Supplier CRUD behavior, frontend file, or User Service application code. The contract decision is approved by @ron; implementation review is required.
+OpenAI Codex (GPT-6) assisted on 2026-09-27 with implementing issue #33 after @ron explicitly approved a backend-owned runtime metadata endpoint for long-term frontend consistency. The work derives a complete `{ code, label }` option set from the existing Supplier building registry, exposes it to authenticated MEMBER and ADMINISTRATOR callers, documents it in OpenAPI and the Supplier specification, and adds focused controller, generated-contract, and live Compose coverage. It changes no database state, Supplier CRUD behavior, frontend file, or User Service application code. The contract decision and implementation were reviewed and approved by @ron.

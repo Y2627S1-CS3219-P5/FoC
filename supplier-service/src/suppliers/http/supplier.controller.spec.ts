@@ -8,7 +8,7 @@
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; tested the
  * issue #33 authenticated metadata response and role policy.
- * Contract decision approved by @ron; implementation review required.
+ * Contract decision and implementation reviewed and approved by @ron.
  */
 import { ExecutionContext, ForbiddenException } from "@nestjs/common";
 import {

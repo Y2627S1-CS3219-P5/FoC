@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added focused exact-body and validation tests for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { describe, expect, it } from 'vitest'
 import {

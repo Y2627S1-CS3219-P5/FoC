@@ -3,10 +3,10 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added create/edit orchestration, ETag concurrency recovery, and error
  * feedback for the administrator Supplier form in issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: adopted the shared administrator page shell for issue #34.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'

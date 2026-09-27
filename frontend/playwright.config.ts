@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Configured the isolated real-browser Supplier UI verification for
  * issue #31.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { defineConfig } from '@playwright/test'
 

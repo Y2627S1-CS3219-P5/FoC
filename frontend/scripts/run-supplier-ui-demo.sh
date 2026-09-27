@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: Added a one-command wrapper for the isolated Supplier UI checks in
-# issue #31. Author review: Pending project-author review.
+# issue #31. Author review: Reviewed and approved by @ron.
 
 set -euo pipefail
 

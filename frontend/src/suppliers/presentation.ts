@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added shared Supplier category and typical-hours presentation helpers
  * from the approved specification for issue #28.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import type { Supplier, SupplierCategory, SupplierHoursKind } from './types'
 

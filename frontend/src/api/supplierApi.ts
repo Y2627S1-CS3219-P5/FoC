@@ -3,10 +3,10 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added typed Supplier v1 API calls with query serialization and ETag
  * handling for issue #28.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: added the authenticated Supplier metadata helper for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { apiRequest, apiRequestWithMeta } from './client'
 import type {

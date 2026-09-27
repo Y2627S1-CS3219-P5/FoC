@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: Added a regression test for aligned Supplier opening and closing controls.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'

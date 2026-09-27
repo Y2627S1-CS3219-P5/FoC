@@ -3,14 +3,14 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Defined frontend Supplier API types from the implemented v1 contract
  * for issue #28.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: added backend-owned Building Code metadata types for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: replaced the duplicated closed Building Code union with the
  * metadata-driven named string domain type for issue #34.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 
 export const SUPPLIER_CATEGORIES = ['FOOD', 'COFFEE', 'PRINTING', 'SHOPPING', 'PICKUP_POINT'] as const

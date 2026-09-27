@@ -3,7 +3,7 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Implemented responsive, accessible Supplier catalogue cards for
  * issue #29.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Link, useLocation } from 'react-router'
 import { formatSupplierCategory, formatTypicalHours } from './presentation'

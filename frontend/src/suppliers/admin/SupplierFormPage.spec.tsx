@@ -3,10 +3,10 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Tested administrator duplicate handling and stale-draft recovery for
  * issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: aligned metadata fixtures with the open Building Code domain type for
- * issue #34. Author review: Pending project-author review.
+ * issue #34. Author review: Reviewed and approved by @ron.
  */
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

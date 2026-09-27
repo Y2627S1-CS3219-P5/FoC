@@ -3,8 +3,8 @@
  * Scope: regression-tested the generated issue #25 Supplier OpenAPI contract.
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; covered the
- * issue #33 metadata operation and schemas. Contract decision approved by
- * @ron; implementation review required.
+ * issue #33 metadata operation and schemas. Contract decision and
+ * implementation reviewed and approved by @ron.
  */
 import { INestApplication, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";

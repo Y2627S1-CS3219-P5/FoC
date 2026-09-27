@@ -5,10 +5,10 @@
  * Author review: Reviewed and approved by @t-leongchuan
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: replaced
  * the placeholder route with protected Supplier catalogue and detail routes for
- * issue #29. Author review: Pending project-author review.
+ * issue #29. Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added
  * protected Supplier administrator routes for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from './components/RequireAuth'

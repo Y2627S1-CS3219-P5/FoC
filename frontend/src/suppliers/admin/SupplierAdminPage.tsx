@@ -3,10 +3,10 @@
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added responsive administrator Supplier management, archive, restore,
  * pagination, refresh, and lifecycle feedback for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: adopted the shared administrator page shell for issue #34.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'

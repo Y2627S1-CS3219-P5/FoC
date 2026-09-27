@@ -5,22 +5,22 @@ Scope: Sidecar disclosure for frontend files that cannot carry a comment, plus V
 Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: recorded
 the issue #28 test-tooling and generated lockfile changes below.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: implemented
 and tested the issue #29 Supplier member catalogue and detail UI described below.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: implemented
 and tested the issue #30 Supplier administrator UI described below.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: added the
 issue #31 real-browser integration tooling, evidence, and documentation below.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: resolved
 the Supplier UI final-review findings and expanded live evidence for issue #34.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: fixed and
 tested Supplier form-control alignment and persistent navigation for PR #32.
-Author review: Pending project-author review.
+Author review: Reviewed and approved by @ron.
 -->
 
 # Frontend AI disclosures
@@ -56,7 +56,7 @@ README) were deleted. Every other file under `frontend/` carries its own header 
 - **Repository files affected:** `frontend/src/api/client.ts`, `frontend/src/api/supplierApi.ts`,
   `frontend/src/suppliers/**`, focused tests and test configuration, dependency metadata,
   `frontend/nginx.conf`, and frontend documentation.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 Codex added typed Supplier v1 API helpers, retained ETag and structured error metadata,
 centralised category/typical-hours presentation values, established Vitest and Testing
@@ -71,7 +71,7 @@ backend service.
   specification and GitHub issue #29.
 - **Repository files affected:** `frontend/src/App.tsx`, `frontend/src/api/supplierApi.ts`,
   `frontend/src/suppliers/**`, `frontend/src/test/setup.ts`, and frontend documentation.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 Codex replaced the authenticated placeholder with protected `/suppliers` and
 `/suppliers/:id` routes. It implemented live URL-backed search, metadata-backed
@@ -89,7 +89,7 @@ or changes to backend and User Service code.
 - **Repository files affected:** `frontend/src/App.tsx`, `frontend/src/components/TopBar.tsx`,
   the Supplier API/types helpers, `frontend/src/suppliers/admin/**`, focused frontend tests,
   and frontend documentation.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 Codex added administrator-only routes and navigation; a live ACTIVE/ARCHIVED management
 view; backend-metadata-backed create/full-edit forms; detail ETag acquisition before edit,
@@ -107,7 +107,7 @@ or changes to User/Order/Supplier backend application code.
 - **Repository files affected:** Playwright configuration and journeys under `frontend/`,
   the disposable Compose orchestrator, frontend/Supplier documentation and verification
   evidence, dependency metadata, and `ai/usage-log.md`.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 Codex added an isolated Chromium workflow against the production nginx frontend, real
 User and Supplier services, and private PostgreSQL databases. It verifies a MEMBER using
@@ -129,7 +129,7 @@ Service application code or Order integration was added.
   product behavior or User/Order Service application code.
 - **Repository files affected:** Supplier frontend types/tests and administrator layout,
   the Playwright journey, frontend/Supplier documentation, and AI usage records.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 Codex removed the frontend's duplicated closed Building Code union while retaining a named
 string domain type whose valid options come from live Supplier metadata. It extracted the
@@ -148,7 +148,7 @@ No User or Order application file was changed.
 - **Repository files affected:** `frontend/src/components/TopBar.tsx`,
   `frontend/src/suppliers/admin/SupplierForm.tsx`, focused component tests, the
   Supplier Playwright journey, and AI usage records.
-- **Author review:** Pending project-author review.
+- **Author review:** Reviewed and approved by @ron.
 
 Codex made the shared authenticated navigation sticky with an explicit stacking layer.
 It also bottom-aligned controls inside paired form-field grid rows so optional guidance

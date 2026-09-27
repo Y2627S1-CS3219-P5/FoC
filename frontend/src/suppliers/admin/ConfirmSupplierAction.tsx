@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: OpenAI Codex (GPT-6), date: 2026-09-27
  * Scope: Added accessible archive and restore confirmation UI for issue #30.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { useEffect, useRef } from 'react'
 import type { Supplier } from '../types'

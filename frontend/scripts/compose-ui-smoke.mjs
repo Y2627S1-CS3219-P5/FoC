@@ -2,7 +2,7 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
  * Scope: Added disposable Compose orchestration for the real-browser Supplier
  * UI verification in issue #31.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @ron.
  */
 import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
