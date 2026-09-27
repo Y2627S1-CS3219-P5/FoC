@@ -2,6 +2,9 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: consolidated approved Supplier building codes, labels, and seed aliases.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; derived the
+ * public issue #33 code/label options from the existing backend registry.
+ * Contract decision approved by @ron; implementation review required.
  */
 export const BUILDINGS = [
   { code: "COM2", label: "COM2", seedAliases: ["Com 2", "Com2"] },
@@ -58,6 +61,15 @@ export const BUILDINGS = [
 ] as const;
 
 export type BuildingCode = (typeof BUILDINGS)[number]["code"];
+
+export interface BuildingOption {
+  readonly code: BuildingCode;
+  readonly label: string;
+}
+
+export const BUILDING_OPTIONS: readonly BuildingOption[] = BUILDINGS.map(
+  ({ code, label }) => ({ code, label }),
+);
 
 export const BUILDING_CODES: readonly BuildingCode[] = BUILDINGS.map(
   ({ code }) => code,

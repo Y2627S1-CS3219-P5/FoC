@@ -507,3 +507,18 @@ Verified on the Docker stack with 26 API checks, including:
 - 20 rounds of two admins demoting each other at the same time, where both never succeed
 
 Claude noted that the 409 rule cannot be triggered in D2, because self-changes are forbidden.
+
+## 2026-09-27 — Supplier Building Code metadata endpoint
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implementing the project-author-approved authenticated runtime metadata contract for issue #33, documenting it, and adding focused verification; no Supplier CRUD behavior, database state, frontend files, or User Service application code changes.
+- **Repository files affected:** `supplier-service/SPEC.md`, `supplier-service/AI-DISCLOSURES.md`, `supplier-service/src/domain/buildings.ts`, Supplier controller/OpenAPI source and tests, `supplier-service/scripts/compose-smoke.mjs`, and `ai/usage-log.md`
+- **Author review:** The metadata-endpoint contract decision was approved by @ron on 2026-09-27; implementation review is required.
+
+### Exact prompt
+
+> `yes for long-term consistency lets add metadata endpoitn`
+
+### Key response
+
+Codex implemented authenticated `GET /api/v1/suppliers/metadata` with the approved extensible response shape `{ "buildingCodes": [{ "code", "label" }] }`. The endpoint serves the complete stable option set directly from the backend-owned building registry to both MEMBER and ADMINISTRATOR callers, without exposing seed aliases or introducing database state. It is covered by focused controller and generated OpenAPI tests plus the real-service Compose integration check, including unauthenticated rejection and exact MEMBER/ADMINISTRATOR responses. No existing Supplier CRUD behavior, frontend file, or User Service application code was changed.

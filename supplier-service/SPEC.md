@@ -23,6 +23,10 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26. Scope: clarified
 that database serialization protects equivalent POST requests across both
 statuses without extending duplicate rejection to PUT.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: recorded
+the Supplier workstream author's approved backend-owned Building Code metadata
+endpoint for issue #33. Contract decision approved by @ron; implementation
+review required.
 -->
 
 # FoC Supplier Service — D2 Specification
@@ -56,6 +60,7 @@ Supplier Service does not own user credentials or roles, orders, credits, paymen
 | Request correlation | Server generates each request ID and does not trust a client-supplied ID | Approved by Supplier workstream author |
 | Request completion logging | Nest middleware plus the built-in JSON `ConsoleLogger`; no tracing/APM SDK or external exporter in this increment | Approved by Supplier workstream author on 2026-09-25 |
 | Bundled images | Supplier serves repository `data/images` at `/assets/suppliers` | Approved by Supplier workstream author |
+| Building options | Authenticated `GET /api/v1/suppliers/metadata` returns backend-owned `{ code, label }` options | Approved by Supplier workstream author on 2026-09-27 |
 | Description | Use `locationDescription` as the only displayed Supplier description | Approved by team; replaces the separate D1 general-description field |
 | Removal | Archive, retain record, allow administrator restoration | Approved by team; replaces the D1 deletion restriction |
 | Edit conflicts | DB integer version exposed as ETag; `If-Match` and 412/428 | Selected |
@@ -117,6 +122,8 @@ User Service currently supports configured frontend origins through CORS. After 
 Reject an unknown building code with 400 for D2. Add a new building to this controlled mapping deliberately rather than accepting free text.
 
 Requests identify a building using `buildingCode` only. Responses return both `buildingCode` and the corresponding `buildingLabel`; clients do not maintain their own code-to-label mapping.
+
+For long-term client consistency, the Supplier workstream author approved an authenticated metadata endpoint as the runtime source of every selectable Building Code and label. `GET /api/v1/suppliers/metadata` returns `{ "buildingCodes": [{ "code": "COM2", "label": "COM2" }, ...] }`, sourced from the same backend registry used for request validation and response labels. Both MEMBER and ADMINISTRATOR may call it. It exposes no seed aliases or mutable configuration.
 
 Index the primary key, status/building code, and category membership. Sort names with ID as a stable tiebreaker. Use ordinary case-insensitive substring search over the small catalogue; measure before adding specialist indexes. Do not create cross-service foreign keys.
 
@@ -192,6 +199,7 @@ Base path: `/api/v1/suppliers`. All business endpoints require a verified active
 | Method and path | Behaviour | Success |
 | --- | --- | --- |
 | `GET /api/v1/suppliers` | Search/filter/sort/page; ACTIVE by default; admin can request ARCHIVED | 200 page |
+| `GET /api/v1/suppliers/metadata` | Complete backend-owned Building Code options; both roles | 200 `{ "buildingCodes": [{ "code", "label" }] }` |
 | `GET /api/v1/suppliers/{id}` | Detail; archived detail for admin only | 200 body and `ETag` |
 | `POST /api/v1/suppliers` | Validate and create ACTIVE row | 201 body, `Location`, `ETag` |
 | `PUT /api/v1/suppliers/{id}` | Replace editable fields, require `If-Match` | 200 body, new `ETag` |
@@ -303,6 +311,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 | A11 | API works while frontend process is stopped. |
 | A12 | Real login, role checks, mutation, database state, and responsive UI appear in integrated demo. |
 | A13 | Creating an exact normalized duplicate of an ACTIVE or ARCHIVED Supplier returns 409 and identifies the existing record without mutation. |
+| A14 | Authenticated members and administrators receive every canonical Building Code and label from Supplier metadata; unauthenticated access returns 401. |
 
 ### 9.2 D2 demo
 
@@ -316,7 +325,7 @@ Show Add/Edit/Archive to admins; an ARCHIVED management view includes Restore. F
 
 **External decisions remaining:** publish the team's approved description and archive revisions in the D1 requirements and acceptance criteria; decide frontend bearer-token storage/persistence, whether refresh/logout is required for D2, final origins/routing, and deployed TLS routing. The Supplier verification deployment timeout is approved at 1,000 ms. PR #14 is the implemented backend auth contract; it has no separate service credential for `/auth/verify`. NestJS/Express, PostgreSQL/Drizzle, Vite React, and ETag/If-Match are selected for the Supplier workstream.
 
-**Implementation status:** the Supplier backend now implements the NestJS/Drizzle schema, migrations, repeatable seed, real User Service `SessionVerifier` and bearer/role guard, authenticated list/detail, and administrator create/full-update/archive/restore with atomic version and duplicate handling. Unit/contract tests and the isolated live Compose check cover the backend API and PostgreSQL state. Supplier frontend screens, integrated frontend routing, the performance workload, and the full responsive acceptance demo remain future work; the D1 document-alignment and frontend decisions above also remain open.
+**Implementation status:** the Supplier backend now implements the NestJS/Drizzle schema, migrations, repeatable seed, real User Service `SessionVerifier` and bearer/role guard, authenticated Building Code metadata and list/detail, and administrator create/full-update/archive/restore with atomic version and duplicate handling. Unit/contract tests and the isolated live Compose check cover the backend API and PostgreSQL state. Supplier frontend screens, integrated frontend routing, the performance workload, and the full responsive acceptance demo remain future work; the D1 document-alignment and frontend decisions above also remain open.
 
 ### Sources
 

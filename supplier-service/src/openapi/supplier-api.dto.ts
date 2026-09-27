@@ -2,6 +2,9 @@
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-26.
  * Scope: described the implemented Supplier HTTP request and response models
  * for the issue #25 OpenAPI document. Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; described the
+ * issue #33 Building Code metadata response. Contract decision approved by
+ * @ron; implementation review required.
  */
 import {
   ApiProperty,
@@ -203,6 +206,31 @@ export class SupplierListResponseDto {
 
   @ApiProperty({ example: 2, minimum: 0 })
   readonly totalPages!: number;
+}
+
+@ApiSchema({ description: "One canonical Supplier Building Code option." })
+export class SupplierBuildingOptionDto {
+  @ApiProperty({
+    description: "Canonical Building Code accepted by Supplier requests.",
+    enum: BUILDING_CODES,
+    enumName: "BuildingCode",
+    example: "CENTRAL_LIBRARY",
+  })
+  readonly code!: string;
+
+  @ApiProperty({
+    description: "Backend-owned display label for the Building Code.",
+    example: "Central Library",
+  })
+  readonly label!: string;
+}
+
+@ApiSchema({
+  description: "Stable frontend metadata owned by Supplier Service.",
+})
+export class SupplierMetadataResponseDto {
+  @ApiProperty({ type: [SupplierBuildingOptionDto] })
+  readonly buildingCodes!: SupplierBuildingOptionDto[];
 }
 
 @ApiSchema({

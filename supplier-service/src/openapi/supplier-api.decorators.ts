@@ -3,6 +3,9 @@
  * Scope: attached accurate issue #25 OpenAPI operations, parameters, response
  * codes, and access rules to the existing Supplier controller.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; documented the
+ * authenticated issue #33 Supplier metadata operation.
+ * Contract decision approved by @ron; implementation review required.
  */
 import { applyDecorators } from "@nestjs/common";
 import {
@@ -31,6 +34,7 @@ import { BUILDING_CODES } from "../domain/buildings";
 import {
   SupplierErrorResponseDto,
   SupplierListResponseDto,
+  SupplierMetadataResponseDto,
   SupplierMutationRequestDto,
   SupplierResponseDto,
 } from "./supplier-api.dto";
@@ -82,6 +86,21 @@ export function ApiSupplierController(): ClassDecorator {
     ApiServiceUnavailableResponse({
       ...supplierErrorResponse,
       description: "User Service verification is temporarily unavailable.",
+    }),
+  );
+}
+
+export function ApiGetSupplierMetadata(): MethodDecorator {
+  return applyDecorators(
+    ApiOperation({
+      summary: "Get Supplier metadata",
+      description:
+        "MEMBER and ADMINISTRATOR may retrieve the complete backend-owned Building Code option set.",
+    }),
+    ApiOkResponse({
+      description: "Canonical Building Codes and their display labels.",
+      headers: requestIdHeader,
+      type: SupplierMetadataResponseDto,
     }),
   );
 }
