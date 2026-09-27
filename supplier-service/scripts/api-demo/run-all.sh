@@ -32,7 +32,8 @@ journeys=(
   admin-concurrency.sh
 )
 
-printf 'Running isolated endpoint checks...\n'
+printf 'Running isolated endpoint checks...\n\n\n'
+printf -- '------------------------------------------------------------------\n'
 for endpoint in "${endpoints[@]}"; do
   "${script_dir}/tests/run-endpoint.sh" "${endpoint}"
 done
@@ -41,5 +42,5 @@ printf '\nRunning user journeys...\n'
 for journey in "${journeys[@]}"; do
   "${script_dir}/journeys/${journey}"
 done
-
+printf -- '\n---------------------------------\n'
 printf '\nPASS: all Supplier API endpoint checks and journeys\n'
