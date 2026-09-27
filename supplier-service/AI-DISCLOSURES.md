@@ -9,6 +9,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-26
 Scope: Recorded the issue #25 `package.json` Swagger dependency disclosure.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
+Scope: Recorded the issue #33 metadata-endpoint implementation disclosure.
+Contract decision approved by @ron; implementation review required.
 -->
 
 # Supplier Service AI disclosures
@@ -35,3 +38,7 @@ This remediation changed no frontend, User Service application code, migration, 
 ## Supplier OpenAPI documentation
 
 OpenAI Codex (GPT-6) assisted on 2026-09-26 with adding the official NestJS Swagger dependency to `package.json`. The package retains its leading `"//"` disclosure metadata, npm accepts it, and full verification is recorded in the issue #25 usage-log entry. Project-author review was completed and approved by @ron; the separate course-owner strict-JSON exception remains pending.
+
+## Supplier Building Code metadata
+
+OpenAI Codex (GPT-6) assisted on 2026-09-27 with implementing issue #33 after @ron explicitly approved a backend-owned runtime metadata endpoint for long-term frontend consistency. The work derives a complete `{ code, label }` option set from the existing Supplier building registry, exposes it to authenticated MEMBER and ADMINISTRATOR callers, documents it in OpenAPI and the Supplier specification, and adds focused controller, generated-contract, and live Compose coverage. It changes no database state, Supplier CRUD behavior, frontend file, or User Service application code. The contract decision is approved by @ron; implementation review is required.

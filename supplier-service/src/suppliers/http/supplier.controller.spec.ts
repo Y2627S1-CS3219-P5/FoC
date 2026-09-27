@@ -6,6 +6,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-26; tested mutation
  * role metadata, delegation, statuses, and headers for issue #22.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; tested the
+ * issue #33 authenticated metadata response and role policy.
+ * Contract decision approved by @ron; implementation review required.
  */
 import { ExecutionContext, ForbiddenException } from "@nestjs/common";
 import {
@@ -23,6 +26,7 @@ import {
   SessionVerifier,
   VerifiedPrincipal,
 } from "../../auth/session-verifier";
+import { BUILDING_OPTIONS } from "../../domain/buildings";
 import { SupplierReadModel } from "../read/supplier-read.types";
 import { SupplierMutationValues } from "../supplier-mutation.values";
 import { SupplierAdministrationService } from "./supplier-administration.service";
@@ -67,6 +71,21 @@ describe("SupplierController", () => {
 
     await expect(controller.list(query, request())).resolves.toBe(page);
     expect(catalogue.list).toHaveBeenCalledWith(query, PRINCIPAL);
+  });
+
+  it("returns every backend-owned Building Code option to either authenticated role", () => {
+    const controller = new SupplierController(
+      createCatalogue(),
+      createAdministration(),
+    );
+
+    expect(controller.metadata()).toEqual({ buildingCodes: BUILDING_OPTIONS });
+    expect(
+      Reflect.getMetadata(
+        SUPPLIER_REQUIRED_ROLES,
+        SupplierController.prototype.metadata,
+      ),
+    ).toBeUndefined();
   });
 
   it("returns detail and sets the exact strong version ETag", async () => {
