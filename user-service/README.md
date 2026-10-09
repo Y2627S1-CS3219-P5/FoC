@@ -6,6 +6,9 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
 Scope: Documented the database roles, migrations and the reset script.
 Author review of additional changes: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
+Scope: Documented /health, database-outage behaviour and the deployment note.
+Author review of additional changes: Reviewed and approved by @t-leongchuan
 -->
 
 # User Service
@@ -25,6 +28,7 @@ The gateway strips `/api/v1` before forwarding.
 | `PATCH /api/v1/whoami` | logged in | `{ displayName }` (1–50 chars). Other fields are ignored. Missing displayName → no change |
 | `PUT /api/v1/users/{id}/role` | ADMINISTRATOR | `{ role: "MEMBER" \| "ADMINISTRATOR" }`. Same role → no change |
 | `GET /auth/verify` | **other services only** (not exposed by the gateway) | → `{ id, role }` for the bearer token |
+| `GET /health` | Docker healthcheck, other services (not exposed by the gateway) | Readiness: 200 `{ "status": "ok" }` if the database answers within 1 s, else 503 `{ "status": "not_ready" }` |
 
 "Logged in" = `Authorization: Bearer <accessToken>`. Roles are re-read from the database on
 every request, so role changes apply immediately. Concurrent role changes are serialised
@@ -44,6 +48,7 @@ All errors look like `{ "error": "CODE", "message": "...", "details"?: { field: 
 | 404 `USER_NOT_FOUND` | No account with that id |
 | 409 `USERNAME_TAKEN` / `EMAIL_TAKEN` | Registration clashes with an existing account |
 | 409 `LAST_ADMINISTRATOR` | The change would leave no ACTIVE administrator |
+| 503 `SERVICE_UNAVAILABLE` | The database is temporarily unreachable; try again later. Never 401, so callers don't log users out |
 
 ## Configuration
 
@@ -89,6 +94,46 @@ Deletes only the User Service's data and starts it again. Use this, **not**
 You need it once after pulling the change that introduced migrations: the service will
 refuse to start on an older database and tell you to run it.
 
+### When the database is unavailable
+
+Timings are in `src/config.ts` (`DB_RESILIENCE`).
+
+- **At startup**, `user-service` and `user-migrate` retry the connection (0.5 s, 1 s, 2 s, 4 s,
+  then every 5 s) for up to 60 s. `user-migrate` never re-runs a migration that failed.
+- **While running**, requests get `503 SERVICE_UNAVAILABLE` (within 0.5 s) instead of
+  crashing the service; it recovers on its own when the database is back. The log shows one
+  line when the database goes away and one when it is back.
+- **On `docker compose stop`**, in-flight requests finish and connections close (8 s limit).
+
+**Deployment note:** `restart: unless-stopped` plus the 60 s startup retries means the
+service retries **forever** while the database stays unreachable, with each failure
+visible in `docker compose ps` and the logs. That's intended for local Compose; revisit it
+(e.g. alerting on repeated restarts) before any cloud deployment.
+
+### Known limitations
+
+**Login bursts slow everything else down** (measured 2026-10-09, cold connection pool,
+3 parallel `/auth/verify` callers during the burst):
+
+| Burst | Before the 500 ms pool timeout | With it (current) |
+| --- | --- | --- |
+| 8 simultaneous logins | all 200; median 2.8–3.3 s | 1–3 of 8 get 503; median 1.4–1.7 s |
+| `/auth/verify` during those 8 | 3–4 per burst over 1 s | 3–5 per burst over 1 s; 1–2 get 503 |
+| 16 simultaneous logins | all 200; median 5.6–7.6 s | 1–4 of 16 get 503; median 3.0–3.9 s |
+
+- **Cause:** `bcryptjs` (cost 12, about 0.3 s per hash) runs on Node's single main thread. The
+  code already uses the async `compare`/`hash`, but bcryptjs's async versions only yield
+  between chunks; the work stays on the main thread. Everything else in the process,
+  including `/auth/verify` and opening database connections, waits its turn.
+- **Effect on Supplier:** it gives up on `/auth/verify` after 1 s, so during a login burst
+  some Supplier requests get 503, before and after the timeout change alike.
+- **Effect of the 500 ms timeout:** some logins fail fast with 503 instead of waiting; the log
+  then says "No database connection within 500 ms (database down, or this service busy…)".
+- **Not done (options for later):** a password library that hashes off the main thread (e.g.
+  native `bcrypt`, which also reads existing bcryptjs hashes), Node worker threads, or
+  keeping more pool connections open. Raising the 500 ms timeout is ruled out: it must stay
+  under Supplier's 1 s so callers see our 503.
+
 ### Troubleshooting
 
 `docker compose up` only says that a step failed. The reason is in that step's log:
@@ -106,3 +151,4 @@ docker compose logs user-migrate
 | `Applied migration ... is missing` / `Two migrations share the number` / `Unexpected file in migrations/` | A migration was deleted, two branches used the same number, or a non-migration file is in `migrations/` | Restore the deleted file, renumber your new file, or move the extra file out |
 | `<file> failed and was rolled back: ...` | The SQL in a new migration has an error; nothing from that file was applied | Fix the SQL in that (not yet merged) file and run `docker compose up -d` again |
 | `permission denied for table ...` in `docker compose logs user-service` | A migration created a table without granting `user_app` access | Add a new migration with the needed `GRANT ... TO user_app` |
+| `error mounting ... 010-user-roles.sh ... no such file or directory` when starting `user-db` (Docker Desktop on WSL) | The `user-db` container was created before git replaced `docker/postgres/init-roles.sh` (e.g. after switching branches); the container still points at the old file | `docker compose up -d --force-recreate user-db` (keeps your data; the volume is untouched) |

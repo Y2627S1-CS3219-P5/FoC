@@ -60,6 +60,9 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
 Scope: Drafted the User Service author's Dockerfile entry below from the author's prompts; the author edited and approved it.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
+Scope: Drafted the User Service author's outage-resilience entry below from the author's prompts; the author edited and approved it.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
@@ -876,4 +879,65 @@ Verification (isolated Compose project):
 - **reset script:** worked
 - **D2 demo kit:** 36/36 checks passed, and the race demo had exactly 1 winner
 
+## 2026-10-09 — User Service: surviving database outages
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:**
+  - Learning support: restart policies, liveness vs readiness, exponential backoff, graceful shutdown, pool timeouts, how Node's event loop interacts with CPU-heavy work
+  - Measurements of the current behaviour
+  - Implementation code after the author decided the behaviour and every timing
+  - Documentation
+- **Repository files affected:**
+  - `user-service/src/dbAvailability.ts` (new)
+  - `user-service/src/config.ts`, `db.ts`, `index.ts`, `migrate.ts`
+  - `user-service/README.md`
+  - `compose.yaml` (`user-service` restart policy and healthcheck)
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> [Behaviour] "Survive expected failures, but restart on unexpected failures [...] unless-stopped for user-service, and no for user-migrate [...] 503 matters [...] /auth/verify should never return 401 [...] Retry with a limit (exponential backoff) [...] must not retry a failed migration [...] Shut down gracefully [...] Log the first failure, each retry with its delay, recovery and give up [...] never print the full database URL"
+
+> [Timings] "retrying forever through docker is fine [...] we need to probably note it somewhere [...] First delay: 500ms, multiplier: x2, cap 5 second, give up 60 seconds [...] wait before listening [...] /health/ready [...] Timeout: 1-2 seconds [...] pool connection timeout: about 2-3 seconds [...] around 8 seconds [...] Service unavailable."
+
+> [Matching Supplier] "b) match supplier. easier to explain. However, /health now returns 503 during an outage so help me make sure nothing relies on it always answering 200 [...] Copy supplier's value, for consistency again" / "500ms, so we give half of supplier's second for everything else?"
+
+> [Login-burst finding] "i think it'd be best to do e) [...] can you run additional tests to be more conclusive? Try and run /auth/verify during a login burst. And also, a cheap check before thinking of d). are we using sync or async bcrypt? [...] Worth documenting though [...] b) is out, since it's a rule given up that made 503 meaningful."
+
+### Key response
+
+Claude measured the existing behaviour: a database drop crashed `user-service` (an unhandled
+pool error) with no restart; startup with the database down exited at once; `/health` always
+said ok. It explained the general options without choosing. It checked that nothing relies
+on `/health` always answering 200, and found that Supplier's `/auth/verify` timeout is 1000 ms.
+
+It then implemented the author's decisions:
+- **Expected vs other errors:** connection failures are expected and answered with
+  `503 SERVICE_UNAVAILABLE` (never 401); other errors stay 500.
+- **Pool:** connection timeout 500 ms, and an error listener so a dropped connection no
+  longer crashes the process.
+- **Startup retries** before listening: 0.5 s ×2, capped at 5 s, giving up after 60 s. Shared
+  with the migration runner, which never re-runs a failed migration.
+- **`/health` as readiness**, like Supplier: `SELECT 1` within 1 s; 200 `ok` / 503 `not_ready`.
+- **Graceful shutdown** on SIGTERM, with an 8 s limit.
+- **Logging:** only state changes, with no secrets.
+- **Compose:** `restart: unless-stopped` and a healthcheck with Supplier's timings, plus a
+  documented "retries forever, revisit before cloud deployment" note.
+
+Testing found that bursts of simultaneous logins on a cold pool produce some 503s. Claude
+traced this to bcryptjs hashing on Node's main thread (the code already used the async
+functions), and compared it with the code before the change: `/auth/verify` calls slower
+than 1 s already happened during login bursts. Per the author's choice, timeouts are now
+logged as "database down, or this service busy", and the limitation and future options
+are documented in the README.
+
+Verification (isolated Compose project):
+- **database stops while running:** no crash or restart; 503 in about 0.5 s from `/health`,
+  `/auth/verify`, login and Supplier; recovers on its own; one log line each way
+- **startup with the database down:** retries, then starts once it's back
+- **outage longer than 60 s:** gives up, Docker restarts it, it recovers
+- **migration runner:** retries its connection; a wrong password isn't retried
+- **shutdown:** clean, in 3.5 s
+- **logs:** no secrets
+- **demo kit:** 36/36, and the race demo had exactly 1 winner
 
