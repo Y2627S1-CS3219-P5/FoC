@@ -4,6 +4,7 @@
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: made the User Service host port configurable so the isolated Supplier integration smoke test can avoid a developer stack. Author review of additional changes: Reviewed and approved by @ron.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-09-26. Scope: added the frontend gateway service (nginx serving the React app and proxying /api/v1 to the services, per the User Service author's routing decisions). Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: User Service database roles, the one-off user-migrate step and the user-db secrets from .env, per the User Service author's migration decisions. Author review: Reviewed and approved by @t-leongchuan.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: pinned the user-db Postgres image to a full version tag, per the User Service author's decision. Author review: Reviewed and approved by @t-leongchuan.
 services:
   # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
   frontend:
@@ -48,7 +49,7 @@ services:
     restart: "no"
 
   user-db:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine3.24
     environment:
       # The superuser exists only to run the init script below; no service connects as it
       POSTGRES_USER: user_bootstrap

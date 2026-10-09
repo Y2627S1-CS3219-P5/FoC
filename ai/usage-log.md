@@ -57,6 +57,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
 Scope: Drafted the User Service author's migrations entry below from the author's prompts; the author edited and approved it.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
+Scope: Drafted the User Service author's Dockerfile entry below from the author's prompts; the author edited and approved it.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
@@ -829,4 +832,48 @@ Verification (isolated Compose project, 2026-10-09):
 - **old D2-style database:** a clear message naming the reset script
 - **reset script:** the missing-setting, No, yes and `--yes` paths all worked; it wiped only the user database (the Supplier volume and its 21 rows were untouched); login and supplier reads through the gateway worked afterwards
 - **D2 demo kit:** 36/36 checks passed, and the race demo still had exactly 1 winner
+
+## 2026-10-09 — User Service container image (two-stage build, non-root, pinned versions)
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:**
+  - Learning support: multi-stage builds, production-only installs, `.dockerignore` vs `COPY` allowlists, non-root users, image tag pinning, `NODE_ENV`
+  - Implementation code after the author decided the image design
+- **Repository files affected:**
+  - `user-service/Dockerfile`, `user-service/.dockerignore`
+  - `compose.yaml` (the `user-db` image tag)
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> [Stages, packages, contents] "Multiple Stages (2 stage [...]). My justification is that runtime image contains no build tools or source [...] it doesn't need [...] Fresh install. Simpler to explain [...] an 'allow list' of sorts in the runtime stage, plus a '.dockerignore' for the build stage"
+
+> [User, versions, environment, context] "node user, PoLP? [...] full version tag, for both images [...] Yes, but only in runtime stage? [...] Keep ./user-service 'Independent Deployment' fits nicely with a build that can only see its service."
+
+> [Alpine pinning] "Use the form with the alpine version..? I feel like this is arbitrary and i do not have the nuance to answer this with confidence."
+
+### Key response
+
+Claude described the current image (347 MB, about 30 MB of compiler, source files included,
+running as root) and the general options, without choosing. It explained the trade-off
+behind pinning the Alpine version: reproducibility versus automatic OS updates.
+
+It then implemented the author's decisions:
+- **Build stage:** builds the TypeScript.
+- **Runtime stage:**
+  - `NODE_ENV=production`
+  - a fresh `npm ci --omit=dev`
+  - copies in only `dist/` and `migrations/`
+  - runs as the built-in `node` user
+- **Pinned images:** `node:22.23.3-alpine3.24` and `postgres:17.11-alpine3.24`.
+- **`.dockerignore`:** extended so the build can't see scripts, docs or Docker files.
+
+Verification (isolated Compose project):
+- **image:** 347 MB → 248 MB; `node_modules` 52 MB → 6.2 MB (the five production packages only)
+- **image contents:** only `dist/`, `migrations/`, `node_modules/` and the package files
+- **user:** the process runs as uid 1000 (`node`)
+- **migrations:** "up to date" on a re-run; the app role still can't change the schema
+- **reset script:** worked
+- **D2 demo kit:** 36/36 checks passed, and the race demo had exactly 1 winner
+
 
