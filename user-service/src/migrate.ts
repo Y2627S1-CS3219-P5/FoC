@@ -5,12 +5,17 @@
  *        forward-only, one run at a time (advisory lock), each file in its own transaction,
  *        checksums of applied files, refuse to continue on any failure.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
+ * Scope: Retry the connection (not the migrations) while the database is unreachable, using
+ *        the shared helper and timings.
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Client, DatabaseError } from "pg";
 import { loadDatabaseConfig } from "./config";
+import { retryWhileDatabaseUnavailable } from "./dbAvailability";
 
 // Run with: node dist/migrate.js (the user-migrate Compose service does this).
 // Connects as the migration role; the running service never runs this.
@@ -108,10 +113,23 @@ async function migrate(client: Client): Promise<void> {
   }
 }
 
-async function main(): Promise<void> {
+async function connect(): Promise<Client> {
+  // A Client cannot reconnect after a failed connect(), so each attempt uses a new one
   const client = new Client({ connectionString: loadDatabaseConfig().databaseUrl });
   try {
     await client.connect();
+    return client;
+  } catch (err) {
+    await client.end().catch(() => {});
+    throw err;
+  }
+}
+
+async function main(): Promise<void> {
+  let client: Client;
+  try {
+    // Only the connection is retried: a failed migration is never re-run automatically
+    client = await retryWhileDatabaseUnavailable("Migrations", connect);
   } catch (err) {
     // A database from before migrations has no migration role, so login fails
     if (err instanceof DatabaseError && (err.code === "28P01" || err.code === "28000")) {
