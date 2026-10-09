@@ -54,6 +54,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented and verified the standalone Supplier API Bash endpoint collection,
 self-contained endpoint checks, and MEMBER/ADMINISTRATOR journeys.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
+Scope: Drafted the User Service author's migrations entry below from the author's prompts; the author edited and approved it.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
@@ -743,3 +746,87 @@ concurrent administrator updates. Shared helpers read ignored local configuratio
 executing it, keep tokens in memory, capture responses in temporary files, redact tokens
 from assertion failures, and archive successful mutation fixtures. Live Compose runs passed
 for every endpoint and journey; no frontend or service implementation file changed.
+
+---
+
+## 2026-10-09 — User Service schema migrations, database roles and reset script
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:**
+  - Requirements interpretation: mapping the D1 backlog and D3 instructions to remaining User Service work
+  - Learning support:
+    - schema migrations
+    - the Postgres image's superuser, database roles vs application roles, table ownership and grants
+    - the `_FILE` secrets convention
+    - Compose volume scope
+  - Implementation code after the author decided the migration and privilege design
+  - Documentation
+- **Repository files affected:**
+  - `user-service/src/config.ts` (new), `migrate.ts` (new)
+  - `user-service/src/db.ts`, `token.ts`, `accounts.ts`, `bootstrap.ts`, `index.ts`
+  - `user-service/src/schema.ts` (removed)
+  - `user-service/migrations/0001_create_users.sql` (new)
+  - `user-service/docker/postgres/init-roles.sh` (new)
+  - `user-service/scripts/reset-db.sh` (new)
+  - `user-service/package.json`, `user-service/README.md` (including a Troubleshooting table)
+  - `compose.yaml`, `.env.example`
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> [Planning] "I want to look at the requirements not yet completed for the user service side that can be done independently [...] as well as what needs to be done in D3 for user service."
+
+> [Where migrations run] "Separate one-off container, as supplier does. I think consistency is good here. [...] having containers make me think that we can 'script it' somehow"
+
+> [Tooling] "I think hand-written is better: We own the service and gives us explicit control with low overhead [...] ORM is overhead feels too high and too much for a microservice."
+
+> [Format and direction] "we can try doing it with sql first." / "Roll forward. [...] we don't risk having a state with mixed data."
+
+> [Concurrency, failure, privileges] "I think locks." / "Refuse to start." / "Absolutely nope. this leads to a superadmin 'antipattern'. Principle of least privilege should be applied here."
+
+> [Existing databases, app privileges, roles, secrets] "Q5: Wipe [...] 8 a) [...] SELECT/INSERT/UPDATE/DELETE on tables and USAGE on sequences, with no DDL. [...] grant only INSERT, SELECT on the audit table. [...] b) An init script, matching Supplier. [...] c) Move them to .env, with a committed .env.example holding placeholder values"
+
+> [Superuser credentials, ownership, grants] "Narrow who receives it. [...] premature optimization." / "Migration role owns the table, and that's acceptable?" / "have the migration grant right for the table it creates"
+
+> [Runner details] "(b) [...] Role names: Fixed. Role names aren't secret? [checksums] Yes [...] Sequence Numbers."
+
+> [Reset script] "Only user service, in line with microservice arch [...] Check and print only [...] Ask first. Default to no, perhaps a --yes [...] bash script [...] Reusable [...] Stop after resetting, and print a next-step line."
+
+> [Troubleshooting docs] "let's do b), I think they will use AI to help them as well so it would be great"
+
+> [Reset script hint for other services] "(a)"
+
+### Key response
+
+Claude explained the concepts and the consequences of each option without choosing. It
+pointed out that `docker compose down -v` would also wipe the Supplier database, and that
+database roles are separate from FoC's MEMBER/ADMINISTRATOR roles.
+
+It then implemented the author's decisions:
+- **Config:** all configuration read in `src/config.ts`.
+- **Migrate step:** a one-off `user-migrate` Compose step running hand-written, numbered,
+  forward-only SQL migrations:
+  - each file in its own transaction, under an advisory lock
+  - stored checksums, so editing an applied file is refused
+  - a clear message on a pre-migration database
+  - `user-service` starts only after it succeeds
+- **Roles:** an init script creating a migration role (owner) and an app role (row access
+  only). The superuser credentials go only to the database container, and all passwords
+  come from `.env`.
+- **Reset script:** `user-service/scripts/reset-db.sh` resets only the User Service's local
+  database. It checks `.env` and only reports problems, and asks before deleting. Its last
+  lines point to `docker compose up -d` for any other service left stopped by an earlier
+  failed `up`.
+- **README:** a Troubleshooting table matching each exact error message to its cause and fix.
+
+Verification (isolated Compose project, 2026-10-09):
+- type-checked and built
+- **fresh start:** roles, migration and first admin all came up on the first `up`
+- **re-run:** "database is up to date"
+- **app role:** can read and write rows; cannot create, alter or drop tables or read the tracking table
+- **broken migration folders:** edited, missing, misnamed, duplicate and failing files were all refused (the failing one was rolled back) and `user-service` stayed stopped
+- **CRLF:** a Windows line-ending copy is accepted
+- **old D2-style database:** a clear message naming the reset script
+- **reset script:** the missing-setting, No, yes and `--yes` paths all worked; it wiped only the user database (the Supplier volume and its 21 rows were untouched); login and supplier reads through the gateway worked afterwards
+- **D2 demo kit:** 36/36 checks passed, and the race demo still had exactly 1 winner
+

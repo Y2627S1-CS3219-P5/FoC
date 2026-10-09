@@ -1,11 +1,15 @@
+/*
+ * AI Assistance Disclosure:
+ * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
+ * Scope: ALLOWED_EMAIL_DOMAIN is now read through config.ts. This disclosure covers only that change.
+ * Author review: Reviewed and approved by @t-leongchuan
+ */
 import bcrypt from "bcryptjs";
 import { DatabaseError } from "pg";
 import { pool } from "./db";
+import { loadAppConfig } from "./config";
 
-const ALLOWED_EMAIL_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN?.toLowerCase();
-if (!ALLOWED_EMAIL_DOMAIN) {
-  throw new Error("ALLOWED_EMAIL_DOMAIN is not set");
-}
+const ALLOWED_EMAIL_DOMAIN = loadAppConfig().allowedEmailDomain;
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,30}$/;             // US-F1.1.2
 const EMAIL_RE = /^[^\s@]+@[^\s@]+$/;

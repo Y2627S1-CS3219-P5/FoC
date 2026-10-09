@@ -3,6 +3,7 @@
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded the approved 1000 ms Supplier verification deployment timeout for issue #17. Author review of additional changes: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: made the User Service host port configurable so the isolated Supplier integration smoke test can avoid a developer stack. Author review of additional changes: Reviewed and approved by @ron.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-09-26. Scope: added the frontend gateway service (nginx serving the React app and proxying /api/v1 to the services, per the User Service author's routing decisions). Author review: Reviewed and approved by @t-leongchuan.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: User Service database roles, the one-off user-migrate step and the user-db secrets from .env, per the User Service author's migration decisions. Author review: Reviewed and approved by @t-leongchuan.
 services:
   # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
   frontend:
@@ -14,13 +15,15 @@ services:
       - supplier-service
 
   user-service:
+    image: foc-user-service:local
     build: ./user-service
     init: true
     ports:
       - "${USER_PORT:-3001}:3001"
     environment:
       PORT: 3001
-      DATABASE_URL: postgres://foc:foc@user-db:5432/users
+      # The app role: row access only, no schema changes
+      DATABASE_URL: postgres://user_app:${USER_DB_APP_PASSWORD:?Set USER_DB_APP_PASSWORD in .env}@user-db:5432/users
       ALLOWED_EMAIL_DOMAIN: ${ALLOWED_EMAIL_DOMAIN:-u.nus.edu}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-1800}
@@ -29,20 +32,37 @@ services:
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     depends_on:
+      user-migrate:
+        condition: service_completed_successfully
+
+  # Applies user-service/migrations/*.sql, then exits. user-service starts only if it succeeds.
+  user-migrate:
+    image: foc-user-service:local
+    pull_policy: never
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://user_migrator:${USER_DB_MIGRATION_PASSWORD:?Set USER_DB_MIGRATION_PASSWORD in .env}@user-db:5432/users
+    depends_on:
       user-db:
         condition: service_healthy
+    restart: "no"
 
   user-db:
     image: postgres:17-alpine
     environment:
-      # Credentials are local-development defaults from the User Service.
-      POSTGRES_USER: foc
-      POSTGRES_PASSWORD: foc
+      # The superuser exists only to run the init script below; no service connects as it
+      POSTGRES_USER: user_bootstrap
+      POSTGRES_PASSWORD: ${USER_DB_ADMIN_PASSWORD:?Set USER_DB_ADMIN_PASSWORD in .env}
       POSTGRES_DB: users
+      USER_DB_MIGRATION_PASSWORD: ${USER_DB_MIGRATION_PASSWORD:?Set USER_DB_MIGRATION_PASSWORD in .env}
+      USER_DB_APP_PASSWORD: ${USER_DB_APP_PASSWORD:?Set USER_DB_APP_PASSWORD in .env}
     volumes:
       - user-db-data:/var/lib/postgresql/data
+      - ./user-service/docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/010-user-roles.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U foc -d users"]
+      # -h localhost checks over TCP, which the temporary server used during first-time
+      # initialisation does not open; so the check only passes once the real server is up
+      test: ["CMD-SHELL", "pg_isready -h localhost -U user_bootstrap -d users"]
       interval: 5s
       timeout: 3s
       retries: 10

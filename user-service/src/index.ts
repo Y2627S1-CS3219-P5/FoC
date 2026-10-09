@@ -4,6 +4,10 @@
  * Scope: Mounted the profile router (/whoami) and users router (/users/:id/role).
  *        This disclosure covers only those lines.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
+ * Scope: Removed the startup schema creation (now done by the separate migration step,
+ *        src/migrate.ts) and read PORT/CORS_ORIGINS through config.ts.
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { authRouter } from "./auth";
 import { profileRouter } from "./profile";
@@ -11,17 +15,14 @@ import { usersRouter } from "./users";
 import { bootstrapFirstAdmin } from "./bootstrap";
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
-import { initSchema } from "./schema";
+import { loadAppConfig } from "./config";
 
 const app = express();
+const config = loadAppConfig();
 
 // Browsers may only call this service from these origins. Server-to-server calls
 // (e.g. Supplier -> /auth/verify) are unaffected: CORS is enforced by browsers only.
-const allowedOrigins = (process.env.CORS_ORIGINS ?? "")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: config.corsOrigins }));
 
 
 app.use(express.json());
@@ -39,10 +40,11 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: "INTERNAL_ERROR", message: "Something went wrong" });
 });
 
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = config.port;
 
+// The schema is created and changed by the migration step (src/migrate.ts), which
+// runs to completion before this service starts.
 async function main(): Promise<void> {
-  await initSchema();
   await bootstrapFirstAdmin();
   app.listen(PORT, () => console.log(`user-service listening on ${PORT}`));
 }

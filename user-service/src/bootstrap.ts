@@ -1,13 +1,19 @@
+/*
+ * AI Assistance Disclosure:
+ * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
+ * Scope: The BOOTSTRAP_ADMIN_* settings are now read through config.ts.
+ *        This disclosure covers only that change.
+ * Author review: Reviewed and approved by @t-leongchuan
+ */
 import { pool } from "./db";
 import { createAccount, ValidationError, ConflictError } from "./accounts";
+import { loadAppConfig } from "./config";
 
 // Any fixed number, shared by every instance of this service
 const BOOTSTRAP_LOCK_ID = 3219001;
 
 export async function bootstrapFirstAdmin(): Promise<void> {
-  const username = process.env.BOOTSTRAP_ADMIN_USERNAME;
-  const email = process.env.BOOTSTRAP_ADMIN_EMAIL;
-  const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+  const { username, email, password } = loadAppConfig().bootstrapAdmin;
 
   const provided = [username, email, password].filter(Boolean).length;
   if (provided === 0) {
