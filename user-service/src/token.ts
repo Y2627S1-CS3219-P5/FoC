@@ -1,14 +1,16 @@
+/*
+ * AI Assistance Disclosure:
+ * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
+ * Scope: JWT_SECRET and JWT_ACCESS_TOKEN_TTL are now read through config.ts.
+ *        This disclosure covers only that change.
+ * Author review: Reviewed and approved by @t-leongchuan
+ */
 import jwt from "jsonwebtoken";
+import { loadAppConfig } from "./config";
 
-const secret = process.env.JWT_SECRET;
-if (!secret) {
-  throw new Error("JWT_SECRET is not set");
-}
+const { jwtSecret: JWT_SECRET, accessTokenTtlSeconds } = loadAppConfig();
 
-// We do this for TypeScript narrowing limit purposes
-const JWT_SECRET: string = secret; 
-
-export const ACCESS_TOKEN_TTL_SECONDS = Number(process.env.JWT_ACCESS_TOKEN_TTL) || 1800;
+export const ACCESS_TOKEN_TTL_SECONDS = accessTokenTtlSeconds;
 
 // Payload is only the account id (sub) plus iat/exp. Role is deliberately NOT included:
 // /auth/verify reads the current role from the DB, so a token can never carry a stale role.
