@@ -54,6 +54,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Implemented and verified the standalone Supplier API Bash endpoint collection,
 self-contained endpoint checks, and MEMBER/ADMINISTRATOR journeys.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
+Scope: Drafted the User Service author's migrations entry below from the author's prompts; the author edited and approved it.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
