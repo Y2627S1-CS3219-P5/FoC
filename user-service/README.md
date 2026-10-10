@@ -12,11 +12,42 @@ Author review of additional changes: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
 Scope: Documented suspend/restore, the audit log and its limits.
 Author review of additional changes: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+Scope: "Rules for changing this service" section and the endpoint template pointer.
+Author review of additional changes: Reviewed and approved by @t-leongchuan
 -->
 
 # User Service
 
 Accounts, login, profiles and roles for FoC. Express + TypeScript + PostgreSQL.
+
+## Rules for changing this service
+
+Teammates (and their AI tools) are welcome to send PRs here. The User Service owner reviews
+everything under `user-service/`. These rules aren't obvious from any single file:
+
+1. **Start from the template:** `src/examples/exampleRoute.ts` shows the house pattern and lists
+   every step (mounting the router, both gateways, migrations, README).
+2. **Migrations:** never edit or delete a merged file in `migrations/`. Add the next numbered
+   file, and grant `user_app` only the access the code needs (it gets nothing by default).
+3. **Configuration:** environment variables are read only in `src/config.ts`.
+4. **Roles and account status** change only through `runAdminAction()` (`src/roles.ts`). It holds
+   the shared admin-actions lock, re-checks the acting admin, and writes the audit entry in the
+   same transaction (`appendAudit()`). Never `UPDATE users SET role/status` directly.
+5. **Audit log:** append-only. Never change the hash recipe (`"v1"` in `src/audit.ts`) or the
+   table's grants. Don't store names or emails in it, only ids.
+6. **Errors:** always `{ error, message, details? }`. Don't catch database errors in routes: the
+   handler in `src/index.ts` turns outages into **503, never 401** (a 401 logs users out).
+7. **`GET /auth/verify` is a contract** with every other service: `{ id, role }` for a valid
+   login, 401 only for a missing, invalid or expired login, 503 during outages. Changing it
+   affects Supplier, Order and Credit.
+8. **Privacy and secrets:** never return email addresses to other users, never log passwords,
+   keys, tokens or the database URL.
+9. **Before opening a PR:** run `docker compose up -d --build`, then
+   `./supplier-service/scripts/api-demo/run-all.sh` (needs `jq`) and
+   `docker compose exec user-service npm run audit:verify`.
+10. **AI use:** put **your** name in the file headers you write and add your own entry to
+    `ai/usage-log.md`.
 
 ## Endpoints
 

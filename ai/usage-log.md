@@ -66,6 +66,9 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
 Scope: Drafted the User Service author's suspend/restore and audit-log entry below from the author's prompts; the author edited and approved it.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+Scope: Drafted the User Service author's contributor-template entry below; the author edited and approved it.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
@@ -1008,3 +1011,23 @@ Also:
 - upgrading a database created by `main` (gap accepted; the chain starts at the next action and verifies)
 - Ron's API journeys: 189/189
 - D2 demo kit: 36/36, and the race demo had exactly 1 winner
+
+## 2026-10-10 — User Service: endpoint template and rules for contributors
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** documentation, and an example route that restates the author's existing conventions (no new design)
+- **Repository files affected:** `user-service/src/examples/exampleRoute.ts` (new, not mounted), `user-service/README.md`
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> "How about skeleton code for them?" / "Let's do [endpoint template]."
+
+### Key response
+
+Claude explained that skeletons fixing new interfaces would be design decisions for the author
+and teammates. Per the author's choice, it wrote only an unmounted example route showing the
+existing conventions, plus a README "Rules for changing this service" section. The section
+covers migrations, config, admin actions, audit-log rules, the error shape, 503 vs 401, the
+`/auth/verify` contract, privacy, pre-PR checks, and contributors' own AI disclosures.
+Type-checked.
