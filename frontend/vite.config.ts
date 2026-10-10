@@ -5,6 +5,9 @@
  *        author's gateway decisions (data-named /api/v1 paths, rewrites to service routes,
  *        /auth/verify not exposed). Mirrors frontend/nginx.conf used in Docker.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+ * Scope: Dev-proxy rules for the User Service suspend/restore and admin audit endpoints.
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -28,6 +31,9 @@ export default defineConfig({
       '^/api/v1/auth/(login|register)$': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
       '^/api/v1/whoami$': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
       '^/api/v1/users/[^/]+/role$': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
+      '^/api/v1/users/[^/]+/(suspend|restore)$': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
+      // (matched against the URL including its query string, e.g. ?limit=50)
+      '^/api/v1/admin/audit(/verify)?(\\?|$)': { target: USER_SERVICE_URL, rewrite: stripApiPrefix },
       // (user-service's /auth/verify is intentionally NOT listed: it is for services only)
 
       // supplier-service: its routes already match the public paths, so no rewrite

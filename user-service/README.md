@@ -9,6 +9,9 @@ Author review of additional changes: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
 Scope: Documented /health, database-outage behaviour and the deployment note.
 Author review of additional changes: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+Scope: Documented suspend/restore, the audit log and its limits.
+Author review of additional changes: Reviewed and approved by @t-leongchuan
 -->
 
 # User Service
@@ -26,7 +29,11 @@ The gateway strips `/api/v1` before forwarding.
 | `POST /api/v1/auth/login` | anyone | `{ identifier, password }` (username or email) → `{ accessToken, tokenType, expiresIn }` |
 | `GET /api/v1/whoami` | logged in | → `{ username, displayName, role }` of the caller |
 | `PATCH /api/v1/whoami` | logged in | `{ displayName }` (1–50 chars). Other fields are ignored. Missing displayName → no change |
-| `PUT /api/v1/users/{id}/role` | ADMINISTRATOR | `{ role: "MEMBER" \| "ADMINISTRATOR" }`. Same role → no change |
+| `PUT /api/v1/users/{id}/role` | ADMINISTRATOR | `{ role: "MEMBER" \| "ADMINISTRATOR", reason? }`. Same role → no change. Promotion only for ACTIVE accounts; demotion for ACTIVE or SUSPENDED |
+| `POST /api/v1/users/{id}/suspend` | ADMINISTRATOR | `{ reason }` (required). ACTIVE → SUSPENDED; their existing logins stop working at once |
+| `POST /api/v1/users/{id}/restore` | ADMINISTRATOR | `{ reason }` (required). SUSPENDED → ACTIVE |
+| `GET /api/v1/admin/audit` | ADMINISTRATOR | Audit entries, newest first. Filters `targetId`, `actorId`, `action`; paging `?before=<nextCursor>`, `limit` (default 50, max 200) |
+| `GET /api/v1/admin/audit/verify` | ADMINISTRATOR | Checks the hash chain → `{ valid, checkedEntries, firstInvalidId, latestHash }` |
 | `GET /auth/verify` | **other services only** (not exposed by the gateway) | → `{ id, role }` for the bearer token |
 | `GET /health` | Docker healthcheck, other services (not exposed by the gateway) | Readiness: 200 `{ "status": "ok" }` if the database answers within 1 s, else 503 `{ "status": "not_ready" }` |
 
@@ -48,6 +55,8 @@ All errors look like `{ "error": "CODE", "message": "...", "details"?: { field: 
 | 404 `USER_NOT_FOUND` | No account with that id |
 | 409 `USERNAME_TAKEN` / `EMAIL_TAKEN` | Registration clashes with an existing account |
 | 409 `LAST_ADMINISTRATOR` | The change would leave no ACTIVE administrator |
+| 403 `CANNOT_SUSPEND_SELF` | An admin tried to suspend their own account |
+| 409 `INVALID_STATUS_TRANSITION` | The action isn't possible for the account's status (e.g. suspending a CLOSED account, promoting a SUSPENDED one) |
 | 503 `SERVICE_UNAVAILABLE` | The database is temporarily unreachable; try again later. Never 401, so callers don't log users out |
 
 ## Configuration
@@ -110,6 +119,48 @@ service retries **forever** while the database stays unreachable, with each fail
 visible in `docker compose ps` and the logs. That's intended for local Compose; revisit it
 (e.g. alerting on repeated restarts) before any cloud deployment.
 
+## Suspension and the audit log
+
+**Suspend/restore** (repeating an action is a harmless success with no new audit entry):
+
+| Current status | suspend | restore |
+| --- | --- | --- |
+| ACTIVE | → SUSPENDED | 200, no change |
+| SUSPENDED | 200, no change | → ACTIVE |
+| PENDING_VERIFICATION, CLOSED | 409 | 409 |
+
+Role changes, suspend and restore all queue on one database lock, and the acting admin is
+re-checked after waiting, so two admins can't, for example, suspend each other at the same moment.
+
+**Reasons** are required for suspend/restore and optional for role changes (1–500 characters).
+Audit entries are permanent, so **describe the evidence (e.g. order or report IDs), not
+personal details**. Other audit columns hold only ids; usernames are looked up when read.
+
+**The audit log** (`audit_log`, migration `0002`) records role changes, suspensions,
+restorations and first-admin creation, each in the same transaction as the change (if the
+entry can't be saved, nothing changes). Rejected attempts are not audit entries; they appear
+in the application log as `admin.action.rejected` lines.
+
+- **Append-only:** the service's database role can only INSERT and SELECT on it.
+- **Hash chain:** each entry stores `HMAC-SHA256(AUDIT_HMAC_KEY, prev_hash + "\n" + JSON of its
+  fields)`, starting from 64 zeros (recipe in `src/audit.ts` and the migration). Editing,
+  inserting or deleting an entry in the middle breaks the chain from that entry on.
+- **Checking:** `GET /api/v1/admin/audit/verify`, or
+  `docker compose exec user-service npm run audit:verify` (exit code 1 if broken). It re-reads
+  the whole log each time, which is fine at this project's scale.
+- **Anchoring:** every append also writes `audit.appended {"id":…,"hash":…}` to the
+  application log. Comparing these with `latestHash` reveals deleted newest entries.
+
+**Limits (by design, documented):**
+- Deleting the newest entries is only detectable against the `audit.appended` log lines, and
+  container logs aren't durable storage: a checkpoint, not a guarantee.
+- Someone with both the key and database superuser access can rewrite everything.
+- The application log (including rejected attempts) is not tamper-evident.
+- The key must not change: there is no key rotation (the `"v1"` tag in the recipe is where it
+  would be added). `AUDIT_HMAC_KEY` is required, and the service refuses to start without a
+  valid one.
+- Databases created before migration `0002` have no entry for their first administrator.
+
 ### Known limitations
 
 **Login bursts slow everything else down** (measured 2026-10-09, cold connection pool,
@@ -151,4 +202,5 @@ docker compose logs user-migrate
 | `Applied migration ... is missing` / `Two migrations share the number` / `Unexpected file in migrations/` | A migration was deleted, two branches used the same number, or a non-migration file is in `migrations/` | Restore the deleted file, renumber your new file, or move the extra file out |
 | `<file> failed and was rolled back: ...` | The SQL in a new migration has an error; nothing from that file was applied | Fix the SQL in that (not yet merged) file and run `docker compose up -d` again |
 | `permission denied for table ...` in `docker compose logs user-service` | A migration created a table without granting `user_app` access | Add a new migration with the needed `GRANT ... TO user_app` |
+| `AUDIT_HMAC_KEY must be at least 32 random bytes` or `required variable AUDIT_HMAC_KEY is missing a value` | `.env` lacks the audit key, or it's too short | Add `AUDIT_HMAC_KEY=` with the output of `openssl rand -hex 32`. Never change it afterwards |
 | `error mounting ... 010-user-roles.sh ... no such file or directory` when starting `user-db` (Docker Desktop on WSL) | The `user-db` container was created before git replaced `docker/postgres/init-roles.sh` (e.g. after switching branches); the container still points at the old file | `docker compose up -d --force-recreate user-db` (keeps your data; the volume is untouched) |

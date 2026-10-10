@@ -3,9 +3,12 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
  * Scope: ALLOWED_EMAIL_DOMAIN is now read through config.ts. This disclosure covers only that change.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+ * Scope: createAccount can run on a caller's transaction (used by the first-admin bootstrap).
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import bcrypt from "bcryptjs";
-import { DatabaseError } from "pg";
+import { DatabaseError, Pool, PoolClient } from "pg";
 import { pool } from "./db";
 import { loadAppConfig } from "./config";
 
@@ -74,7 +77,8 @@ function validate(input: NewAccountInput): Record<string, string> {
 }
 
 // The single place accounts are created: used by registration and by the admin bootstrap
-export async function createAccount(input: NewAccountInput): Promise<Account> {
+// `db` is the pool by default, or a client inside the caller's transaction
+export async function createAccount(input: NewAccountInput, db: Pool | PoolClient = pool): Promise<Account> {
   const errors = validate(input);
   if (Object.keys(errors).length > 0) {
     throw new ValidationError(errors);
@@ -85,7 +89,7 @@ export async function createAccount(input: NewAccountInput): Promise<Account> {
   const passwordHash = await bcrypt.hash(input.password as string, BCRYPT_COST);
 
   try {
-    const result = await pool.query(
+    const result = await db.query(
       `INSERT INTO users (username, email, password_hash, display_name, role, status)
        VALUES ($1, $2, $3, $4, $5, 'ACTIVE')
        RETURNING id, username, email, display_name, role, status`,

@@ -7,6 +7,9 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
  * Scope: Added the author's resilience timings (DB_RESILIENCE).
  * Author review of additional changes: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+ * Scope: Added the audit-log HMAC key setting (loadAuditKey).
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 
 // The only file that reads process.env. Each part loads only what it needs, so the
@@ -59,3 +62,14 @@ export const DB_RESILIENCE = {
   // Graceful shutdown limit; below Docker's 10 s before it force-kills the container
   shutdownTimeoutMs: 8_000,
 } as const;
+
+// Key for the audit-log hash chain (US-NFR1.2.1). At least 32 random bytes, written as hex
+// (e.g. `openssl rand -hex 32`). Missing or too short: refuse to start rather than write
+// entries that can never be verified. The key is assumed never to change during the project.
+export function loadAuditKey(): Buffer {
+  const hex = required("AUDIT_HMAC_KEY");
+  if (!/^(?:[0-9a-fA-F]{2}){32,}$/.test(hex)) {
+    throw new Error("AUDIT_HMAC_KEY must be at least 32 random bytes in hex (e.g. openssl rand -hex 32)");
+  }
+  return Buffer.from(hex, "hex");
+}
