@@ -5,12 +5,16 @@
  *        never zero ACTIVE admins, idempotent) with the author's lock-then-check
  *        concurrency approach.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+ * Scope: The author's Phase 1 rules: one admin-actions lock (shared with suspend/restore),
+ *        status rules for role changes, an optional reason, and an audit entry in the same
+ *        transaction.
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
+import { PoolClient } from "pg";
 import { pool } from "./db";
 import { Role } from "./accounts";
-
-// Taken by every role change (see changeRole); distinct from the bootstrap lock
-const ROLE_CHANGE_LOCK_ID = 3219002;
+import { ADMIN_ACTIONS_LOCK_ID, AppendedEntry, appendAudit, logAuditAppended } from "./audit";
 
 export const ROLES: readonly Role[] = ["MEMBER", "ADMINISTRATOR"];
 
@@ -25,24 +29,33 @@ export class NotAllowedError extends Error {}       // -> 403
 export class OwnRoleError extends Error {}          // -> 403
 export class UserNotFoundError extends Error {}     // -> 404
 export class LastAdministratorError extends Error {} // -> 409
+export class InvalidStatusTransitionError extends Error {} // -> 409
+
+export interface AdminTarget {
+  id: string;
+  username: string;
+  display_name: string;
+  role: Role;
+  status: string;
+}
 
 /**
- * Change targetId's role on behalf of actorId, independent of how a route identifies
- * the target. Role changes are serialised with an advisory lock so that concurrent
- * changes (e.g. two admins demoting each other) cannot leave zero ACTIVE admins.
+ * Runs one admin action: BEGIN, take the admin-actions lock (role changes, suspend and
+ * restore all queue here), re-check that the actor is still an ACTIVE administrator (they
+ * may have been demoted or suspended while waiting), load the target, run `action`, COMMIT.
+ * `action` returns the audit entry it appended, if any; it is logged only after COMMIT.
  */
-export async function changeRole(actorId: string, targetId: string, newRole: Role): Promise<RoleChangeResult> {
-  // US-F4.1.2: only *another* account's role
-  if (actorId === targetId) throw new OwnRoleError();
-
+export async function runAdminAction<T>(
+  actorId: string,
+  targetId: string,
+  action: (client: PoolClient, target: AdminTarget) => Promise<{ result: T; appended?: AppendedEntry }>,
+): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
     // Released automatically at COMMIT/ROLLBACK
-    await client.query("SELECT pg_advisory_xact_lock($1)", [ROLE_CHANGE_LOCK_ID]);
+    await client.query("SELECT pg_advisory_xact_lock($1)", [ADMIN_ACTIONS_LOCK_ID]);
 
-    // The actor may have been demoted while waiting for the lock
     const actor = await client.query("SELECT role, status FROM users WHERE id = $1", [actorId]);
     if (actor.rows[0]?.role !== "ADMINISTRATOR" || actor.rows[0]?.status !== "ACTIVE") {
       throw new NotAllowedError();
@@ -52,11 +65,42 @@ export async function changeRole(actorId: string, targetId: string, newRole: Rol
       "SELECT id, username, display_name, role, status FROM users WHERE id = $1",
       [targetId],
     );
-    const t = target.rows[0];
-    if (!t) throw new UserNotFoundError();
+    if (!target.rows[0]) throw new UserNotFoundError();
 
-    // Same role: no change (idempotent)
+    const { result, appended } = await action(client, target.rows[0]);
+    await client.query("COMMIT");
+    if (appended) logAuditAppended(appended);
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Change targetId's role on behalf of actorId, independent of how a route identifies the
+ * target. Rules (author, 2026-10-10): PENDING_VERIFICATION and CLOSED targets -> 409;
+ * same role -> no change, no audit entry; promotion only for ACTIVE targets; demotion for
+ * ACTIVE or SUSPENDED targets; never leave zero ACTIVE administrators (US-F4.1.3).
+ */
+export async function changeRole(
+  actorId: string,
+  targetId: string,
+  newRole: Role,
+  reason: string | null,
+): Promise<RoleChangeResult> {
+  // US-F4.1.2: only *another* account's role
+  if (actorId === targetId) throw new OwnRoleError();
+
+  return runAdminAction(actorId, targetId, async (client, t) => {
+    if (t.status !== "ACTIVE" && t.status !== "SUSPENDED") throw new InvalidStatusTransitionError();
+
+    let appended: AppendedEntry | undefined;
     if (t.role !== newRole) {
+      // A suspended member would become an admin the moment they are restored
+      if (newRole === "ADMINISTRATOR" && t.status !== "ACTIVE") throw new InvalidStatusTransitionError();
       // US-F4.1.3
       if (t.role === "ADMINISTRATOR" && t.status === "ACTIVE") {
         const admins = await client.query(
@@ -65,15 +109,15 @@ export async function changeRole(actorId: string, targetId: string, newRole: Rol
         if (admins.rows[0].n <= 1) throw new LastAdministratorError();
       }
       await client.query("UPDATE users SET role = $1, updated_at = now() WHERE id = $2", [newRole, targetId]);
+      appended = await appendAudit(client, {
+        actorType: "USER", actorId, action: "ROLE_CHANGED", targetId,
+        previousValue: t.role, newValue: newRole, reason,
+      });
       t.role = newRole;
     }
-
-    await client.query("COMMIT");
-    return { id: t.id, username: t.username, displayName: t.display_name, role: t.role };
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
+    return {
+      result: { id: t.id, username: t.username, displayName: t.display_name, role: t.role },
+      appended,
+    };
+  });
 }

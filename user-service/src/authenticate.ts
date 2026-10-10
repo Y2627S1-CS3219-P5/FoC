@@ -5,6 +5,9 @@
  *        middleware so that /whoami (and later profile/admin routes) can share them.
  *        Added the requireRole RBAC middleware used by admin-only routes.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+ * Scope: requireRole logs rejected attempts to the application log (author's Phase 1 rule).
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { Request, Response, NextFunction } from "express";
 import { pool } from "./db";
@@ -65,6 +68,8 @@ export function currentUser(res: Response): AuthenticatedUser {
 export function requireRole(...allowed: Role[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!allowed.includes(currentUser(res).role)) {
+      // Rejected attempts go to the application log, not the audit table
+      console.warn(`admin.action.rejected ${JSON.stringify({ actorId: currentUser(res).id, path: req.path, code: "FORBIDDEN" })}`);
       res.status(403).json({ error: "FORBIDDEN", message: "You do not have permission to do this" });
       return;
     }

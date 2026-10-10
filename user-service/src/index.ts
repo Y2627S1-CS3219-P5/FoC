@@ -13,6 +13,9 @@
  *        503 SERVICE_UNAVAILABLE while the database is unreachable, startup retries before
  *        listening, and graceful shutdown on SIGTERM.
  * Author review of additional changes: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+ * Scope: Mounted the admin audit routes; refuse to start without a valid AUDIT_HMAC_KEY.
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { authRouter } from "./auth";
 import { profileRouter } from "./profile";
@@ -20,7 +23,8 @@ import { usersRouter } from "./users";
 import { bootstrapFirstAdmin } from "./bootstrap";
 import cors from "cors";
 import express, { Request, Response, NextFunction } from "express";
-import { loadAppConfig, DB_RESILIENCE } from "./config";
+import { loadAppConfig, loadAuditKey, DB_RESILIENCE } from "./config";
+import { adminAuditRouter } from "./adminAudit";
 import { pool } from "./db";
 import {
   isDatabaseUnavailable,
@@ -61,6 +65,7 @@ app.get("/health", async (req: Request, res: Response) => {
 app.use("/auth", authRouter);
 app.use(profileRouter);
 app.use(usersRouter);
+app.use(adminAuditRouter);
 
 app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   // Expected: the database is temporarily unreachable. Tell callers to try again later.
@@ -84,6 +89,8 @@ const PORT = config.port;
 // so in practice it retries forever. NOTE for deployment: revisit this "forever" before
 // running outside local Compose (cloud, Kubernetes), e.g. alerting on repeated restarts.
 async function main(): Promise<void> {
+  // Refuse to start rather than write audit entries that can never be verified
+  loadAuditKey();
   await retryWhileDatabaseUnavailable("Startup", () => pool.query("SELECT 1"));
   await retryWhileDatabaseUnavailable("First-admin bootstrap", bootstrapFirstAdmin);
   const server = app.listen(PORT, () => console.log(`user-service listening on ${PORT}`));

@@ -6,6 +6,7 @@
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: User Service database roles, the one-off user-migrate step and the user-db secrets from .env, per the User Service author's migration decisions. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: pinned the user-db Postgres image to a full version tag, per the User Service author's decision. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: user-service restart policy and readiness healthcheck, per the User Service author's resilience decisions. Author review: Reviewed and approved by @t-leongchuan.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-10. Scope: AUDIT_HMAC_KEY for user-service (audit-log hash chain). Author review: Reviewed and approved by @t-leongchuan.
 services:
   # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
   frontend:
@@ -33,6 +34,8 @@ services:
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      # Audit-log hash-chain key; only user-service receives it
+      AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY:?Set AUDIT_HMAC_KEY in .env (openssl rand -hex 32)}
     depends_on:
       user-migrate:
         condition: service_completed_successfully

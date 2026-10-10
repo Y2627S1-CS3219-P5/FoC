@@ -63,6 +63,12 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-09
 Scope: Drafted the User Service author's outage-resilience entry below from the author's prompts; the author edited and approved it.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+Scope: Drafted the User Service author's suspend/restore and audit-log entry below from the author's prompts; the author edited and approved it.
+Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
+Scope: Drafted the User Service author's contributor-template entry below; the author edited and approved it.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
@@ -941,3 +947,87 @@ Verification (isolated Compose project):
 - **logs:** no secrets
 - **demo kit:** 36/36, and the race demo had exactly 1 winner
 
+## 2026-10-10 — User Service: admin suspend/restore and audit log (US-F8.2, US-NFR1)
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:**
+  - Learning support and review of the author's design: action vs state endpoints, lock scope, hash chains vs HMAC, chain forks, canonical hashing, foreign-key delete behaviour, keyset paging, anchoring
+  - Implementation code after the author decided the endpoints, status rules, schema, hash recipe and limits
+  - Documentation
+- **Repository files affected:**
+  - `user-service/migrations/0002_audit_log.sql` (new)
+  - `user-service/src/audit.ts`, `accountStatus.ts`, `adminAudit.ts`, `auditVerify.ts` (new)
+  - `user-service/src/roles.ts`, `users.ts`, `authenticate.ts`, `accounts.ts`, `bootstrap.ts`, `config.ts`, `index.ts`
+  - `user-service/package.json`, `user-service/README.md`
+  - `compose.yaml`, `.env.example`, `frontend/nginx.conf`, `frontend/vite.config.ts`
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> [Endpoints, rules, lock, reason] "Use POST /users/{id}/suspend and POST /users/{id}/restore. [...] Repeating an action is harmless success, matching role change. [...] the same lock, not a separate one. [...] Reason: require it for suspend and restore. Make it 1-500 characters, store on the audit entry."
+
+> [Schema, logging, tamper detection, viewer] "I shall give you my table for now and you need to take a look at it and make suggestions [...] Log only successful actions in the audit table. [...] Hash Chain, plus an HMAC key? [...] Viewer: yes, GET /audit, admin only. Review these for me before anything"
+
+> [Second round] "Reason on role change: optional for now [...] add Unique(prev_hash) and use 64 zeroes [...] leave id out of the hash [...] ON DELETE RESTRICT [...] Check Constraints: yes to everything, written as "if and only if" [...] accept the gap in existing local databases [...] AUDIT_HMAC_KEY in .env [...] refuse to start if it's missing or too short [...] Anchoring: do the cheap version now [...] keyset paginated [...] /admin/audit and /admin/audit/verify"
+
+> [Final details] "harmless repeat no audit entry, even if the request carries a reason [...] CANNOT_SUSPEND_SELF [...] INVALID_STATUS_TRANSITION [...] Promotion requires an ACTIVE target [...] Append function takes the lock itself [...] Inside the container docker compose exec user-service npm run audit:verify"
+
+### Key response
+
+Claude reviewed the author's design without choosing for them. It pointed out:
+- the chain could fork without `UNIQUE(prev_hash)`
+- a millisecond/microsecond timestamp mismatch would break re-hashing
+- `ON DELETE CASCADE` would silently break the chain
+- the A/B mutual-suspension race
+- the first-admin bootstrap needed a transaction
+- reasons stay permanent, so personal details in them stay too
+
+It then implemented the author's decisions:
+- **Endpoints:** suspend/restore, sharing one admin-actions lock and actor re-check with role
+  changes, which now follow the author's status rules and take an optional reason.
+- **Audit log:** an append-only table with the author's CHECKs, indexes and grants; HMAC
+  hash-chain appends in the same transaction as each change; a FIRST_ADMIN_CREATED entry in
+  the bootstrap transaction.
+- **Logging:** `audit.appended` anchor lines, and `admin.action.rejected` application-log warnings.
+- **Viewer:** an admin viewer with keyset paging and filters; chain verification by endpoint
+  and `npm run audit:verify`.
+- **Key:** a required `AUDIT_HMAC_KEY`.
+- **Gateway** routes, and **documentation** of all limits.
+
+Verification (isolated Compose project, 2026-10-10), 53 scripted checks:
+- every status-table row, the role rules, self-suspend, unknown ids and reason validation
+- immediate lockout of suspended users
+- member access denied
+- the A/B race: exactly one winner in 20/20 rounds
+- a forced audit failure rolls back the suspension
+- the viewer's paging, filters and validation
+- chain verification by endpoint and command line; the app role can't UPDATE or DELETE
+- tampering: an edited entry with a recomputed SHA-256, and a deleted middle entry, are both
+  detected; a deleted newest entry is caught only by the anchor line, as documented
+
+Also:
+- a missing or short key refuses to start
+- no secrets in the logs
+- upgrading a database created by `main` (gap accepted; the chain starts at the next action and verifies)
+- Ron's API journeys: 189/189
+- D2 demo kit: 36/36, and the race demo had exactly 1 winner
+
+## 2026-10-10 — User Service: endpoint template and rules for contributors
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** documentation, and an example route that restates the author's existing conventions (no new design)
+- **Repository files affected:** `user-service/src/examples/exampleRoute.ts` (new, not mounted), `user-service/README.md`
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> "How about skeleton code for them?" / "Let's do [endpoint template]."
+
+### Key response
+
+Claude explained that skeletons fixing new interfaces would be design decisions for the author
+and teammates. Per the author's choice, it wrote only an unmounted example route showing the
+existing conventions, plus a README "Rules for changing this service" section. The section
+covers migrations, config, admin actions, audit-log rules, the error shape, 503 vs 401, the
+`/auth/verify` contract, privacy, pre-PR checks, and contributors' own AI disclosures.
+Type-checked.
