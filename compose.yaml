@@ -7,6 +7,8 @@
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: pinned the user-db Postgres image to a full version tag, per the User Service author's decision. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: user-service restart policy and readiness healthcheck, per the User Service author's resilience decisions. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-10. Scope: AUDIT_HMAC_KEY for user-service (audit-log hash chain). Author review: Reviewed and approved by @t-leongchuan.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: credit-db and the one-off credit-migrate step, following the user-db pattern (credit-service/docs/implementation-proposal.md §4, §10). Author review: Reviewed and approved by @phuc
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: shared Kafka broker (KRaft, single node) and the one-off kafka-init step that creates the three topics (kafka/create-topics.sh), 1 partition each per the Credit Service author. Author review: Reviewed and approved by @phuc
 services:
   # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
   frontend:
@@ -133,6 +135,82 @@ services:
     ports:
       - "${SUPPLIER_PORT:-3000}:3000"
 
+  # Credit Service database: same pattern as user-db (bootstrap superuser for the init
+  # script only, credit_migrator for migrations, credit_app for the running service)
+  credit-db:
+    image: postgres:17.11-alpine3.24
+    environment:
+      POSTGRES_USER: credit_bootstrap
+      POSTGRES_PASSWORD: ${CREDIT_DB_ADMIN_PASSWORD:?Set CREDIT_DB_ADMIN_PASSWORD in .env}
+      POSTGRES_DB: credits
+      CREDIT_DB_MIGRATION_PASSWORD: ${CREDIT_DB_MIGRATION_PASSWORD:?Set CREDIT_DB_MIGRATION_PASSWORD in .env}
+      CREDIT_DB_APP_PASSWORD: ${CREDIT_DB_APP_PASSWORD:?Set CREDIT_DB_APP_PASSWORD in .env}
+    volumes:
+      - credit-db-data:/var/lib/postgresql/data
+      - ./credit-service/docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/010-credit-roles.sh:ro
+    healthcheck:
+      # -h localhost: passes only once the real server is up, not the init-time one
+      test: ["CMD-SHELL", "pg_isready -h localhost -U credit_bootstrap -d credits"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Applies credit-service/migrations/*.sql, then exits
+  credit-migrate:
+    image: foc-credit-service:local
+    build: ./credit-service
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://credit_migrator:${CREDIT_DB_MIGRATION_PASSWORD:?Set CREDIT_DB_MIGRATION_PASSWORD in .env}@credit-db:5432/credits
+    depends_on:
+      credit-db:
+        condition: service_healthy
+    restart: "no"
+
+  # Shared Kafka broker (KRaft mode, no ZooKeeper). Only reachable inside the Compose
+  # network at kafka:9092. Topics are created by kafka-init, never automatically.
+  kafka:
+    image: apache/kafka:3.9.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Single broker: internal topics cannot have more than one replica
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      start_period: 20s
+      retries: 10
+
+  # Creates the topics (kafka/create-topics.sh), then exits
+  kafka-init:
+    image: apache/kafka:3.9.0
+    command: ["sh", "/scripts/create-topics.sh"]
+    environment:
+      BOOTSTRAP_SERVER: kafka:9092
+    volumes:
+      - ./kafka/create-topics.sh:/scripts/create-topics.sh:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+
 volumes:
   user-db-data:
   supplier-db-data:
+  credit-db-data:
+  kafka-data:
