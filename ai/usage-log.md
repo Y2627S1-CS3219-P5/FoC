@@ -1100,3 +1100,20 @@ Claude copied the Credit Service database and migration-runner files (dropping t
 specific parts, renaming credit to order, new advisory lock ID), added the migration SQL from the plan,
 and wrote schema tests first (check constraints, and that `order_app` cannot update `errand_history`).
 Tests: 6/6 against a disposable PostgreSQL 17.
+
+## 2026-10-16 — Order Service: errand states, transition table and input validation
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of a transition table and validation rules specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/src/domain/{states,transitions,validation}.ts`, `order-service/test/{transitions,validation}.test.ts`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 2 of the order-service-core plan: states, transition table and create-input validation.
+
+### Key response
+
+Claude wrote the tests first (transition table invariants, create-input validation cases), then the
+state enum, the transition table as plain data (with a `reservationTimeout` action added to the
+`Action` union) and a pure validator that returns every field error. Tests pass; type-checked.
