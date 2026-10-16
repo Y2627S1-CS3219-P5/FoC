@@ -1,0 +1,23 @@
+{
+  "name": "credit-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FoC Credit Service: credit balances, reservations and history",
+  "license": "ISC",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "migrate": "node dist/migrate.js",
+    "test": "node --import tsx --test --test-concurrency=1 \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}
