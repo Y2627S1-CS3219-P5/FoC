@@ -1,7 +1,7 @@
 #!/bin/sh
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: creates the
 # migration-owner and app roles on a fresh Credit Service database, following the User
-# Service pattern (implementation-proposal.md §4). Author review: PENDING
+# Service pattern (implementation-proposal.md §4). Reviewed and approved by @phuc
 #
 # Postgres runs this once, only when the credit-db volume is first created.
 # The superuser (POSTGRES_USER) is used only here; no service connects as it.
