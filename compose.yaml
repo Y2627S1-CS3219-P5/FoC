@@ -9,6 +9,8 @@
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-10. Scope: AUDIT_HMAC_KEY for user-service (audit-log hash chain). Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: credit-db and the one-off credit-migrate step, following the user-db pattern (credit-service/docs/implementation-proposal.md §4, §10). Author review: Reviewed and approved by @phuc
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: shared Kafka broker (KRaft, single node) and the one-off kafka-init step that creates the three topics (kafka/create-topics.sh), 1 partition each per the Credit Service author. Author review: Reviewed and approved by @phuc
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: kafka-test, an on-demand smoke test of the broker and topics (kafka/test-topics.sh). Author review: Reviewed and approved by @phuc.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: credit-service (Kafka consumer and outbox publisher) and the two Credit Service DLQ topics. Author review: Reviewed and approved by @phuc.
 services:
   # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
   frontend:
@@ -155,6 +157,24 @@ services:
       timeout: 3s
       retries: 10
 
+  # Consumes user.account-status and credit.commands; publishes to credit.results
+  credit-service:
+    image: foc-credit-service:local
+    pull_policy: never
+    init: true
+    environment:
+      # The app role: row access only, no schema changes
+      DATABASE_URL: postgres://credit_app:${CREDIT_DB_APP_PASSWORD:?Set CREDIT_DB_APP_PASSWORD in .env}@credit-db:5432/credits
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: credit-service
+      INITIAL_CREDIT_GRANT: 100
+    depends_on:
+      credit-migrate:
+        condition: service_completed_successfully
+      kafka-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   # Applies credit-service/migrations/*.sql, then exits
   credit-migrate:
     image: foc-credit-service:local
@@ -208,6 +228,19 @@ services:
       kafka:
         condition: service_healthy
     restart: "no"
+
+  # On demand only (profile "test"): docker compose run --rm kafka-test
+  kafka-test:
+    image: apache/kafka:3.9.0
+    profiles: ["test"]
+    command: ["sh", "/scripts/test-topics.sh"]
+    environment:
+      BOOTSTRAP_SERVER: kafka:9092
+    volumes:
+      - ./kafka/test-topics.sh:/scripts/test-topics.sh:ro
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
 
 volumes:
   user-db-data:

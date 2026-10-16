@@ -1,7 +1,7 @@
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: an isolated stack
 # for the Credit Service end-to-end test (author's choice: separate test stack). Mirrors the
 # kafka, credit-db, credit-migrate and credit-service definitions in the root compose.yaml.
-# Author review: PENDING
+# Author review: Reviewed and approved by @phuc
 #
 # Run through e2e/run.sh, which uses its own project name (foc-credit-e2e) and deletes the
 # volumes afterwards. No ports are published, so it can run next to the dev stack.

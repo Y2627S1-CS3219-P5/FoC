@@ -1,6 +1,8 @@
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: image built the
 # same way as user-service/Dockerfile (two stages, fresh production install, allowlisted
 # runtime contents, non-root user, pinned base image). Author review: PENDING
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: runs the service
+# entry point; added the e2e test stage. Author review: PENDING
 
 # ---- Build stage: all packages + TypeScript compiler -> dist/ -------------------
 FROM node:22.23.3-alpine3.24 AS build
@@ -12,6 +14,12 @@ RUN npm ci
 
 COPY . .
 RUN npm run build
+
+# ---- End-to-end test runner (credit-service/e2e/run.sh builds this target) ----------
+# Has the dev packages (tsx) and the e2e tests; never deployed.
+FROM build AS e2e
+USER node
+CMD ["node", "--import", "tsx", "--test", "--test-reporter=spec", "--test-concurrency=1", "e2e/credit-flow.test.ts"]
 
 # ---- Runtime stage: only what the service and the migration step run ------------
 FROM node:22.23.3-alpine3.24 AS runtime
@@ -28,6 +36,5 @@ COPY migrations ./migrations
 # The base image's unprivileged user (uid 1000); the app only reads its files
 USER node
 
-# The service entry point (Kafka consumers, HTTP API) is not written yet, so the image
-# currently runs only the migration step.
-CMD ["node", "dist/migrate.js"]
+# The migration step overrides this with: node dist/migrate.js
+CMD ["node", "dist/index.js"]
