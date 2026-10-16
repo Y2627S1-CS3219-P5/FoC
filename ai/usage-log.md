@@ -1209,3 +1209,20 @@ timer loop that logs errors and whose `stop()` waits for a running sweep. Tests 
 Claude ordered the sweep actions explicitly (reservation timeout first, pickup timeout before expiry), made the race test
 assert that both outcomes occur, and wrapped each row in a savepoint so a failing row is logged and skipped while other rows
 and actions continue. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: outbox publisher and stub adapters
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation and tests for the outbox publisher and the stub User, Supplier and Credit adapters, adapted from `credit-service/src/outbox.ts` and `src/publisher.ts`
+- **Repository files affected:** `order-service/src/outbox.ts`, `order-service/src/config.ts`, `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/adapters/supplierDirectory.ts`, `order-service/src/adapters/creditBus.ts`, `order-service/test/outbox.test.ts`, `order-service/test/adapters.test.ts`, `ai/usage-log.md`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 7 of the order-service-core plan: the outbox publisher and the stub adapters.
+
+### Key response
+
+Claude wrote the tests first, then `publishOutboxBatch` and `startOutboxPublisher` (non-overlapping loop whose `stop()` waits), `loadAdapterConfig`,
+the stub session verifier and supplier directory, and `StubCreditBus`, which keeps in-memory holds, replies to `ReserveRequested` through
+`handleCreditResult`, and records any message that breaks the Order-Credit contract rules as a violation. Tests pass against PostgreSQL 17; type-checked.

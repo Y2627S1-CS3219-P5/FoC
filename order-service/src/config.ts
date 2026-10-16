@@ -39,10 +39,42 @@ export function loadOrderConfig(): { confirmationWindowMinutes: number; reservat
   };
 }
 
+const STUB_ONLY = "stub";
+
+// AUTH_MODE, SUPPLIER_MODE and CREDIT_MODE pick the adapter for User, Supplier and Credit
+// Service. Only the stubs exist so far; the real adapters come in a later project.
+function stubMode(name: string): "stub" {
+  const value = process.env[name] || STUB_ONLY;
+  if (value !== STUB_ONLY) throw new Error(`${name}=${value} is not implemented yet`);
+  return STUB_ONLY;
+}
+
+export function loadAdapterConfig(): {
+  authMode: "stub";
+  supplierMode: "stub";
+  creditMode: "stub";
+  stubCreditLimit: number;
+  stubCreditDelayMs: number;
+  stubCreditSilentAmount: number;
+} {
+  return {
+    authMode: stubMode("AUTH_MODE"),
+    supplierMode: stubMode("SUPPLIER_MODE"),
+    creditMode: stubMode("CREDIT_MODE"),
+    stubCreditLimit: positiveInteger("STUB_CREDIT_LIMIT", 100),
+    stubCreditDelayMs: positiveInteger("STUB_CREDIT_DELAY_MS", 500),
+    // A ReserveRequested for exactly this amount gets no reply, to demonstrate the timeout
+    stubCreditSilentAmount: positiveInteger("STUB_CREDIT_SILENT_AMOUNT", 999),
+  };
+}
+
 export const TOPICS = { commands: "credit.commands", results: "credit.results" } as const;
 
 // Deadline sweeper: how often it runs and how many errands one transaction handles
 export const SWEEPER = { intervalMs: 5_000, batchSize: 100 } as const;
+
+// Outbox publisher: rows per batch and the pause when there is nothing to send
+export const OUTBOX = { batchSize: 100, idlePollMs: 250 } as const;
 
 // Same values as User Service; kept here so they can be tuned in one place.
 export const DB_RESILIENCE = {
