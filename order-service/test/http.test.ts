@@ -3,6 +3,8 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Tests for the errand HTTP API (authentication, relationship-based authorization, status
  *        code mapping, lifecycle), written before the implementation per the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: Tests that a non-party learns neither the later state (failed accept) nor actor ids (history).
  * Author review: PENDING
  */
 import assert from "node:assert/strict";
@@ -185,13 +187,31 @@ test("requester accept is 403 CANNOT_ACCEPT_OWN_ERRAND", async () => {
   assert.equal(r.body.error, "CANNOT_ACCEPT_OWN_ERRAND");
 });
 
-test("second accept is 409 ERRAND_NO_LONGER_AVAILABLE", async () => {
-  const e = await createOpen(member(randomUUID()));
-  assert.equal((await call("POST", `/errands/${e.id}/accept`, member(randomUUID()))).status, 200);
+test("second accept is 409 ERRAND_NO_LONGER_AVAILABLE, without the state for a non-party", async () => {
+  const a = randomUUID();
+  const b = randomUUID();
+  const e = await createOpen(member(a));
+  assert.equal((await call("POST", `/errands/${e.id}/accept`, member(b))).status, 200);
   const r = await call("POST", `/errands/${e.id}/accept`, member(randomUUID()));
   assert.equal(r.status, 409);
   assert.equal(r.body.error, "ERRAND_NO_LONGER_AVAILABLE");
-  assert.equal(r.body.currentState, "ACCEPTED");
+  assert.ok(!("currentState" in r.body), "a non-party must not learn the state");
+  // The courier and an administrator still get it
+  assert.equal((await call("POST", `/errands/${e.id}/accept`, member(b))).body.currentState, "ACCEPTED");
+  assert.equal((await call("POST", `/errands/${e.id}/accept`, admin(randomUUID()))).body.currentState, "ACCEPTED");
+});
+
+test("history actor ids are hidden from a viewer who sees the errand only because it is OPEN", async () => {
+  const a = randomUUID();
+  const e = await createOpen(member(a));
+  const stranger = await call("GET", `/errands/${e.id}`, member(randomUUID()));
+  assert.equal(stranger.status, 200);
+  assert.ok(stranger.body.history.length >= 1);
+  for (const h of stranger.body.history) assert.equal(h.actorId, null);
+  const own = await call("GET", `/errands/${e.id}`, member(a));
+  assert.equal(own.body.history[0].actorId, a);
+  const adm = await call("GET", `/errands/${e.id}`, admin(randomUUID()));
+  assert.equal(adm.body.history[0].actorId, a);
 });
 
 test("second confirm is 409 INVALID_STATE currentState COMPLETED", async () => {

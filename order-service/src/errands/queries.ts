@@ -3,6 +3,8 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Read queries behind the errand list and detail endpoints (open listing, my errands,
  *        detail with history, admin listing), implementing the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: History actor ids are hidden from viewers who are not a party or an administrator.
  * Author review: PENDING
  */
 import { Pool } from "pg";
@@ -88,16 +90,19 @@ export async function getErrandForViewer(
      FROM errand_history WHERE errand_id = $1 ORDER BY id ASC`,
     [id],
   );
+  // Someone who sees the errand only because it is OPEN must not learn who acted
+  const e = mapErrandRow(rows[0]);
+  const privileged = viewer.role === "ADMINISTRATOR" || e.requesterId === viewer.id.toLowerCase() || e.courierId === viewer.id.toLowerCase();
   const history: HistoryEntry[] = h.rows.map((r) => ({
     fromState: r.from_state,
     toState: r.to_state,
     action: r.action,
     actorType: r.actor_type,
-    actorId: r.actor_id,
+    actorId: privileged ? r.actor_id : null,
     reason: r.reason,
     at: r.at,
   }));
-  return { ...mapErrandRow(rows[0]), history };
+  return { ...e, history };
 }
 
 /** Every errand, newest first, optionally filtered by requester, courier and state. */

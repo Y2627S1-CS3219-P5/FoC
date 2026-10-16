@@ -3,6 +3,8 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Atomic errand creation and state transitions (one conditional UPDATE + history +
  *        outbox in one transaction) with failure classification, implementing the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: A non-party's failed accept no longer reveals the errand's current state.
  * Author review: PENDING
  */
 import { randomUUID } from "node:crypto";
@@ -162,7 +164,13 @@ async function classifyFailure(
     }
     return { ok: false, error: "FORBIDDEN" };
   }
-  if (!rule.from.includes(e.state)) return { ok: false, error: "INVALID_STATE", currentState: e.state };
+  if (!rule.from.includes(e.state)) {
+    // Anyone may try to accept an OPEN errand, but a non-party must not learn what it became
+    const id = actor.kind === "user" ? actor.id.toLowerCase() : null;
+    const learnsState = actor.kind !== "user" || actor.role === "ADMINISTRATOR" || e.requesterId === id || e.courierId === id;
+    if (action === "accept" && !learnsState) return { ok: false, error: "INVALID_STATE" };
+    return { ok: false, error: "INVALID_STATE", currentState: e.state };
+  }
   // The state and party clauses hold, so the deadline clause failed
   return { ok: false, error: "DEADLINE_PASSED" };
 }

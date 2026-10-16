@@ -3,6 +3,8 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Tests for atomic errand creation and state transitions (history + outbox), written
  *        before the implementation per the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: A non-party's failed accept carries no currentState.
  * Author review: PENDING
  */
 import assert from "node:assert/strict";
@@ -218,7 +220,8 @@ test("ten concurrent accepts: exactly one wins", async () => {
   const wins = results.filter((r) => r.ok);
   assert.equal(wins.length, 1);
   for (const r of results.filter((r) => !r.ok)) {
-    assert.deepEqual(r, { ok: false, error: "INVALID_STATE", currentState: "ACCEPTED" });
+    // A non-party loser is not told what the errand became
+    assert.deepEqual(r, { ok: false, error: "INVALID_STATE" });
   }
   const { rows } = await pool.query(
     `SELECT count(*)::int AS n FROM errand_history WHERE errand_id = $1 AND action = 'accept'`,
@@ -248,7 +251,7 @@ test("accept racing cancel: one wins, the other gets INVALID_STATE", async () =>
     const rows = await outbox(e.id);
     assert.equal(rows.filter((o) => o.event_type === "OrderCancelled").length, cancelWins);
     assert.equal(rows.length, 1 + cancelWins);
-    if (!accepted.ok) assert.equal(accepted.currentState, "CANCELLED");
+    if (!accepted.ok) assert.equal(accepted.currentState, undefined);
     const { rows: history } = await pool.query(
       `SELECT from_state FROM errand_history WHERE errand_id = $1 AND action = 'cancel'`,
       [e.id],
