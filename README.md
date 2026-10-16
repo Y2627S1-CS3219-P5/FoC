@@ -17,6 +17,9 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-09-26
 Scope: Added the User Service author's AI Use Summary paragraph.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Added the Order Service AI Use Summary paragraph.
+Author review: PENDING
 -->
 
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
@@ -85,3 +88,12 @@ Prohibited phases were avoided: the author chose the routing, storage, endpoint,
 status-code and concurrency designs. All output was reviewed and tested by the author.
 Prompts and key responses are in `ai/usage-log.md`; per-file attributions are in the
 file headers and `frontend/AI-DISCLOSURES.md`.
+
+Claude Code (Claude Opus 5.5) assisted on 2026-10-16 with implementing the Order Service core
+from the author's approved plan: the errand lifecycle and its PostgreSQL schema, atomic state
+transitions with an outbox, the deadline sweeper, Credit reply handling, a stub Credit Service,
+the HTTP API with relationship-based authorization, the container, Compose services, gateway
+routes and a demo script. The author made the design decisions listed in the plan's design
+calls; Claude drafted them as proposals. Project-author review of the implementation is
+pending. Prompts and key responses are in `ai/usage-log.md`; per-file attributions are in the
+file headers.

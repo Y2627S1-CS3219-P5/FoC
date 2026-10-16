@@ -5,6 +5,9 @@ Scope: Drafted an implementation plan for the Order Service core from the team's
        the D3 instructions and the Credit Service message contract on origin/branch_credit.
        Every design call is listed in "Design calls" for the author to accept or change.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Added one open-question line under the design calls (pickup-timeout re-listing).
+Author review: PENDING
 -->
 
 # Order Service Core Implementation Plan
@@ -22,6 +25,8 @@ Author review: Reviewed and approved by @mattis.
 ## Design calls (accepted as written by the author, 2026-10-16)
 
 The repo's AI policy has the author make design decisions.
+
+> **Open question for the author:** `pickupTimeout` and a late `withdraw` return an errand to `OPEN` already past its `listing_deadline` (the schema enforces `listing_deadline <= pickup_deadline`), so it cannot be re-accepted and expires in the same sweep. OS-F2.2.2 promises re-listing; the behaviour is kept and documented in the README under "Known deviations".
 
 1. **Database: PostgreSQL 17, own `order-db`.** The service needs row locks and conditional updates for single-winner accepts, and the outbox needs the errand change and the event in one transaction.
 2. **A state before OPEN.** `PENDING_RESERVATION` (hidden from couriers) → `OPEN` on `CreditReserved`, or → `RESERVATION_REJECTED` (terminal, no credit event, `rejection_reason` stored) on `CreditReservationRejected`.

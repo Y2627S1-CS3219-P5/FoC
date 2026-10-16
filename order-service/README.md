@@ -3,6 +3,9 @@ AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Order Service README: status, state table, API and error tables, design calls, how to run and test.
 Author review: PENDING
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Documented the pickup-timeout re-listing deviation, the single-publisher requirement and the typecheck script.
+Author review: PENDING
 -->
 
 # Order Service
@@ -40,7 +43,7 @@ States: `PENDING_RESERVATION`, `RESERVATION_REJECTED`\*, `RESERVATION_TIMED_OUT`
 | `CreditReservationRejected` reply | `PENDING_RESERVATION` | `RESERVATION_REJECTED` | Credit | none | none |
 | `reservationTimeout` | `PENDING_RESERVATION` | `RESERVATION_TIMED_OUT` | sweeper | `reservation_deadline` passed | `ReservationTimedOut` |
 | `accept` | `OPEN` | `ACCEPTED` | any member except the requester | before `listing_deadline` | none |
-| `withdraw` | `ACCEPTED` | `OPEN` | the courier | none | none |
+| `withdraw` | `ACCEPTED` | `OPEN` (see [Known deviations](#known-deviations)) | the courier | none | none |
 | `pickup` | `ACCEPTED` | `PICKED_UP` | the courier | before `pickup_deadline` | none |
 | `deliver` | `PICKED_UP` | `DELIVERED` | the courier | before `delivery_deadline` | none |
 | `confirm` | `DELIVERED` | `COMPLETED` | the requester | none | `OrderCompleted` |
@@ -49,7 +52,7 @@ States: `PENDING_RESERVATION`, `RESERVATION_REJECTED`\*, `RESERVATION_TIMED_OUT`
 | `resolve` (COURIER) | `DISPUTED` | `COMPLETED` | administrator | none | `OrderCompleted` |
 | `resolve` (REQUESTER) | `DISPUTED` | `FAILED` | administrator | none | `OrderFailed` |
 | `expire` | `OPEN` | `EXPIRED` | sweeper | `listing_deadline` passed | `OrderExpired` |
-| `pickupTimeout` | `ACCEPTED` | `OPEN` (courier cleared) | sweeper | `pickup_deadline` passed | none |
+| `pickupTimeout` | `ACCEPTED` | `OPEN` (courier cleared; see [Known deviations](#known-deviations)) | sweeper | `pickup_deadline` passed | none |
 | `deliveryTimeout` | `PICKED_UP` | `DISPUTED` | sweeper | `delivery_deadline` passed | none |
 | `confirmTimeout` | `DELIVERED` | `COMPLETED` | sweeper | `confirm_deadline` passed | `OrderCompleted` |
 
@@ -114,6 +117,16 @@ responses carry `details` (one entry per bad field).
 13. **No cancel while `PENDING_RESERVATION`.** There is no hold to release yet.
 14. **Port 3002, paths without a prefix**, like User Service. The gateway strips `/api/v1`.
 
+## Known deviations
+
+- **Re-listing after a pickup timeout does not work yet (open question for the author).** The schema enforces
+  `listing_deadline <= pickup_deadline`, so an errand that `pickupTimeout` returns to `OPEN` (or that a courier
+  `withdraw`s after the listing deadline) is already past its listing deadline. No other courier can accept it,
+  and the sweeper expires it in the same tick, releasing the credits through `OrderExpired`. OS-F2.2.2 promises
+  re-listing for another courier. The behaviour is kept for now and the author decides whether to change it.
+- **One outbox publisher.** Contract rule 5 (messages for one errand arrive in order) relies on a single outbox
+  publisher (one replica), or on per-key serialisation once the Kafka adapter exists.
+
 ## Run
 
 From the repository root, with a `.env` made from `.env.example` (the three `ORDER_DB_*` passwords are required):
@@ -152,5 +165,5 @@ The DB tests need a disposable PostgreSQL superuser URL:
 docker run --rm -d --name order-test-pg -e POSTGRES_PASSWORD=postgres -p 55432:5432 postgres:17.11-alpine3.24
 cd order-service
 TEST_DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres npm test
-npx tsc --noEmit
+npm run typecheck   # src and test
 ```
