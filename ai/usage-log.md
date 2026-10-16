@@ -1173,3 +1173,22 @@ Claude wrote the tests first (own errands excluded from the open list, hidden st
 courier and requester views, detail visibility for requester, courier, admin and OPEN, ordered history,
 admin filters, paging totals), then `listOpen`, `listMine`, `getErrandForViewer` and `adminListErrands`
 with parameterised SQL and a `COUNT(*) OVER ()` total. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: deadline sweeper
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the sweeper specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/src/deadlines/sweeper.ts`, `order-service/src/config.ts`, `order-service/test/sweeper.test.ts`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 6 of the order-service-core plan: the deadline sweeper.
+
+### Key response
+
+Claude wrote the tests first (expiry, pickup, delivery, confirmation and reservation timeouts, errands before
+their deadline left alone, two concurrent sweeps, and the accept-versus-expiry and reply-versus-timeout races),
+then `sweepDeadlines`, which derives its five system actions from the transition table and processes due errands
+in `FOR UPDATE SKIP LOCKED` batches through `applyTransitionInTx`, and `startDeadlineSweeper`, a non-overlapping
+timer loop that logs errors and whose `stop()` waits for a running sweep. Tests pass against PostgreSQL 17; type-checked.

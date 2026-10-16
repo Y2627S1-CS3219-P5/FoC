@@ -41,6 +41,9 @@ export function loadOrderConfig(): { confirmationWindowMinutes: number; reservat
 
 export const TOPICS = { commands: "credit.commands", results: "credit.results" } as const;
 
+// Deadline sweeper: how often it runs and how many errands one transaction handles
+export const SWEEPER = { intervalMs: 5_000, batchSize: 100 } as const;
+
 // Same values as User Service; kept here so they can be tuned in one place.
 export const DB_RESILIENCE = {
   // Startup connection retries: 0.5 s, 1 s, 2 s, 4 s, 5 s, 5 s ...
