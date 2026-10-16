@@ -47,7 +47,10 @@ export function sendTransitionFailure(res: Response, action: Action, r: Extract<
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   if (res.headersSent) return next(err);
   const status = (err as { status?: unknown }).status;
-  if (typeof (err as { type?: unknown }).type === "string" && status === 400) {
+  // body-parser errors carry a string `type` and a 4xx status
+  if (typeof (err as { type?: unknown }).type === "string" && typeof status === "number" && status >= 400 && status < 500) {
+    if (status === 413) return sendError(res, 413, "PAYLOAD_TOO_LARGE", "Request body is too large");
+    if (status === 415) return sendError(res, 415, "UNSUPPORTED_MEDIA_TYPE", "Unsupported charset or content encoding");
     return sendValidation(res, [{ field: "body", message: "body must be valid JSON" }]);
   }
   if (isDatabaseUnavailable(err)) {

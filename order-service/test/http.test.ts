@@ -135,6 +135,26 @@ test("malformed JSON is 400 VALIDATION_ERROR", async () => {
   assert.equal((await res.json()).error, "VALIDATION_ERROR");
 });
 
+test("oversized body is 413 not 500", async () => {
+  const res = await fetch(base + "/errands", {
+    method: "POST",
+    headers: { authorization: member(randomUUID()), "content-type": "application/json" },
+    body: JSON.stringify(createBody({ notes: "x".repeat(200_000) })),
+  });
+  assert.equal(res.status, 413);
+  assert.equal((await res.json()).error, "PAYLOAD_TOO_LARGE");
+});
+
+test("unsupported charset is 415 not 500", async () => {
+  const res = await fetch(base + "/errands", {
+    method: "POST",
+    headers: { authorization: member(randomUUID()), "content-type": "application/json; charset=klingon" },
+    body: "{}",
+  });
+  assert.equal(res.status, 415);
+  assert.equal((await res.json()).error, "UNSUPPORTED_MEDIA_TYPE");
+});
+
 test("full lifecycle over HTTP", async () => {
   const a = randomUUID();
   const b = randomUUID();
