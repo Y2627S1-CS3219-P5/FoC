@@ -1136,3 +1136,22 @@ visibility errors, and real concurrent races: ten accepts, accept vs cancel, dou
 `createErrand` and `applyTransition(InTx)`: one conditional `UPDATE` built from the transition table,
 followed by the history row and, for closing transitions, one outbox message, with failures classified
 after a re-read and rolled back. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: handle Credit reservation replies
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the reply handler and parser specified in the approved plan and the Order ⇄ Credit contract (no new design)
+- **Repository files affected:** `order-service/src/credit/creditResults.ts`, `order-service/src/domain/messages.ts`, `order-service/test/creditResults.test.ts`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 4 of the order-service-core plan: handle CreditReserved and CreditReservationRejected replies.
+
+### Key response
+
+Claude wrote the tests first (open, reject, duplicates, late reserve after rejection releasing via one
+`OrderCancelled`, late replies after timeout, unknown order, parser validation), then
+`parseCreditResult` and `handleCreditResult`: one transaction that locks the errand row with
+`SELECT … FOR UPDATE`, then writes the state change, `CREDIT` history row and any outbox row. The second
+late reserve is detected by its `late_reserve_released` history row. Tests pass against PostgreSQL 17; type-checked.

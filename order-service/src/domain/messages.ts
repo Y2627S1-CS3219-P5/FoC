@@ -55,3 +55,45 @@ export function closingMessagePayload(e: Errand, type: ClosingMessageType, opera
     ? reservationTimedOutPayload(e, operationId)
     : terminalEventPayload(e, type, operationId);
 }
+
+export type CreditResult =
+  | { type: "CreditReserved"; eventId: string; operationId: string; orderId: string; reservationId: string }
+  | { type: "CreditReservationRejected"; eventId: string; operationId: string; orderId: string; reasonCode: string };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Checks a Credit reply from credit.results. Never throws; UUIDs are lower-cased like Credit does. */
+export function parseCreditResult(raw: unknown): { ok: true; message: CreditResult } | { ok: false; reason: string } {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { ok: false, reason: "not a JSON object" };
+  const body = raw as Record<string, unknown>;
+  const bad = (reason: string) => ({ ok: false as const, reason });
+  const uuid = (name: string): string | null => {
+    const v = body[name];
+    return typeof v === "string" && UUID_RE.test(v) ? v.toLowerCase() : null;
+  };
+
+  if (body.schema_version !== 1) return bad("unsupported schema_version");
+  const eventId = uuid("event_id");
+  if (eventId === null) return bad("event_id is not a UUID");
+  const operationId = uuid("operation_id");
+  if (operationId === null) return bad("operation_id is not a UUID");
+  const orderId = uuid("order_id");
+  if (orderId === null) return bad("order_id is not a UUID");
+  if (typeof body.occurred_at !== "string" || Number.isNaN(Date.parse(body.occurred_at))) {
+    return bad("occurred_at is not a timestamp");
+  }
+
+  if (body.type === "CreditReserved") {
+    const reservationId = uuid("reservation_id");
+    if (reservationId === null) return bad("reservation_id is not a UUID");
+    return { ok: true, message: { type: "CreditReserved", eventId, operationId, orderId, reservationId } };
+  }
+  if (body.type === "CreditReservationRejected") {
+    if (typeof body.reason_code !== "string" || body.reason_code === "") return bad("reason_code is missing");
+    return {
+      ok: true,
+      message: { type: "CreditReservationRejected", eventId, operationId, orderId, reasonCode: body.reason_code },
+    };
+  }
+  return bad("unknown type");
+}
