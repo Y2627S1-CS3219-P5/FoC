@@ -1226,3 +1226,20 @@ and actions continue. Tests pass against PostgreSQL 17; type-checked.
 Claude wrote the tests first, then `publishOutboxBatch` and `startOutboxPublisher` (non-overlapping loop whose `stop()` waits), `loadAdapterConfig`,
 the stub session verifier and supplier directory, and `StubCreditBus`, which keeps in-memory holds, replies to `ReserveRequested` through
 `handleCreditResult`, and records any message that breaks the Order-Credit contract rules as a violation. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: errand HTTP API
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation and tests for the Order Service HTTP API: authentication, admin role check, errand endpoints, status-code mapping
+- **Repository files affected:** `order-service/src/http/app.ts`, `order-service/src/http/auth.ts`, `order-service/src/http/errors.ts`, `order-service/src/http/routes.ts`, `order-service/test/http.test.ts`, `ai/usage-log.md`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 8 of the order-service-core plan: the errand HTTP API with relationship-based authorization.
+
+### Key response
+
+Claude wrote the HTTP tests first, then the Express app: session authentication, `requireRole("ADMINISTRATOR")` on `/admin/*`, validated paging and filters,
+one errand serializer, and an error mapper (400/403/404/409/422/503/500). Authorization comes from the repository and query layer, so an unrelated member gets 404.
+Tests pass against PostgreSQL 17; type-checked.
