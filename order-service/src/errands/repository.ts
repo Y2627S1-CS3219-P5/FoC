@@ -156,8 +156,8 @@ async function classifyFailure(
     if (action === "accept" && e.requesterId === id) return { ok: false, error: "CANNOT_ACCEPT_OWN_ERRAND" };
     const isParty = e.requesterId === id || e.courierId === id;
     // Members only see OPEN errands and their own; anything else must look absent to them
-    const userAction = rule.party === "requester" || rule.party === "courier";
-    if (userAction && !isParty && actor.role === "MEMBER" && e.state !== "OPEN") {
+    const partyOrAdminAction = rule.party === "requester" || rule.party === "courier" || rule.party === "admin";
+    if (partyOrAdminAction && !isParty && actor.role === "MEMBER" && e.state !== "OPEN") {
       return { ok: false, error: "NOT_FOUND" };
     }
     return { ok: false, error: "FORBIDDEN" };

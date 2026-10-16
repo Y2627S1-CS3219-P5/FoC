@@ -334,8 +334,11 @@ test("admin party to dispute cannot resolve it", async () => {
   await ok(applyTransition(pool, e.id, "reject", member(a)));
   const r = await applyTransition(pool, e.id, "resolveForCourier", admin(a));
   assert.deepEqual(r, { ok: false, error: "FORBIDDEN" });
+  const byRequester = await applyTransition(pool, e.id, "resolveForCourier", member(a));
+  assert.deepEqual(byRequester, { ok: false, error: "FORBIDDEN" });
+  // A non-party member must not learn that a non-OPEN errand exists
   const byMember = await applyTransition(pool, e.id, "resolveForCourier", member(randomUUID()));
-  assert.deepEqual(byMember, { ok: false, error: "FORBIDDEN" });
+  assert.deepEqual(byMember, { ok: false, error: "NOT_FOUND" });
   assert.equal(await stateOf(e.id), "DISPUTED");
 });
 
