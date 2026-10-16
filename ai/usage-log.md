@@ -1155,3 +1155,21 @@ Claude wrote the tests first (open, reject, duplicates, late reserve after rejec
 `parseCreditResult` and `handleCreditResult`: one transaction that locks the errand row with
 `SELECT … FOR UPDATE`, then writes the state change, `CREDIT` history row and any outbox row. The second
 late reserve is detected by its `late_reserve_released` history row. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: errand read queries
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the read queries specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/src/errands/queries.ts`, `order-service/test/queries.test.ts`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 5 of the order-service-core plan: errand read queries.
+
+### Key response
+
+Claude wrote the tests first (own errands excluded from the open list, hidden states and past listings,
+courier and requester views, detail visibility for requester, courier, admin and OPEN, ordered history,
+admin filters, paging totals), then `listOpen`, `listMine`, `getErrandForViewer` and `adminListErrands`
+with parameterised SQL and a `COUNT(*) OVER ()` total. Tests pass against PostgreSQL 17; type-checked.
