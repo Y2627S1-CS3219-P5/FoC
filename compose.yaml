@@ -7,6 +7,7 @@
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: pinned the user-db Postgres image to a full version tag, per the User Service author's decision. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: user-service restart policy and readiness healthcheck, per the User Service author's resilience decisions. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-10. Scope: AUDIT_HMAC_KEY for user-service (audit-log hash chain). Author review: Reviewed and approved by @t-leongchuan.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: order-db, order-migrate and order-service (stub adapters), mirroring the user-* services. Author review: PENDING
 services:
   # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
   frontend:
@@ -16,6 +17,7 @@ services:
     depends_on:
       - user-service
       - supplier-service
+      - order-service
 
   user-service:
     image: foc-user-service:local
@@ -83,6 +85,67 @@ services:
       timeout: 3s
       retries: 10
 
+  order-service:
+    image: foc-order-service:local
+    build: ./order-service
+    init: true
+    ports:
+      - "${ORDER_PORT:-3002}:3002"
+    environment:
+      PORT: 3002
+      # The app role: row access only, no schema changes
+      DATABASE_URL: postgres://order_app:${ORDER_DB_APP_PASSWORD:?Set ORDER_DB_APP_PASSWORD in .env}@order-db:5432/orders
+      # Stand-ins until the real User, Supplier and Credit adapters exist
+      AUTH_MODE: stub
+      SUPPLIER_MODE: stub
+      CREDIT_MODE: stub
+      CONFIRMATION_WINDOW_MINUTES: ${CONFIRMATION_WINDOW_MINUTES:-1440}
+      RESERVATION_TIMEOUT_SECONDS: ${RESERVATION_TIMEOUT_SECONDS:-30}
+      STUB_CREDIT_LIMIT: ${STUB_CREDIT_LIMIT:-100}
+      STUB_CREDIT_SILENT_AMOUNT: ${STUB_CREDIT_SILENT_AMOUNT:-999}
+    depends_on:
+      order-migrate:
+        condition: service_completed_successfully
+    # Same policy as user-service: retry forever while the database is unreachable
+    restart: unless-stopped
+    # /health is a readiness check (database reachable)
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+
+  # Applies order-service/migrations/*.sql, then exits. order-service starts only if it succeeds.
+  order-migrate:
+    image: foc-order-service:local
+    pull_policy: never
+    command: ["node", "dist/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://order_migrator:${ORDER_DB_MIGRATION_PASSWORD:?Set ORDER_DB_MIGRATION_PASSWORD in .env}@order-db:5432/orders
+    depends_on:
+      order-db:
+        condition: service_healthy
+    restart: "no"
+
+  order-db:
+    image: postgres:17.11-alpine3.24
+    environment:
+      # The superuser exists only to run the init script below; no service connects as it
+      POSTGRES_USER: order_bootstrap
+      POSTGRES_PASSWORD: ${ORDER_DB_ADMIN_PASSWORD:?Set ORDER_DB_ADMIN_PASSWORD in .env}
+      POSTGRES_DB: orders
+      ORDER_DB_MIGRATION_PASSWORD: ${ORDER_DB_MIGRATION_PASSWORD:?Set ORDER_DB_MIGRATION_PASSWORD in .env}
+      ORDER_DB_APP_PASSWORD: ${ORDER_DB_APP_PASSWORD:?Set ORDER_DB_APP_PASSWORD in .env}
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+      - ./order-service/docker/postgres/init-roles.sh:/docker-entrypoint-initdb.d/010-order-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U order_bootstrap -d orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   supplier-db:
     image: postgres:17-alpine
     environment:
@@ -136,3 +199,4 @@ services:
 volumes:
   user-db-data:
   supplier-db-data:
+  order-db-data:

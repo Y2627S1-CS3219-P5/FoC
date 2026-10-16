@@ -1243,3 +1243,21 @@ the stub session verifier and supplier directory, and `StubCreditBus`, which kee
 Claude wrote the HTTP tests first, then the Express app: session authentication, `requireRole("ADMINISTRATOR")` on `/admin/*`, validated paging and filters,
 one errand serializer, and an error mapper (400/403/404/409/422/503/500). Authorization comes from the repository and query layer, so an unrelated member gets 404.
 Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: entry point, container, compose, gateway and demo script
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the Order Service entry point, Dockerfile, database init script, Compose services, gateway routes, demo script and README
+- **Repository files affected:** `order-service/src/index.ts`, `order-service/src/config.ts`, `order-service/Dockerfile`, `order-service/.dockerignore`, `order-service/docker/postgres/init-roles.sh`, `order-service/scripts/demo.sh`, `order-service/README.md`, `compose.yaml`, `.env.example`, `frontend/nginx.conf`, `frontend/vite.config.ts`, `ai/usage-log.md`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 9 of the order-service-core plan: entry point, container, compose services, gateway routes, demo script and README.
+
+### Key response
+
+Claude wrote `index.ts` (fail-fast config, database wait, stub adapters, publisher, sweeper, HTTP server, graceful shutdown), copied the User Service
+image and role script for Order, added `order-db`, `order-migrate` and `order-service` to Compose, put the two errand routes before the nginx
+`/api/` catch-all and in the Vite dev proxy, and wrote `scripts/demo.sh`. The demo passes through the gateway, before and after a service restart.
+

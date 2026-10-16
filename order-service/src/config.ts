@@ -5,6 +5,9 @@
  *        credit-service/src/config.ts (branch_credit) with only the database parts; order
  *        timing settings and topic names added per the approved plan.
  * Author review: PENDING
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: Added the PORT setting for the service entry point.
+ * Author review of additional changes: PENDING
  */
 
 // The only file that reads process.env. Each part loads only what it needs, so the
@@ -30,6 +33,10 @@ function positiveInteger(name: string, fallback: number): number {
     throw new Error(`${name} must be a whole number >= 1`);
   }
   return Number(raw);
+}
+
+export function loadServerConfig(): { port: number } {
+  return { port: positiveInteger("PORT", 3002) };
 }
 
 export function loadOrderConfig(): { confirmationWindowMinutes: number; reservationTimeoutSeconds: number } {
