@@ -4,6 +4,10 @@
  * Scope: Configuration module following the User Service pattern (every environment variable
  *        read in one place), with the Credit Service's settings from implementation-proposal.md.
  * Author review: Reviewed and approved by @phuc
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: Kafka settings (brokers, topics including the DLQs, consumer group, retry count,
+ *        outbox publisher timings), per the author's decisions.
+ * Author review of additional changes: PENDING
  */
 
 // The only file that reads process.env. Each part loads only what it needs, so the
@@ -29,13 +33,45 @@ export function loadCreditConfig() {
   return { initialCreditGrant: grant };
 }
 
-// Kafka topic for replies to Order Service (decision D9; created by kafka/create-topics.sh)
-export const CREDIT_RESULTS_TOPIC = "credit.results";
+export function loadKafkaConfig() {
+  return {
+    brokers: required("KAFKA_BROKERS").split(",").map((b) => b.trim()).filter(Boolean),
+    clientId: process.env.KAFKA_CLIENT_ID || "credit-service",
+  };
+}
+
+// Kafka topics (decision D9; created by kafka/create-topics.sh)
+export const TOPICS = {
+  accountStatus: "user.account-status",
+  commands: "credit.commands",
+  results: "credit.results",
+  // Dead-letter topics, one per consumed topic (implementation-proposal.md §7.3)
+  accountStatusDlq: "user.account-status.dlq",
+  commandsDlq: "credit.commands.dlq",
+} as const;
+
+// Kafka topic for replies to Order Service
+export const CREDIT_RESULTS_TOPIC = TOPICS.results;
+
+export const CONSUMER_GROUP = "credit-service";
+
+// A message that keeps failing is retried in place this many times in total, then sent to
+// its DLQ (author's decision). Database or Kafka outages are not counted: those messages are
+// retried until the outage ends, because sending them to the DLQ would lose valid messages.
+export const MESSAGE_RETRY = {
+  maxAttempts: 5,
+  initialDelayMs: 200,
+  maxDelayMs: 5_000,
+} as const;
 
 // Outbox publisher (implementation-proposal.md §4.4)
 export const OUTBOX = {
   batchSize: 100,
   retentionDays: 7,
+  // How long the publisher waits after finding nothing to publish
+  idlePollMs: 250,
+  // How often published rows older than retentionDays are deleted
+  cleanupIntervalMs: 60 * 60 * 1000,
 } as const;
 
 // Same values as User Service; kept here so they can be tuned in one place.
