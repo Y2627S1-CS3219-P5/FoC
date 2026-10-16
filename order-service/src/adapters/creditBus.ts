@@ -4,6 +4,9 @@
  * Scope: Stub Credit Service behind MessagePublisher. It holds credits in memory like the real
  *        service, replies to ReserveRequested, and checks every message against
  *        docs/order-credit-contract.md, implementing the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: Added restore(), which rebuilds the holds from already-published outbox rows so a
+ *        service restart does not cause false contract violations.
  * Author review: PENDING
  */
 import { randomUUID } from "node:crypto";
@@ -29,6 +32,7 @@ export class StubCreditBus implements MessagePublisher {
   // Orders whose ReserveRequested was rejected (no hold), with that request's operation_id
   private readonly rejected = new Map<string, string>();
   private readonly found: string[] = [];
+  private replaying = false;
   private readonly pending = new Set<Promise<void>>();
 
   constructor(
@@ -42,6 +46,30 @@ export class StubCreditBus implements MessagePublisher {
       log.info("credit.stub.sent", { eventId: m.eventId, topic: m.topic, key: m.key, type: m.payload.type });
       this.process(m.payload);
     }
+  }
+
+  /**
+   * Rebuilds the holds from outbox rows already published before a restart, without sending
+   * replies. A hold whose errand has left PENDING_RESERVATION counts as replied.
+   */
+  async restore(): Promise<void> {
+    const { rows } = await this.pool.query(
+      `SELECT payload FROM outbox WHERE published_at IS NOT NULL ORDER BY created_at`,
+    );
+    this.replaying = true;
+    try {
+      for (const r of rows) this.process(r.payload, true);
+    } finally {
+      this.replaying = false;
+    }
+    const ids = [...this.holds.keys()];
+    if (ids.length === 0) return;
+    const states = await this.pool.query(`SELECT id, state FROM errands WHERE id = ANY($1::uuid[])`, [ids]);
+    for (const e of states.rows) {
+      const hold = this.holds.get(e.id);
+      if (hold && e.state !== "PENDING_RESERVATION") hold.replied = true;
+    }
+    log.info("credit.stub.restored", { holds: ids.length });
   }
 
   /** The hold for an errand, if the stub made one (for tests). */
@@ -60,6 +88,8 @@ export class StubCreditBus implements MessagePublisher {
   }
 
   private violation(p: Record<string, unknown>, reason: string): void {
+    // Replayed rows were already checked when first sent; replay only rebuilds the holds
+    if (this.replaying) return;
     this.found.push(reason);
     log.warn("credit.stub.contract_violation", { type: p.type, orderId: p.order_id, operationId: p.operation_id, reason });
   }
@@ -87,7 +117,7 @@ export class StubCreditBus implements MessagePublisher {
     return null;
   }
 
-  private process(p: Record<string, unknown>): void {
+  private process(p: Record<string, unknown>, replay = false): void {
     const type = p.type;
     if (type !== "ReserveRequested" && type !== "ReservationTimedOut" && !TERMINAL.includes(type as string)) {
       return this.violation(p, `unknown type ${String(type)}`);
@@ -113,7 +143,7 @@ export class StubCreditBus implements MessagePublisher {
       if (amount > this.opts.limit && amount !== this.opts.silentAmount) {
         this.rejected.set(orderId, operationId);
         log.info("credit.stub.applied", { type, orderId, operationId, status: "REJECTED" });
-        this.scheduleReply(orderId, operationId, null);
+        if (!replay) this.scheduleReply(orderId, operationId, null);
         return;
       }
       const created: StubHold = {
@@ -122,7 +152,7 @@ export class StubCreditBus implements MessagePublisher {
       this.holds.set(orderId, created);
       log.info("credit.stub.applied", { type, orderId, operationId, status: "HELD" });
       // A lost reply is mimicked by the silent amount: the hold exists but nothing answers
-      if (amount !== this.opts.silentAmount) this.scheduleReply(orderId, operationId, created);
+      if (amount !== this.opts.silentAmount && !replay) this.scheduleReply(orderId, operationId, created);
       return;
     }
 

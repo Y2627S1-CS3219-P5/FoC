@@ -3,6 +3,8 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Tests for the stub session verifier, supplier directory, credit bus and adapter
  *        configuration, written before the implementation per the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: Added the restart test for StubCreditBus.restore().
  * Author review: PENDING
  */
 import assert from "node:assert/strict";
@@ -163,6 +165,22 @@ describe("stub credit bus", () => {
     assert.match(bus.violations()[0], /amount/);
     assert.equal(bus.hold(e.id)?.status, "HELD");
     assert.ok(logged.some((l) => l.event === "credit.stub.contract_violation"));
+  });
+
+  it("a restarted bus rebuilds its holds from published rows: no false violation", async () => {
+    const e = await newErrand(10);
+    await flush();
+    for (const a of ["accept", "pickup", "deliver"] as const) await step(e.id, a);
+    assert.equal((await state(e.id)).state, "DELIVERED");
+
+    const bus2 = new StubCreditBus(pool, { limit: 100, delayMs: 0, silentAmount: 999 });
+    await bus2.restore();
+    assert.equal(bus2.hold(e.id)?.status, "HELD");
+    await step(e.id, "confirm");
+    await publishOutboxBatch(pool, (m) => bus2.publish(m));
+    await bus2.idle();
+    assert.deepEqual(bus2.violations(), []);
+    assert.equal(bus2.hold(e.id)?.status, "CAPTURED");
   });
 
   it("stub bus ignores a duplicate terminal event", async () => {

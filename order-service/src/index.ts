@@ -4,6 +4,8 @@
  * Scope: Service entry point: load the configuration, wait for the database, build the stub
  *        adapters, start the outbox publisher, deadline sweeper and HTTP server, and shut down
  *        cleanly on SIGTERM/SIGINT. Startup/shutdown pattern from credit-service/src/index.ts.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: Rebuild the stub Credit holds from published outbox rows before the publisher starts.
  * Author review: PENDING
  */
 import { StubCreditBus } from "./adapters/creditBus";
@@ -36,6 +38,8 @@ async function main(): Promise<void> {
     silentAmount: adapters.stubCreditSilentAmount,
   });
 
+  // The stub's holds live in memory; rebuild them from what was already published
+  await creditBus.restore();
   const publisher = startOutboxPublisher(pool, creditBus);
   const sweeper = startDeadlineSweeper(pool);
   const server = createApp({ pool, verifier, suppliers }).listen(port, () => {

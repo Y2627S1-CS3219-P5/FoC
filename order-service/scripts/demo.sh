@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: curl walkthrough of
 # the Order Service lifecycle for the D3 demo (stub tokens, stub Credit). Author review: PENDING
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: step 11 now checks
+# that all five credit event types were sent and the stub logged no contract violation. Author review: PENDING
 #
 # Usage:  docker compose up -d --build order-service frontend && bash order-service/scripts/demo.sh
 # Needs curl and jq. BASE is the gateway; RESERVATION_TIMEOUT_SECONDS must match the service's value.
@@ -182,5 +184,17 @@ for ((i = 0; i < 20; i++)); do
 done
 docker compose -f "$ROOT/compose.yaml" exec -T order-db psql -U order_bootstrap -d orders -c "$OUTBOX_SQL"
 [[ "$PENDING" == 0 ]] || fail "$PENDING outbox rows are still unpublished"
+
+for type in ReserveRequested OrderCompleted OrderCancelled OrderFailed ReservationTimedOut; do
+  N=$(docker compose -f "$ROOT/compose.yaml" exec -T order-db psql -U order_bootstrap -d orders -Atc \
+    "select count(*) from outbox where event_type = '$type' and published_at is not null")
+  [[ "$N" -ge 1 ]] || fail "no published $type event in the outbox"
+done
+echo "All five event types were published."
+
+# grep -c exits 1 on zero matches, which must not trip set -e
+VIOLATIONS=$(docker compose -f "$ROOT/compose.yaml" logs order-service | grep -c credit.stub.contract_violation || true)
+echo "Stub contract violations in the service log: $VIOLATIONS"
+[[ "$VIOLATIONS" == 0 ]] || fail "$VIOLATIONS credit.stub.contract_violation log lines"
 
 printf '\nDemo passed: every step returned the expected status.\n'
