@@ -1117,3 +1117,22 @@ Tests: 6/6 against a disposable PostgreSQL 17.
 Claude wrote the tests first (transition table invariants, create-input validation cases), then the
 state enum, the transition table as plain data (with a `reservationTimeout` action added to the
 `Action` union) and a pure validator that returns every field error. Tests pass; type-checked.
+
+## 2026-10-16 — Order Service: atomic create and state transitions with outbox events
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the repository, message payloads and outbox insert specified in the approved plan and the Order ⇄ Credit contract (no new design)
+- **Repository files affected:** `order-service/src/config.ts`, `order-service/src/errands/{errand,repository}.ts`, `order-service/src/domain/messages.ts`, `order-service/src/outbox.ts`, `order-service/test/repository.test.ts`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 3 of the order-service-core plan: create errand and apply transitions atomically.
+
+### Key response
+
+Claude wrote the repository tests first (contract payload keys, happy path, deadlines, party and
+visibility errors, and real concurrent races: ten accepts, accept vs cancel, double confirm), then
+`createErrand` and `applyTransition(InTx)`: one conditional `UPDATE` built from the transition table,
+followed by the history row and, for closing transitions, one outbox message, with failures classified
+after a re-read and rolled back. Tests pass against PostgreSQL 17; type-checked.

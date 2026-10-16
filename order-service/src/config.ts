@@ -2,7 +2,8 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Configuration module (every environment variable read in one place), adapted from
- *        credit-service/src/config.ts (branch_credit) with only the database parts.
+ *        credit-service/src/config.ts (branch_credit) with only the database parts; order
+ *        timing settings and topic names added per the approved plan.
  * Author review: PENDING
  */
 
@@ -20,6 +21,25 @@ function required(name: string): string {
 export function loadDatabaseConfig() {
   return { databaseUrl: required("DATABASE_URL") };
 }
+
+// A whole number >= 1, or `fallback` when the variable is unset
+function positiveInteger(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return fallback;
+  if (!/^\d+$/.test(raw) || Number(raw) < 1 || !Number.isSafeInteger(Number(raw))) {
+    throw new Error(`${name} must be a whole number >= 1`);
+  }
+  return Number(raw);
+}
+
+export function loadOrderConfig(): { confirmationWindowMinutes: number; reservationTimeoutSeconds: number } {
+  return {
+    confirmationWindowMinutes: positiveInteger("CONFIRMATION_WINDOW_MINUTES", 1440),
+    reservationTimeoutSeconds: positiveInteger("RESERVATION_TIMEOUT_SECONDS", 30),
+  };
+}
+
+export const TOPICS = { commands: "credit.commands", results: "credit.results" } as const;
 
 // Same values as User Service; kept here so they can be tuned in one place.
 export const DB_RESILIENCE = {
