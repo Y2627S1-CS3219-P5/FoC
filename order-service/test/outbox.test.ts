@@ -104,6 +104,51 @@ describe("outbox publisher", () => {
     }
   });
 
+  it("stop() during an in-flight batch resolves promptly after it", async () => {
+    mock.method(console, "log", () => {});
+    try {
+      await queueEvents(1);
+      let started!: () => void;
+      const inFlight = new Promise<void>((r) => (started = r));
+      const publisher = startOutboxPublisher(pool, {
+        publish: async () => {
+          started();
+          await new Promise((r) => setTimeout(r, 150));
+        },
+      });
+      await inFlight;
+      const t = Date.now();
+      await publisher.stop();
+      // The batch ends with rows sent; the next batch finds none and would pause 250 ms
+      assert.ok(Date.now() - t < 220, `stop took ${Date.now() - t} ms`);
+    } finally {
+      mock.restoreAll();
+    }
+  });
+
+  it("stop() during a failing batch does not wait out the backoff", async () => {
+    mock.method(console, "log", () => {});
+    mock.method(console, "error", () => {});
+    try {
+      await queueEvents(1);
+      let started!: () => void;
+      const inFlight = new Promise<void>((r) => (started = r));
+      const publisher = startOutboxPublisher(pool, {
+        publish: async () => {
+          started();
+          await new Promise((r) => setTimeout(r, 50));
+          throw new Error("down");
+        },
+      });
+      await inFlight;
+      const t = Date.now();
+      await publisher.stop();
+      assert.ok(Date.now() - t < 300, `stop took ${Date.now() - t} ms`);
+    } finally {
+      mock.restoreAll();
+    }
+  });
+
   it("publisher loop survives a failing publish and retries", async () => {
     mock.method(console, "log", () => {});
     mock.method(console, "error", () => {});

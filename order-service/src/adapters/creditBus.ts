@@ -17,6 +17,8 @@ export interface StubHold {
   amount: number;
   status: "HELD" | "CAPTURED" | "RELEASED";
   operationIds: string[];
+  /** True once the CreditReserved reply has been sent; terminal events before it break rule 3. */
+  replied: boolean;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,6 +26,8 @@ const TERMINAL = ["OrderCompleted", "OrderCancelled", "OrderExpired", "OrderFail
 
 export class StubCreditBus implements MessagePublisher {
   private readonly holds = new Map<string, StubHold>();
+  // Orders whose ReserveRequested was rejected (no hold), with that request's operation_id
+  private readonly rejected = new Map<string, string>();
   private readonly found: string[] = [];
   private readonly pending = new Set<Promise<void>>();
 
@@ -95,19 +99,30 @@ export class StubCreditBus implements MessagePublisher {
     const operationId = p.operation_id as string;
     const hold = this.holds.get(orderId);
 
-    if (hold?.operationIds.includes(operationId)) {
+    if (hold?.operationIds.includes(operationId) || this.rejected.get(orderId) === operationId) {
       log.info("credit.stub.duplicate", { type, orderId, operationId });
       return;
     }
 
     if (type === "ReserveRequested") {
-      if (hold) return this.violation(p, "second ReserveRequested for the order with a different operation_id (rule 1)");
-      this.holds.set(orderId, {
-        requesterId: p.requester_id as string, amount: p.amount as number, status: "HELD", operationIds: [operationId],
-      });
+      if (hold || this.rejected.has(orderId)) {
+        return this.violation(p, "second ReserveRequested for the order with a different operation_id (rule 1)");
+      }
+      const amount = p.amount as number;
+      // Like real Credit, the outcome is decided now: an accepted request holds before it replies
+      if (amount > this.opts.limit && amount !== this.opts.silentAmount) {
+        this.rejected.set(orderId, operationId);
+        log.info("credit.stub.applied", { type, orderId, operationId, status: "REJECTED" });
+        this.scheduleReply(orderId, operationId, null);
+        return;
+      }
+      const created: StubHold = {
+        requesterId: p.requester_id as string, amount, status: "HELD", operationIds: [operationId], replied: false,
+      };
+      this.holds.set(orderId, created);
       log.info("credit.stub.applied", { type, orderId, operationId, status: "HELD" });
       // A lost reply is mimicked by the silent amount: the hold exists but nothing answers
-      if (p.amount !== this.opts.silentAmount) this.scheduleReply(orderId, operationId, p.amount as number);
+      if (amount !== this.opts.silentAmount) this.scheduleReply(orderId, operationId, created);
       return;
     }
 
@@ -121,6 +136,9 @@ export class StubCreditBus implements MessagePublisher {
     if (hold.status !== "HELD") {
       return this.violation(p, `hold already ${hold.status} by a different operation_id (rule 2)`);
     }
+    if (type !== "ReservationTimedOut" && !hold.replied) {
+      return this.violation(p, "terminal event before CreditReserved was delivered (rule 3)");
+    }
     if (p.requester_id !== hold.requesterId) return this.violation(p, "requester_id differs from the hold (rule 4)");
     if (p.amount !== hold.amount) return this.violation(p, `amount ${String(p.amount)} differs from the held amount ${hold.amount} (rule 4)`);
 
@@ -129,14 +147,17 @@ export class StubCreditBus implements MessagePublisher {
     log.info("credit.stub.applied", { type, orderId, operationId, status: hold.status });
   }
 
-  private scheduleReply(orderId: string, operationId: string, amount: number): void {
+  /** `hold` is the new hold for CreditReserved, or null for a rejection. */
+  private scheduleReply(orderId: string, operationId: string, hold: StubHold | null): void {
     const task = (async () => {
       await new Promise((resolve) => setTimeout(resolve, this.opts.delayMs));
       const eventId = randomUUID();
       try {
+        // Marked first: the reply is on its way, and Order can't act on it before it commits
+        if (hold) hold.replied = true;
         await handleCreditResult(
           this.pool,
-          amount <= this.opts.limit
+          hold
             ? { type: "CreditReserved", eventId, operationId, orderId, reservationId: randomUUID() }
             : { type: "CreditReservationRejected", eventId, operationId, orderId, reasonCode: "INSUFFICIENT_CREDIT" },
         );

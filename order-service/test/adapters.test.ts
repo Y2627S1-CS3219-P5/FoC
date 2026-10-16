@@ -114,6 +114,37 @@ describe("stub credit bus", () => {
     assert.deepEqual(bus.violations(), []);
   });
 
+  it("stub bus makes no hold for a rejected reserve, so a terminal event breaks rule 3", async () => {
+    const e = await newErrand(150);
+    await flush();
+    assert.equal(bus.hold(e.id), undefined);
+    await bus.publish([terminal(e.id)]);
+    assert.equal(bus.violations().length, 1);
+    assert.match(bus.violations()[0], /rule 3/);
+  });
+
+  it("stub bus treats ReservationTimedOut after a rejected reserve as a no-op", async () => {
+    const e = await newErrand(150);
+    await flush();
+    const m = terminal(e.id, { type: "ReservationTimedOut", amount: 150 });
+    delete m.payload.courier_id;
+    await bus.publish([m]);
+    assert.deepEqual(bus.violations(), []);
+    assert.equal(bus.hold(e.id), undefined);
+  });
+
+  it("stub bus flags a terminal event sent before the reserve reply is delivered", async () => {
+    bus = new StubCreditBus(pool, { limit: 100, delayMs: 100, silentAmount: 999 });
+    const e = await newErrand(10);
+    await publishOutboxBatch(pool, (m) => bus.publish(m));
+    await bus.publish([terminal(e.id)]);
+    assert.equal(bus.violations().length, 1);
+    assert.match(bus.violations()[0], /rule 3/);
+    assert.equal(bus.hold(e.id)?.status, "HELD");
+    await bus.idle();
+    assert.equal((await state(e.id)).state, "OPEN");
+  });
+
   it("stub bus accepts a full lifecycle with no violations", async () => {
     const e = await newErrand(10);
     await flush();

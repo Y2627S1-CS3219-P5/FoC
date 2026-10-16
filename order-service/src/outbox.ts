@@ -83,6 +83,8 @@ export function startOutboxPublisher(pool: Pool, publisher: MessagePublisher): {
   // Resolves after ms, or at once when stop() is called
   const pause = (ms: number) =>
     new Promise<void>((resolve) => {
+      // stop() may have been called while a batch was running, when there was no pause to wake
+      if (stopping) return resolve();
       wake = resolve;
       timer = setTimeout(resolve, ms);
     });
