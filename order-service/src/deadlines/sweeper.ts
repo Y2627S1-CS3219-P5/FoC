@@ -5,6 +5,7 @@
  *        and the pickup, delivery and confirmation timeouts, implementing the approved plan.
  * Author review: PENDING
  */
+import assert from "node:assert/strict";
 import type { Pool } from "pg";
 import { SWEEPER } from "../config";
 import { inTransaction } from "../db";
@@ -17,42 +18,82 @@ export type SweepCounts = Record<
   number
 >;
 
-// Every system rule with a deadline, taken from the transition table
-const SYSTEM_ACTIONS = (Object.keys(TRANSITIONS) as Action[]).filter(
-  (a) => TRANSITIONS[a].party === "system" && TRANSITIONS[a].deadline?.mustHavePassed,
-) as (keyof SweepCounts)[];
+// Every system rule with a deadline comes from the transition table; ORDER only fixes the sequence:
+// reservation timeouts first (the credit reply is the one thing racing them), and pickupTimeout
+// before expire so an errand returned to OPEN can expire in the same tick.
+const ORDER: (keyof SweepCounts)[] = ["reservationTimeout", "pickupTimeout", "expire", "deliveryTimeout", "confirmTimeout"];
+const SYSTEM_ACTIONS = ORDER.filter((a) => TRANSITIONS[a].party === "system" && TRANSITIONS[a].deadline?.mustHavePassed);
+assert.equal(
+  SYSTEM_ACTIONS.length,
+  (Object.keys(TRANSITIONS) as Action[]).filter((a) => TRANSITIONS[a].party === "system" && TRANSITIONS[a].deadline?.mustHavePassed).length,
+  "sweeper ORDER is missing a system action",
+);
+
+type Transition = typeof applyTransitionInTx;
 
 /**
  * One transaction: lock up to batchSize due errands (skipping rows another sweeper or request
- * holds) and transition each. Returns how many were selected and how many transitions succeeded.
+ * holds, and ids that already failed in this sweep) and transition each inside its own
+ * savepoint, so a row that throws is rolled back, logged and skipped without losing the rest.
  */
-async function sweepBatch(pool: Pool, action: keyof SweepCounts, now: Date): Promise<{ selected: number; done: number }> {
+async function sweepBatch(
+  pool: Pool, action: keyof SweepCounts, now: Date, failed: Set<string>, transition: Transition,
+): Promise<{ selected: number; done: number; progressed: number }> {
   const rule = TRANSITIONS[action];
   const column = rule.deadline!.column; // a fixed DeadlineColumn name, never user input
   return inTransaction(pool, async (client) => {
     const { rows } = await client.query<{ id: string }>(
-      `SELECT id FROM errands WHERE state = ANY($1::errand_state[]) AND ${column} <= $2
+      `SELECT id FROM errands WHERE state = ANY($1::errand_state[]) AND ${column} <= $2 AND id <> ALL($4::uuid[])
        ORDER BY ${column} LIMIT $3 FOR UPDATE SKIP LOCKED`,
-      [rule.from, now, SWEEPER.batchSize],
+      [rule.from, now, SWEEPER.batchSize, [...failed]],
     );
     let done = 0;
+    let progressed = 0;
     for (const { id } of rows) {
-      const result = await applyTransitionInTx(client, id, action, { kind: "system" }, { now });
-      if (result.ok) done++;
+      await client.query("SAVEPOINT sweep_row");
+      try {
+        const result = await transition(client, id, action, { kind: "system" }, { now });
+        await client.query("RELEASE SAVEPOINT sweep_row");
+        if (result.ok) {
+          done++;
+          progressed++;
+        }
+      } catch (err) {
+        await client.query("ROLLBACK TO SAVEPOINT sweep_row");
+        failed.add(id);
+        progressed++;
+        log.error("deadline_sweep_row_failed", { action, errandId: id, error: errorMessage(err) });
+      }
     }
-    return { selected: rows.length, done };
+    return { selected: rows.length, done, progressed };
   });
 }
 
-/** Fires every due system transition once; returns how many succeeded per action. */
-export async function sweepDeadlines(pool: Pool, now: Date = new Date()): Promise<SweepCounts> {
+/** Sweeps one action until nothing due is left; returns how many transitions succeeded. */
+export async function sweepAction(
+  pool: Pool, action: keyof SweepCounts, now: Date = new Date(), failed: Set<string> = new Set(), transition: Transition = applyTransitionInTx,
+): Promise<number> {
+  let total = 0;
+  for (;;) {
+    const { selected, done, progressed } = await sweepBatch(pool, action, now, failed, transition);
+    total += done;
+    // A short batch means nothing due is left; a batch with no progress would repeat forever
+    if (selected < SWEEPER.batchSize || progressed === 0) return total;
+  }
+}
+
+/**
+ * Fires every due system transition once; returns how many succeeded per action. A failing
+ * row or action is logged and skipped, so it cannot stop the others. `transition` is a test seam.
+ */
+export async function sweepDeadlines(pool: Pool, now: Date = new Date(), transition: Transition = applyTransitionInTx): Promise<SweepCounts> {
   const counts: SweepCounts = { reservationTimeout: 0, expire: 0, pickupTimeout: 0, deliveryTimeout: 0, confirmTimeout: 0 };
+  const failed = new Set<string>();
   for (const action of SYSTEM_ACTIONS) {
-    for (;;) {
-      const { selected, done } = await sweepBatch(pool, action, now);
-      counts[action] += done;
-      // A short batch means nothing due is left; a batch where nothing succeeded would repeat forever
-      if (selected < SWEEPER.batchSize || done === 0) break;
+    try {
+      counts[action] = await sweepAction(pool, action, now, failed, transition);
+    } catch (err) {
+      log.error("deadline_sweep_action_failed", { action, error: errorMessage(err) });
     }
   }
   return counts;

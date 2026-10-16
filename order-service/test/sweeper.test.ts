@@ -11,8 +11,8 @@ import { after, before, test } from "node:test";
 import { Pool } from "pg";
 import { createTestDatabase, TestDatabase } from "./helpers";
 import { handleCreditResult } from "../src/credit/creditResults";
-import { startDeadlineSweeper, sweepDeadlines } from "../src/deadlines/sweeper";
-import { applyTransition, createErrand } from "../src/errands/repository";
+import { startDeadlineSweeper, sweepAction, sweepDeadlines } from "../src/deadlines/sweeper";
+import { applyTransition, applyTransitionInTx, createErrand } from "../src/errands/repository";
 import type { Actor, Errand, SupplierSnapshot } from "../src/errands/errand";
 
 let db: TestDatabase;
@@ -117,13 +117,16 @@ test("pickup timeout returns ACCEPTED to OPEN and clears courier", async () => {
   const e = await open();
   await step(e.id, "accept");
   await age(e.id);
-  const counts = await sweepDeadlines(pool);
-  assert.ok(counts.pickupTimeout >= 1);
+  // age() makes the listing deadline past too, so run this action alone to see the OPEN state
+  assert.ok((await sweepAction(pool, "pickupTimeout")) >= 1);
   const r = await row(e.id);
   assert.equal(r.state, "OPEN");
   assert.equal(r.courier_id, null);
   assert.equal((await outbox(e.id)).length, 0);
   assert.equal((await lastHistory(e.id)).action, "pickupTimeout");
+  // In a full sweep the errand returned to OPEN can then expire in the same tick
+  await sweepDeadlines(pool);
+  assert.equal((await row(e.id)).state, "EXPIRED");
 });
 
 test("delivery timeout moves PICKED_UP to DISPUTED, no outbox row", async () => {
@@ -166,8 +169,9 @@ test("reservation timeout closes PENDING_RESERVATION with one ReservationTimedOu
 });
 
 test("reply racing reservation timeout: never both", async () => {
+  const ROUNDS = 100;
   const ids: string[] = [];
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < ROUNDS; i++) {
     const e = await newErrand();
     ids.push(e.id);
     // The sweep runs with a clock past the reservation deadline; the reply runs at the real time
@@ -191,8 +195,10 @@ test("reply racing reservation timeout: never both", async () => {
     }
     msgs += (await outbox(id)).filter((m) => m.event_type === "ReservationTimedOut").length;
   }
-  assert.equal(timedOut + openCount, 20);
+  assert.equal(timedOut + openCount, ROUNDS);
   assert.equal(msgs, timedOut);
+  // Both outcomes must occur, otherwise the two sides are not really racing
+  assert.ok(timedOut > 0 && openCount > 0, `no race: OPEN=${openCount} TIMED_OUT=${timedOut}`);
 });
 
 test("leaves errands before their deadline alone", async () => {
@@ -259,6 +265,52 @@ test("accept racing expiry: never both", async () => {
     [ids],
   );
   assert.equal(rows[0].n, expired);
+});
+
+test("a failing row does not stop other rows or other actions in the same sweep", async () => {
+  const bad: string[] = [];
+  const good: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const b = await open();
+    await age(b.id);
+    bad.push(b.id);
+  }
+  for (let i = 0; i < 2; i++) {
+    const g = await open();
+    await age(g.id);
+    good.push(g.id);
+  }
+  const pending = await newErrand();
+  await age(pending.id);
+  const delivered = await open();
+  await step(delivered.id, "accept");
+  await step(delivered.id, "pickup");
+  await step(delivered.id, "deliver");
+  await age(delivered.id);
+
+  // Fails after writing, so the savepoint rollback must undo the partial work
+  const flaky: typeof applyTransitionInTx = async (client, id, action, actor, opts) => {
+    const r = await applyTransitionInTx(client, id, action, actor, opts);
+    if (bad.includes(id)) throw new Error("injected failure");
+    return r;
+  };
+  const errors = console.error;
+  console.error = () => {}; // the sweeper logs each skipped row
+  try {
+    await sweepDeadlines(pool, new Date(), flaky);
+  } finally {
+    console.error = errors;
+  }
+  for (const id of bad) {
+    assert.equal((await row(id)).state, "OPEN");
+    assert.equal((await outbox(id)).length, 0);
+  }
+  for (const id of good) assert.equal((await row(id)).state, "EXPIRED");
+  assert.equal((await row(pending.id)).state, "RESERVATION_TIMED_OUT");
+  assert.equal((await row(delivered.id)).state, "COMPLETED");
+  // Healthy sweeps pick the rows up again once the failure is gone
+  await sweepDeadlines(pool);
+  for (const id of bad) assert.equal((await row(id)).state, "EXPIRED");
 });
 
 test("stop() resolves", async () => {

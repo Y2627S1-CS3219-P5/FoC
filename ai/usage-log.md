@@ -1192,3 +1192,20 @@ their deadline left alone, two concurrent sweeps, and the accept-versus-expiry a
 then `sweepDeadlines`, which derives its five system actions from the transition table and processes due errands
 in `FOR UPDATE SKIP LOCKED` batches through `applyTransitionInTx`, and `startDeadlineSweeper`, a non-overlapping
 timer loop that logs errors and whose `stop()` waits for a running sweep. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: deadline sweeper fix round
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fixes for review findings on the deadline sweeper (no new design)
+- **Repository files affected:** `order-service/src/deadlines/sweeper.ts`, `order-service/test/sweeper.test.ts`
+- **Author review:** PENDING
+
+### Prompts
+
+> Fix the review findings on the deadline sweeper: the reservation race test did not race, and one failing row blocked its batch.
+
+### Key response
+
+Claude ordered the sweep actions explicitly (reservation timeout first, pickup timeout before expiry), made the race test
+assert that both outcomes occur, and wrapped each row in a savepoint so a failing row is logged and skipped while other rows
+and actions continue. Tests pass against PostgreSQL 17; type-checked.
