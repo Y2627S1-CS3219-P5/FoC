@@ -73,6 +73,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18
 Scope: Designed, implemented, documented, and verified the issue #42 pull-request CI
 foundation after a project-author-approved grilling round.
 Author review: Pending project-author review.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Scaffolded the Order Service (package, config, pool, migration runner) by copying and adapting Credit Service files, and implemented the author's planned errands/errand_history/outbox schema with its tests.
+Author review: PENDING
 -->
 
 # AI Usage Log
@@ -1079,3 +1082,21 @@ tests and production build passed; Supplier typecheck, 213 Jest tests and Nest b
 the User Service build passed; the complete live Supplier integration suite passed; both
 Chromium member/administrator journeys passed; and both disposable Compose projects removed
 their containers and volumes.
+
+## 2026-10-16 — Order Service: scaffold, schema and migration runner
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** boilerplate and scaffolding copied from the Credit Service, and implementation of a schema and tests specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/package.json`, `tsconfig.json`, `AGENTS.md`, `src/{config,db,dbAvailability,log,migrations,migrate}.ts`, `migrations/0001_create_order_tables.sql`, `test/{helpers,schema.test}.ts`
+- **Author review:** PENDING
+
+### Prompts
+
+> Implement Task 1 of the order-service-core plan: scaffold, schema and migration runner.
+
+### Key response
+
+Claude copied the Credit Service database and migration-runner files (dropping the Kafka and credit
+specific parts, renaming credit to order, new advisory lock ID), added the migration SQL from the plan,
+and wrote schema tests first (check constraints, and that `order_app` cannot update `errand_history`).
+Tests: 6/6 against a disposable PostgreSQL 17.
