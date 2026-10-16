@@ -77,3 +77,17 @@ test("rejects non-object body", () => {
   assert.equal(firstField(null), "body");
   assert.equal(firstField([]), "body");
 });
+
+test("rejects impossible calendar date", () => {
+  assert.equal(firstField({ ...valid, listingDeadline: "2026-02-31T10:00:00Z" }), "listingDeadline");
+});
+
+test("rejects hour 24", () => {
+  assert.equal(firstField({ ...valid, listingDeadline: "2026-10-20T24:00:00Z" }), "listingDeadline");
+});
+
+test("accepts a valid offset timestamp", () => {
+  const r = validateCreateErrand({ ...valid, listingDeadline: "2026-10-20T09:00:00+08:00" }, now);
+  assert.ok(r.ok);
+  if (r.ok) assert.equal(r.value.listingDeadline.toISOString(), "2026-10-20T01:00:00.000Z");
+});

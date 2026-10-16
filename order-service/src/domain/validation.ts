@@ -113,7 +113,16 @@ export function validateCreateErrand(body: unknown, now: Date): CreateErrandVali
       return undefined;
     }
     const d = new Date(v);
-    if (Number.isNaN(d.getTime())) {
+    // Date silently rolls impossible values (Feb 31, hour 24) forward, so check the components too
+    const [, y, mo, da, h, mi, sec] = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/.exec(v)!;
+    const daysInMonth = new Date(Date.UTC(Number(y), Number(mo), 0)).getUTCDate();
+    const offset = /([+-])(\d{2}):(\d{2})$/.exec(v);
+    if (
+      Number(mo) < 1 || Number(mo) > 12 || Number(da) < 1 || Number(da) > daysInMonth ||
+      Number(h) > 23 || Number(mi) > 59 || Number(sec ?? 0) > 59 ||
+      (offset !== null && (Number(offset[2]) > 23 || Number(offset[3]) > 59)) ||
+      Number.isNaN(d.getTime())
+    ) {
       fail(field, `${field} is not a valid timestamp`);
       return undefined;
     }
