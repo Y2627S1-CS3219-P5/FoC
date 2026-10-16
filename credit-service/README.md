@@ -3,6 +3,9 @@ AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Documented the Credit Service database and logic as implemented from docs/decision-record.md.
 Author review: PENDING
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Documented the Kafka consumer, DLQs, outbox publisher loop and the end-to-end test.
+Author review of additional changes: PENDING
 -->
 
 # Credit Service
@@ -19,8 +22,9 @@ Owns every credit balance on the platform. The design is in
 | Message handling: account status, initial grant, reserve, capture, release, forfeit | Done |
 | Outbox: insert, publish batch, retention cleanup | Done |
 | Balance read (`getBalance`) | Done; no HTTP route yet |
-| Kafka topics | Created by the shared `kafka-init` Compose service, see [../kafka/README.md](../kafka/README.md) |
-| Kafka consumers and producer, DLQ, HTTP API, `/health` | Not started: client library, DLQ topics and HTTP paths are still open |
+| Kafka topics, including the two DLQs | Created by the shared `kafka-init` Compose service, see [../kafka/README.md](../kafka/README.md) |
+| Kafka consumer, rejection replies, DLQ, outbox publisher loop | Done (`src/consumer.ts`, `src/publisher.ts`, `src/index.ts`) |
+| HTTP API, `/health` | Not started: HTTP paths are still open |
 
 ## Layout
 
@@ -32,29 +36,34 @@ src/messages.ts                           validates incoming Kafka payloads
 src/accounts.ts                           account status, initial grant, forfeit, balance
 src/reservations.ts                       reserve, capture, release
 src/outbox.ts                             outbox insert, publisher batch, cleanup
+src/consumer.ts                           Kafka consumer: parse, handle, reply/DLQ, commit offset
+src/publisher.ts                          outbox publisher loop and hourly cleanup
+src/kafka.ts                              Kafka client and producer (acks=all, idempotent)
+src/index.ts                              service entry point
 src/db.ts                                 pool and inTransaction()
+e2e/                                      end-to-end test in its own Compose stack
 ```
 
-## What the Kafka layer must do with each outcome
+## How messages are handled
 
-Each handler runs in its own database transaction and returns an outcome. The consumer commits
-the Kafka offset only after acting on it (decision D7):
+`src/consumer.ts` reads `user.account-status` and `credit.commands` (group `credit-service`), one
+message at a time in partition order, and commits a message's offset only after it is fully
+handled (decision D7):
 
-| Handler | Outcome | Consumer action before committing the offset |
-|---|---|---|
-| `parse*` | `ok: false` | Send to the DLQ with `reason` |
-| `handleAccountStatus` | `applied`, `duplicate` | Nothing |
-| | `invalid` | Send to the DLQ with `reason` |
-| `handleReserveRequested` | `reserved`, `duplicate` | Nothing (`CreditReserved` is in the outbox) |
-| | `rejected` | Produce `reply` (topic, key, payload) with `acks=all` and wait for the ack (decision D5) |
-| `handleTerminalEvent` | `applied`, `duplicate` | Nothing |
-| | `invalid` | Send to the DLQ with `reason` |
+| Handler outcome | What the consumer does before committing the offset |
+|---|---|
+| Message not JSON, or fails validation | Sends it to the topic's DLQ with the reason |
+| `applied`, `duplicate`, `reserved` | Nothing more (`CreditReserved` is in the outbox) |
+| `rejected` (reserve) | Produces `CreditReservationRejected` to `credit.results` and waits for the ack (decision D5) |
+| `invalid` | Sends it to the topic's DLQ with the reason |
 
-A thrown error means nothing was committed: retry the message (decision-record §9: retry count
-not yet decided).
+DLQs: `user.account-status.dlq` and `credit.commands.dlq`. A message whose handling throws is
+retried in place, 5 attempts in total, then sent to the DLQ. When the database or Kafka is
+unreachable, attempts are not counted: the message is retried until the outage ends, because
+sending it to the DLQ would lose a valid message.
 
-`publishOutboxBatch(pool, produce)` sends unpublished events; `produce` must resolve only after
-Kafka acknowledges every message. Run `deletePublishedOutboxEvents(pool)` periodically.
+`src/publisher.ts` publishes the outbox (batches back to back, 250 ms pause when empty) and
+deletes published rows older than 7 days every hour.
 
 ## Running locally
 
@@ -62,12 +71,29 @@ Set `CREDIT_DB_ADMIN_PASSWORD`, `CREDIT_DB_MIGRATION_PASSWORD` and `CREDIT_DB_AP
 `.env`, then:
 
 ```sh
-docker compose up --build credit-migrate   # starts credit-db, applies migrations, exits
+docker compose up -d --build credit-service   # starts kafka, credit-db, migrations, then the service
+docker compose logs -f credit-service          # one JSON line per handled message
 ```
 
 ## Tests
 
-The tests need a disposable PostgreSQL 17 server and a superuser URL. Each test file creates its
+### End-to-end (through Kafka)
+
+```sh
+bash credit-service/e2e/run.sh        # or: cd credit-service && npm run test:e2e
+```
+
+Starts a separate, throwaway Compose stack (project `foc-credit-e2e`: Kafka, credit-db,
+credit-service; no host ports, volumes deleted afterwards), then plays User Service and Order
+Service: it sends messages to `user.account-status` and `credit.commands`, and checks the replies
+on `credit.results`, the DLQs and the database. It covers the initial grant, accepted and rejected
+reserves (each reason code), duplicate deliveries, capture, the three release events, suspension,
+closure with forfeit, invalid messages going to the DLQ, and the outbox being fully published.
+On failure it prints the credit-service logs; `--keep` leaves the stack running.
+
+### Database tests
+
+The database tests need a disposable PostgreSQL 17 server and a superuser URL. Each test file creates its
 own database, applies the migrations, and drops the database afterwards.
 
 ```sh

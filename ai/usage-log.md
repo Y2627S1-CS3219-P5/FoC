@@ -1031,3 +1031,183 @@ existing conventions, plus a README "Rules for changing this service" section. T
 covers migrations, config, admin actions, audit-log rules, the error shape, 503 vs 401, the
 `/auth/verify` contract, privacy, pre-PR checks, and contributors' own AI disclosures.
 Type-checked.
+
+## 2026-10-15 — Credit Service: implementation proposal moved from Redis Streams to Kafka
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** formatting and writing a proposal around the author's chosen architecture (Kafka, plus the author's three-table design); no new design decisions
+- **Repository files affected:** `credit-service/docs/implementation-proposal.md`
+- **Author review:** Reviewed and approved by @phuc
+
+### Prompts
+
+> "change credit proposal to kafka queue" (with the author's own "Credit Service Database
+> Proposal": `credit_accounts`, `credit_transactions`, `outbox`, Kafka publication)
+
+### Key response
+
+Claude replaced Redis Streams with Kafka topics throughout the proposal and swapped in the author's
+table design word for word. It replaced XACK with committing consumer offsets after the database
+commit, and replaced direct XADD replies with Credit Service's own outbox and publisher. It marked
+Kafka settings (topic names, partitions, retention, replication, DLQ, ACLs, client library) as
+"Author decision". It also listed, without resolving them, the gaps between the author's schema and
+D1: rejected outcomes, forfeit, REFUND, the courier side of a capture, account status, and an empty
+table row.
+
+## 2026-10-15 — Credit Service proposal: author's revisions (statuses, outbox publisher, type names)
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** applying the author's stated decisions to the proposal text; reading User Service code to report its account statuses
+- **Repository files affected:** `credit-service/docs/implementation-proposal.md`
+- **Author review:** Reviewed and approved by @phuc
+
+### Prompts
+
+> "what are the account status implemented in user"
+
+> "remove the empty collumn, change according to user status / retend outdate for 7 day Keep the
+> transaction open through publication and marking the rows. Committing immediately after the
+> SELECT would release the locks and allow another instance to select the same rows. / skip name
+> of previous prompt name using the name in the order state diagram" (clarified: transaction types)
+
+### Key response
+
+Claude listed User Service's statuses from the code: PENDING_VERIFICATION (default only, never set),
+ACTIVE, SUSPENDED and CLOSED (never set). It then made the author's changes to the proposal:
+- removed the empty-column question
+- aligned account statuses with User Service and dropped CLOSING
+- made the outbox publisher hold one transaction (SELECT ... FOR UPDATE SKIP LOCKED, produce,
+  mark, COMMIT) and delete published rows after 7 days
+- renamed the terminal transaction types after the Order state diagram (COMPLETED, CANCELLED,
+  EXPIRED, FAILED) and dropped REFUND
+
+## 2026-10-16 — Credit Service proposal: applied the decision record
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** applying the author's decision record (D1 to D8) to the proposal text; no new design decisions
+- **Repository files affected:** `credit-service/docs/implementation-proposal.md`
+- **Author review:** PENDING
+
+### Prompts
+
+> "apply to the implementation proposal" (with the author's "Credit Service: Decision Record")
+
+### Key response
+
+Claude applied the decision record's §10 list to the proposal: §4 now has the four-table schema
+(`credit_accounts` with status and `forfeited_at`, `credit_reservations`, `credit_transactions`
+with credit-term types and deltas, `outbox` with `causation_id`); §4.5 replaces the idempotency
+table with the no-inbox design; §6.2 adds `CreditReservationRejected` and its reason codes; §6.4
+uses the conditional-UPDATE flow with directly produced rejections and the proposed CS-NFR2.3
+change, marked as needing Order Service agreement; §6.5 uses the reservation-row terminal flow;
+§9 updates the CS-NFR2.3 row. It also brought §3, §5.4, §6.3, §7 (Kafka settings), §11, §12
+(tests) and §13 (open questions) in line with the decisions.
+
+## 2026-10-16 — Credit Service: database and message-handling logic
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** writing implementation code and tests once the author had decided the schema and flows (docs/decision-record.md D1 to D8); boilerplate copied from User Service patterns. No new design decisions
+- **Repository files affected:** `credit-service/` (package.json, tsconfig.json, Dockerfile, .dockerignore, README.md, docker/postgres/init-roles.sh, migrations/0001_create_credit_tables.sql, src/*.ts, test/*.ts), `compose.yaml`, `.env.example`
+- **Author review:** PENDING
+
+### Prompts
+
+> "Implement the credit db using the proposal"
+
+### Key response
+
+Claude implemented the decided four-table schema as migration 0001, with the User Service role
+pattern (bootstrap, `credit_migrator`, `credit_app`) and per-table grants that make
+`credit_transactions` append-only for the app. It reused User Service's migration runner and
+connection-retry helper. It wrote handlers that each run in one transaction and return an outcome
+for the future Kafka layer: account status (initial grant via `ON CONFLICT DO NOTHING`, idempotent
+status changes, forfeit now or on the last finalised reservation), reserve (one conditional
+`UPDATE`, rejection built for direct production with the D8 reason codes), and terminal events
+(reservation row lock, duplicate/conflict detection, validation, accounts locked in `user_id`
+order, D3 rows). It also wrote the outbox insert, publisher batch and 7-day cleanup, the balance
+read, Compose services `credit-db` and `credit-migrate`, and 29 tests run against a real
+PostgreSQL 17. It left Kafka wiring and HTTP routes unimplemented because those decisions are
+still open.
+
+Claude flagged three points for the author: the deferred FORFEIT row needs its own operation_id
+because `UNIQUE (operation_id, user_id)` is already taken by the requester's RELEASE or
+CAPTURE_DEBIT row (a random UUID is used); status changes out of CLOSED are sent to the DLQ;
+credits captured to an already-forfeited CLOSED courier are not forfeited again.
+
+## 2026-10-16 — Kafka broker and the three topics
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** configuration and scaffolding for the author's decisions; Claude asked for the partition count and folder rather than choosing them
+- **Repository files affected:** `kafka/create-topics.sh`, `kafka/README.md`, `compose.yaml`, `credit-service/docs/implementation-proposal.md`, `credit-service/src/config.ts`
+- **Author review:** Reviewed and approved by @phuc
+
+### Prompts
+
+> "create the 3 kafka queue in another folder"
+
+Claude asked: partitions per topic → author chose "1 each"; folder → author chose "kafka/ (top level)".
+
+### Key response
+
+Claude created `kafka/create-topics.sh`, which creates `user.account-status`, `credit.commands` and
+`credit.results` (1 partition, replication factor 1, `--if-not-exists`). It added a single-node
+KRaft `kafka` broker (`apache/kafka:3.9.0`, automatic topic creation off, named volume) and a
+one-off `kafka-init` service to `compose.yaml`, and recorded the decision in the proposal (§2, §9,
+§13). Compose config was checked to parse; the broker was not started because Docker was not
+running.
+
+## 2026-10-16 — Kafka topic smoke tests
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** writing tests for the author's topic setup
+- **Repository files affected:** `kafka/test-topics.sh`, `kafka/README.md`, `compose.yaml`
+- **Author review:** Reviewed and approved by @phuc
+
+### Prompts
+
+> "Add testing on these kafka queue"
+
+### Key response
+
+Claude wrote `kafka/test-topics.sh`, run on demand with `docker compose run --rm kafka-test` (new
+Compose service under the `test` profile). It uses Kafka's command-line tools, so no client library
+was chosen. It checks the three real topics read-only (exists, 1 partition, replication factor 1,
+leader, readable) and that automatic topic creation is off. It tests send/receive on a temporary
+topic with the same settings: key and order kept, a consumer group resumes from its committed
+offset, a new group reads from the beginning. Claude explained that the real topics are not
+written to because Credit Service reads them from the beginning. Result: 20 passed, 0 failed; a
+deliberately wrong expectation made the run fail with exit code 1; the temporary topic and groups
+were removed.
+
+## 2026-10-16 — Credit Service: Kafka consumer, DLQs and end-to-end test
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation code and tests after the author decided the open items; Claude asked for the decisions instead of making them
+- **Repository files affected:** `credit-service/src/{config,kafka,log,consumer,publisher,index}.ts`, `credit-service/e2e/*`, `credit-service/Dockerfile`, `credit-service/package.json`, `credit-service/README.md`, `credit-service/docs/implementation-proposal.md`, `kafka/create-topics.sh`, `kafka/test-topics.sh`, `kafka/README.md`, `compose.yaml`
+- **Author review:** Reviewed and approved by @phuc
+
+### Prompts
+
+> "I mean create end to end test case send to the kafka queue check if out logical operation work"
+
+Claude explained that nothing yet connected Kafka to the Credit Service logic, and asked three
+questions. The author chose: Kafka client `@confluentinc/kafka-javascript`; one DLQ per consumed
+topic with 5 attempts; a separate test stack for the end-to-end test.
+
+### Key response
+
+Claude wrote the Credit Service entry point:
+- a consumer on `user.account-status` and `credit.commands` that commits each offset only after
+  the message is handled, produces rejection replies directly, and sends invalid messages to
+  `user.account-status.dlq` / `credit.commands.dlq`
+- retries in place up to 5 attempts; database or Kafka outages are retried without counting
+  attempts (flagged to the author)
+- the outbox publisher loop with hourly cleanup
+
+It added the DLQ topics to `kafka/create-topics.sh`, `credit-service` to `compose.yaml`, and an
+isolated end-to-end stack (`credit-service/e2e/`, run with `bash credit-service/e2e/run.sh`) whose
+test plays User Service and Order Service over Kafka and checks replies, DLQs and the database.
+Result: 23 passed, 0 failed; the test stack and its volumes were removed. It also created the two
+DLQ topics in the author's dev Kafka by re-running `kafka-init` (topic tests: 30 passed).
+npm 12 blocked the client's install script; Claude approved it for that one package
+(`allowScripts` in package.json).
