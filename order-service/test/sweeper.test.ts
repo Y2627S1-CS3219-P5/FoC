@@ -3,6 +3,8 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Tests for the deadline sweeper (expiry and the four timeouts), written before the
  *        implementation per the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: The accept-vs-expiry race test now runs 100 rounds with staggered starts and asserts both outcomes occur.
  * Author review: PENDING
  */
 import assert from "node:assert/strict";
@@ -240,14 +242,17 @@ test("two concurrent sweeps produce one OrderExpired per errand", async () => {
 });
 
 test("accept racing expiry: never both", async () => {
+  const ROUNDS = 100;
   const ids: string[] = [];
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < ROUNDS; i++) {
     const e = await open();
     ids.push(e.id);
     // Both are legal at their own clock: the accept at the real time, the sweep 90 minutes on
     // (past the listing deadline, before the pickup deadline)
     const future = new Date(Date.now() + 90 * 60_000);
-    await Promise.all([applyTransition(pool, e.id, "accept", member(COURIER)), sweepDeadlines(pool, future)]);
+    // The accept starts 0-4 ms after the sweep, so each side wins some rounds
+    const accept = new Promise((r) => setTimeout(r, i % 5)).then(() => applyTransition(pool, e.id, "accept", member(COURIER)));
+    await Promise.all([accept, sweepDeadlines(pool, future)]);
   }
   let accepted = 0;
   let expired = 0;
@@ -259,7 +264,9 @@ test("accept racing expiry: never both", async () => {
       accepted++;
     }
   }
-  assert.equal(accepted + expired, 20);
+  assert.equal(accepted + expired, ROUNDS);
+  // Both outcomes must occur, otherwise the two sides are not really racing
+  assert.ok(accepted > 0 && expired > 0, `no race: ACCEPTED=${accepted} EXPIRED=${expired}`);
   const { rows } = await pool.query(
     `SELECT count(*)::int AS n FROM outbox WHERE event_type = 'OrderExpired' AND message_key = ANY($1)`,
     [ids],

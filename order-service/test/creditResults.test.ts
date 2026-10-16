@@ -3,6 +3,8 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Tests for handling CreditReserved / CreditReservationRejected replies, written
  *        before the implementation per the approved plan.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+ * Scope: Widened the closing() helper type so the tests type-check.
  * Author review: PENDING
  */
 import assert from "node:assert/strict";
@@ -75,7 +77,7 @@ async function history(id: string) {
   const { rows } = await pool.query(`SELECT * FROM errand_history WHERE errand_id = $1 ORDER BY id`, [id]);
   return rows;
 }
-const closing = (rows: { event_type: string }[]) => rows.filter((r) => r.event_type !== "ReserveRequested");
+const closing = <T extends { event_type: string }>(rows: T[]) => rows.filter((r) => r.event_type !== "ReserveRequested");
 
 test("reserved opens the errand", async () => {
   const e = await newErrand();
