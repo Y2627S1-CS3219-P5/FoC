@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: SessionVerifier interface (the Order Service's only view of User Service sessions) and a
  *        stub that trusts `Bearer stub.<uuid>.<role>` tokens, implementing the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 export interface Principal {
   id: string;

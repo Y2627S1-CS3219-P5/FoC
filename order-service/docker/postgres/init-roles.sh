@@ -1,7 +1,7 @@
 #!/bin/sh
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: creates the two
 # least-privilege database roles (migration owner, app) on a fresh Order Service database,
-# copied from user-service/docker/postgres/init-roles.sh. Author review: PENDING
+# copied from user-service/docker/postgres/init-roles.sh. Author review: Reviewed and approved by @mattis.
 #
 # Postgres runs this once, only when the order-db volume is first created.
 # The superuser (POSTGRES_USER) is used only here; no service connects as it.

@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Session authentication and role check middleware, in the style of user-service/src/authenticate.ts.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { NextFunction, Request, Response } from "express";
 import type { Principal, SessionVerifier } from "../adapters/sessionVerifier";

@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Copied from credit-service/src/migrations.ts (branch_credit): numbered .sql files,
  *        forward-only, each in its own transaction, with checksums.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";

@@ -4,10 +4,10 @@
  * Scope: Configuration module (every environment variable read in one place), adapted from
  *        credit-service/src/config.ts (branch_credit) with only the database parts; order
  *        timing settings and topic names added per the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Added the PORT setting for the service entry point.
- * Author review of additional changes: PENDING
+ * Author review of additional changes: Reviewed and approved by @mattis.
  */
 
 // The only file that reads process.env. Each part loads only what it needs, so the

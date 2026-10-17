@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Turns Credit's CreditReserved / CreditReservationRejected replies into errand state
  *        changes under a row lock, implementing the approved plan and the Order <-> Credit contract.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { randomUUID } from "node:crypto";
 import { Pool, PoolClient } from "pg";

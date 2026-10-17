@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: curl walkthrough of
-# the Order Service lifecycle for the D3 demo (stub tokens, stub Credit). Author review: PENDING
+# the Order Service lifecycle for the D3 demo (stub tokens, stub Credit). Author review: Reviewed and approved by @mattis.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: step 11 now checks
-# that all five credit event types were sent and the stub logged no contract violation. Author review: PENDING
+# that all five credit event types were sent and the stub logged no contract violation. Author review: Reviewed and approved by @mattis.
 #
 # Usage:  docker compose up -d --build order-service frontend && bash order-service/scripts/demo.sh
 # Needs curl and jq. BASE is the gateway; RESERVATION_TIMEOUT_SECONDS must match the service's value.

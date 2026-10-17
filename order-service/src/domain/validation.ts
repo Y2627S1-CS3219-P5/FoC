@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Pure validation of the create-errand request body, implementing the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 
 export interface CreateErrandInput {

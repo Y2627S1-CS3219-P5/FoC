@@ -1,6 +1,6 @@
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: Order Service image,
 # copied from user-service/Dockerfile (two stages, fresh production install, allowlisted
-# runtime contents, non-root user) with the port changed. Author review: PENDING
+# runtime contents, non-root user) with the port changed. Author review: Reviewed and approved by @mattis.
 
 # ---- Build stage: all packages + TypeScript compiler -> dist/ -------------------
 FROM node:22.23.3-alpine3.24 AS build

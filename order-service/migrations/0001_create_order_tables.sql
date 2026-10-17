@@ -1,7 +1,7 @@
 -- AI Assistance Disclosure:
 -- Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 -- Scope: Order Service schema: errands, errand_history (append-only) and outbox, per the plan.
--- Author review: PENDING
+-- Author review: Reviewed and approved by @mattis.
 
 CREATE TYPE errand_state AS ENUM (
   'PENDING_RESERVATION','RESERVATION_REJECTED','RESERVATION_TIMED_OUT','OPEN','ACCEPTED','PICKED_UP',

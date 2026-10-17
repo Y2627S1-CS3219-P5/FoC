@@ -5,7 +5,7 @@
  *        configuration, written before the implementation per the approved plan.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Added the restart test for StubCreditBus.restore().
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

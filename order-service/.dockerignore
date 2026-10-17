@@ -1,5 +1,5 @@
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: limited the build
-# context to what the build stage needs, copied from user-service/.dockerignore. Author review: PENDING
+# context to what the build stage needs, copied from user-service/.dockerignore. Author review: Reviewed and approved by @mattis.
 node_modules
 dist
 .env

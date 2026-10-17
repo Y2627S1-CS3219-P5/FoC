@@ -5,7 +5,7 @@
  *        implementation per the approved plan.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: The accept-vs-expiry race test now runs 100 rounds with staggered starts and asserts both outcomes occur.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

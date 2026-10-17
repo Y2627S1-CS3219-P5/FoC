@@ -5,7 +5,7 @@
  *        code mapping, lifecycle), written before the implementation per the approved plan.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Tests that a non-party learns neither the later state (failed accept) nor actor ids (history).
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

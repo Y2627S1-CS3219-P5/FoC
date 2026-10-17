@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Copied from credit-service/src/log.ts (branch_credit): one-line JSON logs.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 
 type Fields = Record<string, unknown>;

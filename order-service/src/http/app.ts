@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Express app wiring: health check, authentication, JSON parsing, routes, error handling.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import express from "express";
 import type { Pool } from "pg";

@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Database tests for the outbox publisher, adapted from credit-service/test/outbox.test.ts
  *        (branch_credit), written before the implementation per the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

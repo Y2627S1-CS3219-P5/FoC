@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Errand transition table as plain data, implementing the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { ErrandState } from "./states";
 

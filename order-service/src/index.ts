@@ -6,7 +6,7 @@
  *        cleanly on SIGTERM/SIGINT. Startup/shutdown pattern from credit-service/src/index.ts.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Rebuild the stub Credit holds from published outbox rows before the publisher starts.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { StubCreditBus } from "./adapters/creditBus";
 import { StubSessionVerifier } from "./adapters/sessionVerifier";

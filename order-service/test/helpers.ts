@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Test helper: a throwaway database with the real migrations applied. Adapted from
  *        credit-service/test/helpers.ts (branch_credit), createTestDatabase only.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { randomUUID } from "node:crypto";
 import { Client, Pool } from "pg";

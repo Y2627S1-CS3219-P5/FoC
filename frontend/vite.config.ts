@@ -10,7 +10,7 @@
  * Author review of additional changes: Reviewed and approved by @t-leongchuan
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Dev-proxy rules for the Order Service errand endpoints.
- * Author review of additional changes: PENDING
+ * Author review of additional changes: Reviewed and approved by @mattis.
  */
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'

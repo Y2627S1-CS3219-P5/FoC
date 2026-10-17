@@ -7,7 +7,7 @@ Scope: Drafted an implementation plan for the Order Service core from the team's
 Author review: Reviewed and approved by @mattis.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Added one open-question line under the design calls (pickup-timeout re-listing).
-Author review: PENDING
+Author review: Reviewed and approved by @mattis.
 -->
 
 # Order Service Core Implementation Plan

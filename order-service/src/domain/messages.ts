@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Payload builders for the credit.commands messages, matching
  *        docs/order-credit-contract.md, implementing the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { Errand } from "../errands/errand";
 import type { ClosingMessageType, TerminalEventType } from "./transitions";

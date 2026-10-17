@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: SupplierDirectory interface (the Order Service's only view of Supplier Service) and a stub
  *        with three fixed suppliers, implementing the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { SupplierSnapshot } from "../errands/errand";
 

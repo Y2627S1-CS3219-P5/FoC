@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Deadline sweeper, the "system" actor that fires reservation timeout, listing expiry
  *        and the pickup, delivery and confirmation timeouts, implementing the approved plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import assert from "node:assert/strict";
 import type { Pool } from "pg";

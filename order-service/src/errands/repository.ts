@@ -5,7 +5,7 @@
  *        outbox in one transaction) with failure classification, implementing the approved plan.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: A non-party's failed accept no longer reveals the errand's current state.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { randomUUID } from "node:crypto";
 import { Pool, PoolClient } from "pg";

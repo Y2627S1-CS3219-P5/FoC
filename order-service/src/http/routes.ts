@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Errand routes: parse and validate, call the domain and repository, map the result. Authorization
  *        is enforced by the repository (relationship to the errand) and requireRole (admin routes).
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { Router, type Request, type Response } from "express";
 import type { Pool } from "pg";

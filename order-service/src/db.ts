@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Copied from credit-service/src/db.ts (branch_credit) and adapted: toAmount removed.
  *        Connection pool and transaction helper.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { Pool, PoolClient } from "pg";
 import { loadDatabaseConfig, DB_RESILIENCE } from "./config";

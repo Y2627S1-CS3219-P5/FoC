@@ -19,7 +19,7 @@ Scope: Added the User Service author's AI Use Summary paragraph.
 Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Added the Order Service AI Use Summary paragraph.
-Author review: PENDING
+Author review: Reviewed and approved by @mattis.
 -->
 
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)

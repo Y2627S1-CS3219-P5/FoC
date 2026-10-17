@@ -7,7 +7,7 @@
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: pinned the user-db Postgres image to a full version tag, per the User Service author's decision. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: user-service restart policy and readiness healthcheck, per the User Service author's resilience decisions. Author review: Reviewed and approved by @t-leongchuan.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-10. Scope: AUDIT_HMAC_KEY for user-service (audit-log hash chain). Author review: Reviewed and approved by @t-leongchuan.
-# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: order-db, order-migrate and order-service (stub adapters), mirroring the user-* services. Author review: PENDING
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: order-db, order-migrate and order-service (stub adapters), mirroring the user-* services. Author review: Reviewed and approved by @mattis.
 services:
   # Browser entry point: http://localhost:${FRONTEND_PORT:-8080}
   frontend:

@@ -5,7 +5,7 @@
  *        detail with history, admin listing), implementing the approved plan.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: History actor ids are hidden from viewers who are not a party or an administrator.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { Pool } from "pg";
 import type { ErrandState } from "../domain/states";

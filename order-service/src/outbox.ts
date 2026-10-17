@@ -4,7 +4,7 @@
  * Scope: Outbox insert, batch publisher and publisher loop, adapted from credit-service/src/outbox.ts
  *        and src/publisher.ts (branch_credit) without causation_id, retention cleanup or event_id in
  *        the payload (the contract fixes its keys); the loop takes a MessagePublisher.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { randomUUID } from "node:crypto";
 import { Pool, PoolClient } from "pg";

@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Copied from credit-service/src/dbAvailability.ts (branch_credit), itself adapted from
  *        user-service/src/dbAvailability.ts, unchanged.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { DB_RESILIENCE } from "./config";
 

@@ -3,7 +3,7 @@ AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Summarised the Order → Credit message contract agreed by the Order Service author,
        matching the fields validated by credit-service/src/messages.ts on origin/branch_credit.
-Author review: PENDING
+Author review: Reviewed and approved by @mattis.
 -->
 
 # Order ⇄ Credit Message Contract

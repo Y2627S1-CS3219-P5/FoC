@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Copied from credit-service/src/migrate.ts (branch_credit) and adapted: lock ID 3219102
  *        (distinct from User 3219001-3219003 and Credit 3219101), order-migrate service.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { Client } from "pg";
 import { loadDatabaseConfig } from "./config";

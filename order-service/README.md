@@ -2,10 +2,10 @@
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Order Service README: status, state table, API and error tables, design calls, how to run and test.
-Author review: PENDING
+Author review: Reviewed and approved by @mattis.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Documented the pickup-timeout re-listing deviation, the single-publisher requirement and the typecheck script.
-Author review: PENDING
+Author review: Reviewed and approved by @mattis.
 -->
 
 # Order Service
