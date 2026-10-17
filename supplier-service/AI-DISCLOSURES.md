@@ -15,6 +15,9 @@ Contract decision and implementation reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27
 Scope: Recorded the standalone Bash API endpoint and journey collection disclosure.
 Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Recorded the issue #42 disposable Compose fixture compatibility disclosure.
+Author review: Pending project-author review.
 -->
 
 # Supplier Service AI disclosures
@@ -56,3 +59,12 @@ archive-based CRUD, visibility, validation, and ETag concurrency. The scripts re
 credentials from the ignored `.env`, keep tokens in process memory, use temporary response
 files, and do not change application code, database schema, Compose configuration, or User
 Service files. Project-author review was completed and approved by @ron.
+
+## Pull-request CI fixture compatibility
+
+OpenAI Codex (GPT-6) assisted on 2026-10-18 with keeping the existing Supplier integration
+runner compatible with the User Service's approved database-role and audit-log requirements.
+The runner now supplies disposable test-only User database passwords and a valid test-only
+audit HMAC key to its unique Compose project. It does not change User Service application
+code, production credentials, schema, or Supplier API behavior. Project-author review is
+pending.

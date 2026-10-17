@@ -19,6 +19,10 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; added live
  * authentication and complete-response coverage for issue #33 metadata.
  * Contract decision and implementation reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18; supplied
+ * disposable User database credentials and an audit key required by the
+ * current Compose stack for issue #42 CI.
+ * Author review: Pending project-author review.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -55,6 +59,7 @@ const hugeEtag = `"v${"9".repeat(200)}"`;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const testEnvironment = {
   ...process.env,
+  AUDIT_HMAC_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   JWT_SECRET: "supplier-smoke-only-jwt-secret-32-characters",
   SUPPLIER_DB_ADMIN_PASSWORD: "supplier-smoke-admin-password",
   SUPPLIER_DB_ADMIN_USER: "supplier_bootstrap",
@@ -63,6 +68,9 @@ const testEnvironment = {
   SUPPLIER_DB_MIGRATION_USER: "supplier_migrator",
   SUPPLIER_DB_PASSWORD: "supplier-smoke-runtime-password",
   SUPPLIER_DB_USER: "supplier_app",
+  USER_DB_ADMIN_PASSWORD: "supplier-smoke-user-admin-password",
+  USER_DB_APP_PASSWORD: "supplier-smoke-user-runtime-password",
+  USER_DB_MIGRATION_PASSWORD: "supplier-smoke-user-migration-password",
   USER_SERVICE_VERIFY_TIMEOUT_MS: "1000",
   ALLOWED_EMAIL_DOMAIN: "u.nus.edu",
   BOOTSTRAP_ADMIN_USERNAME: "supplier_smoke_admin",
