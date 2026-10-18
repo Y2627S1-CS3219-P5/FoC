@@ -107,6 +107,11 @@ export const deploymentConfigSchema = z
           [frontend, supplierService, userService].every(isValidFargateSize),
         "each service must use a valid AWS Fargate CPU/memory combination",
       ),
+    registry: z
+      .object({
+        retainedImageCount: z.number().int().positive(),
+      })
+      .strict(),
     waf: z
       .object({
         global: rateRuleSchema,

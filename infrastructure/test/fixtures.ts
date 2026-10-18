@@ -39,6 +39,9 @@ export function validConfig(): DeploymentConfig {
         memoryTargetPercent: 70,
       },
     },
+    registry: {
+      retainedImageCount: 10,
+    },
     waf: {
       global: {
         requestsPerEvaluationWindow: 2000,

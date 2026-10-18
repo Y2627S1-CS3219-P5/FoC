@@ -1,22 +1,15 @@
-import { App, Stack, Tags, Validations } from "aws-cdk-lib";
+import { App, Tags } from "aws-cdk-lib";
 import type { DeploymentConfig } from "./config.js";
+import { FoundationStack } from "./foundation-stack.js";
 
-/**
- * Creates only the initial stack boundary. Ticket #47 adds the Foundation resources;
- * later tickets add Data, Application, and Edge stacks after their blockers clear.
- */
+/** Creates the gated Foundation stack; later tickets add dependent stacks. */
 export function createFocDemoApp(config: DeploymentConfig): App {
   const app = new App();
-  const foundation = new Stack(app, "FoCDemoFoundation", {
+  const foundation = new FoundationStack(app, "FoCDemoFoundation", {
     stackName: "foc-demo-foundation",
-    description:
-      "FoC demo foundation resources (implementation tracked by issue #47)",
+    description: "FoC demo network, registry, and ECS foundation resources",
     env: { account: config.accountId, region: config.primaryRegion },
-  });
-  Validations.of(foundation).acknowledge({
-    id: "CloudFormation-Validate::F0001",
-    reason:
-      "Issue #46 establishes only the guarded stack boundary; issue #47 adds resources.",
+    retainedImageCount: config.registry.retainedImageCount,
   });
 
   for (const [key, value] of Object.entries({

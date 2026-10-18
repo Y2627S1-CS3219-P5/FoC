@@ -1764,3 +1764,26 @@ defaults, performed only read-only AWS capability checks, reproduced the public-
 estimate with deterministic integer arithmetic, and made synth/deploy entry depend on
 matching current preflight and budget evidence. It recorded the existing school SCP quota
 denial and absent CDK bootstrap as blockers rather than weakening the approved design.
+
+## 2026-10-18 — AWS CDK foundation stack
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #47; regional
+  network, ECS/Service Connect foundation, ECR repositories, outputs, tests, and
+  documentation
+- **Repository files affected:** `infrastructure/lib/{app,config,foundation-stack}.ts`,
+  `infrastructure/test/{app,config,fixtures}.ts`, `infrastructure/config/demo.example.json`,
+  `infrastructure/README.md`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented only the unblocked Foundation ticket without provisioning. It added the
+two-AZ no-NAT network, private Service Connect namespace, and exactly three disposable,
+immutable, scanned ECR repositories. It kept image retention as a reviewed deployment
+input, published dependent-stack outputs, and added CDK assertions for isolation, tags,
+lifecycle, encryption, and removal behavior.

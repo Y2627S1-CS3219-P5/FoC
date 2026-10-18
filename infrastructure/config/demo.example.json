@@ -30,6 +30,9 @@
       "memoryTargetPercent": "REPLACE_WITH_MEASURED_TARGET"
     }
   },
+  "registry": {
+    "retainedImageCount": "REPLACE_WITH_APPROVED_IMAGE_RETENTION_COUNT"
+  },
   "waf": {
     "global": {
       "requestsPerEvaluationWindow": "REPLACE_WITH_BOUNDED_TEST_RESULT",

@@ -6,12 +6,40 @@ verification instructions. No AWS resources were created or changed.
 Author review: Pending pull-request review by @ron.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Drafted the issue #47 CDK foundation implementation and verification guidance.
+No AWS resources were created or changed.
+Author review: Pending pull-request review by @ron.
+-->
+
 # FoC AWS infrastructure
 
 This TypeScript AWS CDK package implements the pre-provisioning guardrails from
-[`SPEC.md`](SPEC.md). Issue #46 intentionally creates no AWS resources. Foundation
-resources begin in issue #47 only after the configuration, cost, capability, quota, and
-bootstrap gates pass.
+[`SPEC.md`](SPEC.md) and the regional Foundation stack. Provisioning remains blocked until
+the configuration, cost, capability, quota, and bootstrap gates pass.
+
+## Foundation stack
+
+`foc-demo-foundation` synthesizes only the shared resources approved in issue #47:
+
+- a two-AZ VPC with two public task subnets, two private isolated ALB subnets, and two
+  private isolated RDS subnets;
+- an internet gateway for the public task subnets, with no NAT gateway or paid VPC
+  endpoint;
+- an ECS cluster and the private `foc-demo.local` Service Connect namespace; and
+- exactly three private ECR repositories for frontend, User Service, and Supplier Service.
+
+The default VPC security group is restricted. The application security-group rules are
+added with the services in a later increment. ECR tags are immutable, basic scanning runs
+on push, AES-256 encryption is explicit, and the reviewed image-retention count is required
+in `registry.retainedImageCount`. Final stack deletion empties and removes the disposable
+repositories; it does not retain course images.
+
+Outputs publish the VPC and subnet IDs, cluster name/ARN, Service Connect namespace
+name/ID/ARN, and repository names/ARNs/URIs for later stacks. No Order or Credit resource
+is included.
 
 ## Prerequisites
 
@@ -44,7 +72,8 @@ will be generated in Secrets Manager in later increments.
 The parser has no deployment defaults for unresolved decisions. It rejects missing fields,
 unknown fields, placeholder strings, invalid Fargate sizes, a non-NUS administrator email,
 an authentication rate rule that is not stricter than the global rule, and a database
-autoscaling cap below its initial storage.
+autoscaling cap below its initial storage. It also requires a positive, reviewed ECR
+retention count rather than choosing an unapproved lifecycle value.
 
 Because the NUS SCP currently hides Service Quotas, the configuration also requires a
 named quota confirmation and evidence reference. That manual record does not turn a failed
@@ -89,10 +118,13 @@ inputs and NUS budget approval are separate blockers.
 
 ```sh
 npm run typecheck
+npm run lint
 npm test
 npm run build
 ```
 
 The tests cover complete and incomplete configuration, deterministic cost arithmetic,
 budget failure, stale/tampered artifacts, wrong-account identity, denied service reads,
-quota denial, and missing CDK bootstrap.
+quota denial, missing CDK bootstrap, VPC isolation and routing, the Service Connect
+namespace, ECR security/lifecycle/removal behavior, required tags, and Foundation outputs.
+They synthesize locally and do not contact or mutate AWS.

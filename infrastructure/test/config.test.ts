@@ -49,6 +49,12 @@ test("requires maximum database storage to cover initial storage", () => {
   assert.throws(() => parseDeploymentConfig(invalid), /maximumStorageGiB/);
 });
 
+test("requires a positive ECR image retention count", () => {
+  const invalid = validConfig();
+  invalid.registry.retainedImageCount = 0;
+  assert.throws(() => parseDeploymentConfig(invalid), /retainedImageCount/);
+});
+
 test("configuration fingerprint is independent of JSON key order", () => {
   const config = validConfig();
   const reversed = Object.fromEntries(Object.entries(config).reverse());
