@@ -2329,3 +2329,33 @@ High advisory and Supplier development-tooling advisories (one Critical handleba
 24 Moderate findings); production User/Supplier installs reported zero. No npm package
 was changed as part of this OS-only correction. Full CI and exact-release ECR rescans
 remain required on the combined branch.
+
+## 2026-10-18 — Frontend source-map build dependency security patch
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Resolve the issue #52 compatible frontend build-tool advisory
+  discovered during container release verification; no application behavior or AWS
+  resource was changed.
+- **Repository files affected:** `frontend/package-lock.json`,
+  `frontend/AI-DISCLOSURES.md`, and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+The full frontend audit identified High advisory GHSA-68fv-2mgg-jv7q in development-only
+source-map-js 1.2.1. Its [upstream patch release](https://github.com/7rulnik/source-map-js/releases/tag/v1.2.2)
+and official npm metadata confirm 1.2.2 fixes indexed-source-map denial of service and
+satisfies every existing `^1.2.1` constraint. Codex used a targeted npm lock refresh and
+discarded unrelated generated optional-package metadata, leaving exactly one dependency
+entry changed (version, tarball, and official integrity checksum). No package.json change,
+override, major upgrade, or forced audit fix was needed.
+
+Verification passed: clean `npm ci --ignore-scripts`, all 12 frontend suites/32 tests,
+static local/cloud gateway contracts, lint, TypeScript/Vite production build, and
+`git diff --check`. Full and production-only npm audits each report zero vulnerabilities.
+The parent deployment workflow will run combined CI and rebuild/rescan the exact release;
+these dependency checks do not replace cloud image scanning or live acceptance.
