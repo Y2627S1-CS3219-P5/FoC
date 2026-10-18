@@ -13,7 +13,7 @@ import { isDatabaseUnavailable } from "./dbAvailability";
 import { Consumer, KafkaSendError, OutgoingMessage } from "./kafka";
 import { errorMessage, log } from "./log";
 import { parseAccountStatusNotification, parseCreditCommand } from "./messages";
-import { handleReserveRequested, handleTerminalEvent } from "./reservations";
+import { handleClosingMessage, handleReserveRequested } from "./reservations";
 
 export interface IncomingRecord {
   topic: string;
@@ -99,9 +99,9 @@ export async function processRecord(deps: ConsumerDeps, record: IncomingRecord):
       return;
     }
 
-    const outcome = await handleTerminalEvent(deps.pool, msg);
+    const outcome = await handleClosingMessage(deps.pool, msg);
     if (outcome.kind === "invalid") return sendToDlq(deps, record, outcome.reason, 1);
-    log.info("terminal_event_processed", {
+    log.info("closing_message_processed", {
       ...where,
       type: msg.type,
       outcome: outcome.kind,

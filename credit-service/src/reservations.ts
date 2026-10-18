@@ -4,13 +4,17 @@
  * Scope: Reserve, capture and release as decided in docs/decision-record.md (D2, D3, D5, D6,
  *        D8) and implementation-proposal.md §6.4 and §6.5.
  * Author review: Reviewed and approved by @phuc
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: ReservationTimedOut handled with the terminal events, per
+ *        order-service/docs/order-credit-contract.md on feat/order-service-core.
+ * Author review of additional changes: PENDING
  */
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { forfeitIfDue, newForfeitOperationId, recordTransaction } from "./accounts";
 import { CREDIT_RESULTS_TOPIC } from "./config";
 import { inTransaction, isUniqueViolation, rollback, toAmount } from "./db";
-import { ReserveRequested, TerminalEvent, TerminalEventType } from "./messages";
+import { ClosingMessage, ReserveRequested } from "./messages";
 import { insertOutboxEvent } from "./outbox";
 
 export type RejectionReason = "INSUFFICIENT_CREDIT" | "ACCOUNT_NOT_FOUND" | "ACCOUNT_NOT_ACTIVE" | "INVALID_AMOUNT";
@@ -121,28 +125,31 @@ export async function handleReserveRequested(pool: Pool, msg: ReserveRequested):
   return rejection(msg, "INSUFFICIENT_CREDIT");
 }
 
-export type TerminalOutcome =
+export type ClosingOutcome =
   | { kind: "applied" }
+  // ReservationTimedOut for an order with no hold (rejected, or never reserved). Nothing to do
+  | { kind: "no_hold" }
   // This operation was already applied
   | { kind: "duplicate" }
   // Nothing changed; the caller sends the message to the DLQ (CS-F2.4, CS-F2.5)
   | { kind: "invalid"; reason: string };
 
-const CLOSED_BY: Record<TerminalEventType, string> = {
+const CLOSED_BY: Record<ClosingMessage["type"], string> = {
   OrderCompleted: "COMPLETED",
   OrderCancelled: "CANCELLED",
   OrderExpired: "EXPIRED",
   OrderFailed: "FAILED",
+  ReservationTimedOut: "TIMED_OUT",
 };
 
 /**
- * Handles OrderCompleted (capture) and OrderCancelled / OrderExpired / OrderFailed (release)
- * in one transaction (CS-F2.2 to CS-F2.5, decision D6). Processed whatever the account
- * status (CS-F4.1.1).
+ * Handles OrderCompleted (capture) and OrderCancelled / OrderExpired / OrderFailed /
+ * ReservationTimedOut (release) in one transaction (CS-F2.2 to CS-F2.5, decision D6).
+ * Processed whatever the account status (CS-F4.1.1).
  */
-export async function handleTerminalEvent(pool: Pool, msg: TerminalEvent): Promise<TerminalOutcome> {
-  return inTransaction(pool, async (client): Promise<TerminalOutcome> => {
-    const invalid = (reason: string) => rollback<TerminalOutcome>({ kind: "invalid", reason });
+export async function handleClosingMessage(pool: Pool, msg: ClosingMessage): Promise<ClosingOutcome> {
+  return inTransaction(pool, async (client): Promise<ClosingOutcome> => {
+    const invalid = (reason: string) => rollback<ClosingOutcome>({ kind: "invalid", reason });
 
     // 1. Lock the reservation
     const { rows } = await client.query(
@@ -151,14 +158,19 @@ export async function handleTerminalEvent(pool: Pool, msg: TerminalEvent): Promi
       [msg.orderId],
     );
     const reservation = rows[0];
-    if (!reservation) return invalid("no reservation for order_id");
+    if (!reservation) {
+      // Order may time out a reserve that Credit rejected. Partition order guarantees the
+      // ReserveRequested was handled first, so no hold can appear later (order-credit contract)
+      if (msg.type === "ReservationTimedOut") return { kind: "no_hold" };
+      return invalid("no reservation for order_id");
+    }
 
     // 2. Already finalised: by this operation (duplicate) or by another one (conflict)
     if (reservation.status !== "HELD") {
       const same = await client.query("SELECT 1 FROM credit_transactions WHERE operation_id = $1 LIMIT 1", [
         msg.operationId,
       ]);
-      if (same.rows.length > 0) return rollback<TerminalOutcome>({ kind: "duplicate" });
+      if (same.rows.length > 0) return rollback<ClosingOutcome>({ kind: "duplicate" });
       return invalid(`reservation already ${reservation.status} (closed by ${reservation.closed_by})`);
     }
 
@@ -167,7 +179,7 @@ export async function handleTerminalEvent(pool: Pool, msg: TerminalEvent): Promi
     if (reservation.requester_id !== msg.requesterId) return invalid("requester_id does not match the reservation");
     if (amount !== msg.amount) return invalid("amount does not match the reservation");
     const capture = msg.type === "OrderCompleted";
-    const courierId = msg.courierId;
+    const courierId = msg.type === "OrderCompleted" ? msg.courierId : null;
     if (capture && (courierId === null || courierId === msg.requesterId)) {
       return invalid("OrderCompleted needs a courier_id different from requester_id");
     }

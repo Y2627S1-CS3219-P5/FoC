@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { Client, Pool } from "pg";
 import { handleAccountStatus } from "../src/accounts";
-import { ReserveRequested, TerminalEvent, TerminalEventType } from "../src/messages";
+import { ReservationTimedOut, ReserveRequested, TerminalEvent, TerminalEventType } from "../src/messages";
 import { migrate } from "../src/migrations";
 
 // TEST_DATABASE_URL must point at a disposable PostgreSQL server as a superuser (to create a
@@ -95,6 +95,16 @@ export function terminalMsg(
     orderId: reserve.orderId,
     requesterId: reserve.requesterId,
     courierId,
+    amount: reserve.amount,
+  };
+}
+
+export function timedOutMsg(reserve: ReserveRequested): ReservationTimedOut {
+  return {
+    type: "ReservationTimedOut",
+    operationId: randomUUID(),
+    orderId: reserve.orderId,
+    requesterId: reserve.requesterId,
     amount: reserve.amount,
   };
 }

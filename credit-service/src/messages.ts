@@ -4,6 +4,10 @@
  * Scope: Validation of incoming message payloads, using the fields defined in
  *        implementation-proposal.md §5.2 and §6.2.
  * Author review: Reviewed and approved by @phuc
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: ReservationTimedOut, per order-service/docs/order-credit-contract.md on
+ *        feat/order-service-core.
+ * Author review of additional changes: PENDING
  */
 
 // Incoming messages arrive as parsed JSON from Kafka and are checked here before any
@@ -39,7 +43,20 @@ export interface TerminalEvent {
   amount: number;
 }
 
-export type CreditCommand = ReserveRequested | TerminalEvent;
+// Order gave up waiting for a reply to its ReserveRequested. Releases the hold if one exists;
+// otherwise nothing happens (order-credit contract)
+export interface ReservationTimedOut {
+  type: "ReservationTimedOut";
+  operationId: string;
+  orderId: string;
+  requesterId: string;
+  amount: number;
+}
+
+// The messages that finalise a hold
+export type ClosingMessage = TerminalEvent | ReservationTimedOut;
+
+export type CreditCommand = ReserveRequested | ClosingMessage;
 
 export type Parsed<T> = { ok: true; message: T } | { ok: false; reason: string };
 
@@ -96,11 +113,14 @@ export function parseAccountStatusNotification(raw: unknown): Parsed<AccountStat
   });
 }
 
-/** A message from credit.commands: ReserveRequested or one of the four terminal events. */
+/**
+ * A message from credit.commands: ReserveRequested, one of the four terminal events, or
+ * ReservationTimedOut.
+ */
 export function parseCreditCommand(raw: unknown): Parsed<CreditCommand> {
   return parse(raw, (body): CreditCommand => {
     const type = field(body, "type");
-    if (type === "ReserveRequested") {
+    if (type === "ReserveRequested" || type === "ReservationTimedOut") {
       return {
         type,
         operationId: uuid(body, "operation_id"),

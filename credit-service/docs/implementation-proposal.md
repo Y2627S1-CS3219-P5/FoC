@@ -81,8 +81,11 @@ partition count is raised later.
 | `OPEN → CANCELLED`, `ACCEPTED → CANCELLED` | **Release**: requester reserved −X, available +X | `OrderCancelled` | CS-F2.2.2 |
 | `OPEN → EXPIRED` | **Release** | `OrderExpired` | CS-F2.2.2 |
 | `DISPUTED → FAILED` (admin for requester) | **Release** | `OrderFailed` | CS-F2.2.2, CS-F2.3 |
+| `PENDING_RESERVATION → RESERVATION_TIMED_OUT` (no reply in time) | **Release** if a hold exists; otherwise nothing | `ReservationTimedOut` | order-credit contract |
 
-Only the four terminal events move credits. The Credit Service never sees non-terminal
+Only the four terminal events and `ReservationTimedOut` move credits after the hold.
+`ReservationTimedOut` may arrive for an order that has no hold (the reserve was rejected); it is
+then ignored, not dead-lettered. See `order-service/docs/order-credit-contract.md`. The Credit Service never sees non-terminal
 transitions, which keeps the two services loosely coupled.
 
 ## 4. Database: `credit-db` (PostgreSQL 17)
@@ -133,7 +136,7 @@ CREATE TABLE credit_reservations (
   amount          BIGINT NOT NULL CHECK (amount > 0),
   status          TEXT   NOT NULL CHECK (status IN ('HELD','CAPTURED','RELEASED')),
   courier_id      UUID,
-  closed_by       TEXT CHECK (closed_by IN ('COMPLETED','CANCELLED','EXPIRED','FAILED')),
+  closed_by       TEXT CHECK (closed_by IN ('COMPLETED','CANCELLED','EXPIRED','FAILED','TIMED_OUT')),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   finalised_at    TIMESTAMPTZ,
   CHECK ((status = 'HELD') = (finalised_at IS NULL)),
@@ -180,7 +183,7 @@ CREATE INDEX credit_transactions_user_history_idx
 | Initial grant | `INITIAL_GRANT` (available +100) |
 | Reserve | `RESERVE` (available −X, reserved +X) |
 | `OrderCompleted` | `CAPTURE_DEBIT` for the requester (reserved −X), `CAPTURE_CREDIT` for the courier (available +X) |
-| `OrderCancelled` / `OrderExpired` / `OrderFailed` | `RELEASE` (reserved −X, available +X) |
+| `OrderCancelled` / `OrderExpired` / `OrderFailed` / `ReservationTimedOut` | `RELEASE` (reserved −X, available +X) |
 | Forfeit | `FORFEIT` (available −balance) |
 
 Rules:
@@ -379,6 +382,13 @@ type=OrderCompleted|OrderCancelled|OrderExpired|OrderFailed
 operation_id  order_id  requester_id  courier_id (Completed only)  amount  occurred_at  schema_version=1
 ```
 
+Reservation timeout (Order gave up waiting for a reply to its `ReserveRequested`)
+
+```text
+type=ReservationTimedOut
+operation_id  order_id  requester_id  amount  occurred_at  schema_version=1   (no courier_id)
+```
+
 > **Author decision:** whether Credit Service also publishes `CreditCaptured` /
 > `CreditReleased` for terminal events. OS-NFR3.2 only needs the credits to move.
 
@@ -452,11 +462,12 @@ after a crash between producing and committing the offset. The requirement becom
 > CS-NFR2.3 in D1. If the team keeps CS-NFR2.3 as written, rejections must be stored instead: a
 > table keyed by `operation_id` holding the outcome and reply, written in its own transaction.
 
-### 6.5 Terminal event handling (CS-F2.2 to CS-F2.5)
+### 6.5 Terminal event and `ReservationTimedOut` handling (CS-F2.2 to CS-F2.5)
 
 In one transaction:
 
-1. `SELECT ... FROM credit_reservations WHERE order_id = $1 FOR UPDATE`.
+1. `SELECT ... FROM credit_reservations WHERE order_id = $1 FOR UPDATE`. No row: a terminal
+   event goes to the DLQ; a `ReservationTimedOut` does nothing and the offset is committed.
 2. If `status <> 'HELD'`:
    - the same `operation_id` is already in `credit_transactions` → duplicate; commit the
      offset and stop (CS-F2.5).
@@ -470,7 +481,7 @@ In one transaction:
 5. Apply the balance change and write the §4.3 rows:
    - **Capture** (`OrderCompleted`): requester `reserved -= X` (`CAPTURE_DEBIT`); courier
      `available += X` (`CAPTURE_CREDIT`).
-   - **Release** (`OrderCancelled` / `OrderExpired` / `OrderFailed`): requester
+   - **Release** (`OrderCancelled` / `OrderExpired` / `OrderFailed` / `ReservationTimedOut`): requester
      `reserved -= X`, `available += X` (`RELEASE`).
 6. Set the reservation's `status` (`CAPTURED` or `RELEASED`), `closed_by` and `finalised_at`.
 7. If the requester's account is `CLOSED`, `reserved_balance` is now 0 and `forfeited_at` is

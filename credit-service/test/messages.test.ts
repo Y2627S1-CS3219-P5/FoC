@@ -53,6 +53,15 @@ describe("parseCreditCommand", () => {
     const cancelled = parseCreditCommand({ ...completed, type: "OrderCancelled", courier_id: A });
     assert.ok(cancelled.ok && "courierId" in cancelled.message && cancelled.message.courierId === null);
   });
+
+  it("accepts ReservationTimedOut without a courier_id", () => {
+    const timedOut = { type: "ReservationTimedOut", operation_id: A, order_id: B, requester_id: C, amount: 5, schema_version: 1 };
+    assert.deepEqual(parseCreditCommand(timedOut), {
+      ok: true,
+      message: { type: "ReservationTimedOut", operationId: A, orderId: B, requesterId: C, amount: 5 },
+    });
+    assert.equal(parseCreditCommand({ ...timedOut, order_id: "not-a-uuid" }).ok, false);
+  });
 });
 
 describe("parseAccountStatusNotification", () => {

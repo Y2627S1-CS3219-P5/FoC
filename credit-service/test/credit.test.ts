@@ -11,7 +11,7 @@ import { after, afterEach, before, describe, it } from "node:test";
 import { Pool } from "pg";
 import { getBalance, handleAccountStatus } from "../src/accounts";
 import { AccountStatus } from "../src/messages";
-import { handleReserveRequested, handleTerminalEvent } from "../src/reservations";
+import { handleReserveRequested, handleClosingMessage } from "../src/reservations";
 import {
   TestDatabase,
   activeAccount,
@@ -20,6 +20,7 @@ import {
   createTestDatabase,
   reserveMsg,
   terminalMsg,
+  timedOutMsg,
   transactionTypes,
 } from "./helpers";
 
@@ -163,7 +164,7 @@ describe("terminal events", () => {
     const reserve = await reserved(requester, 40);
     const completed = terminalMsg("OrderCompleted", reserve, courier);
 
-    const outcomes = await Promise.all(Array.from({ length: 20 }, () => handleTerminalEvent(pool, completed)));
+    const outcomes = await Promise.all(Array.from({ length: 20 }, () => handleClosingMessage(pool, completed)));
     assert.equal(outcomes.filter((o) => o.kind === "applied").length, 1);
     assert.equal(outcomes.filter((o) => o.kind === "duplicate").length, 19);
 
@@ -181,7 +182,7 @@ describe("terminal events", () => {
     it(`releases on ${type}`, async () => {
       const requester = await activeAccount(pool);
       const reserve = await reserved(requester, 25);
-      assert.equal((await handleTerminalEvent(pool, terminalMsg(type, reserve))).kind, "applied");
+      assert.equal((await handleClosingMessage(pool, terminalMsg(type, reserve))).kind, "applied");
       assert.deepEqual(await balanceOf(pool, requester), { available: 100, reserved: 0 });
       assert.deepEqual(await transactionTypes(pool, requester), ["INITIAL_GRANT", "RESERVE", "RELEASE"]);
     });
@@ -192,8 +193,8 @@ describe("terminal events", () => {
     const courier = await activeAccount(pool);
     const reserve = await reserved(requester, 20);
     const outcomes = await Promise.all([
-      handleTerminalEvent(pool, terminalMsg("OrderCompleted", reserve, courier)),
-      handleTerminalEvent(pool, terminalMsg("OrderCancelled", reserve)),
+      handleClosingMessage(pool, terminalMsg("OrderCompleted", reserve, courier)),
+      handleClosingMessage(pool, terminalMsg("OrderCancelled", reserve)),
     ]);
     assert.deepEqual(outcomes.map((o) => o.kind).sort(), ["applied", "invalid"]);
   });
@@ -205,7 +206,7 @@ describe("terminal events", () => {
       reserves.push(await reserved(await activeAccount(pool), 2));
     }
     const outcomes = await Promise.all(
-      reserves.map((r) => handleTerminalEvent(pool, terminalMsg("OrderCompleted", r, courier))),
+      reserves.map((r) => handleClosingMessage(pool, terminalMsg("OrderCompleted", r, courier))),
     );
     assert.ok(outcomes.every((o) => o.kind === "applied"));
     assert.deepEqual(await balanceOf(pool, courier), { available: 200, reserved: 0 });
@@ -215,7 +216,7 @@ describe("terminal events", () => {
     const requester = await activeAccount(pool);
     const reserve = await reserved(requester, 10);
     await setStatus(requester, "SUSPENDED");
-    assert.equal((await handleTerminalEvent(pool, terminalMsg("OrderCancelled", reserve))).kind, "applied");
+    assert.equal((await handleClosingMessage(pool, terminalMsg("OrderCancelled", reserve))).kind, "applied");
     assert.deepEqual(await balanceOf(pool, requester), { available: 100, reserved: 0 });
   });
 
@@ -229,10 +230,48 @@ describe("terminal events", () => {
     const unknownOrder = { ...terminalMsg("OrderCancelled", reserve), orderId: randomUUID() };
     const courierWithoutAccount = terminalMsg("OrderCompleted", reserve, randomUUID());
     for (const msg of [wrongAmount, wrongRequester, unknownOrder, courierWithoutAccount]) {
-      assert.equal((await handleTerminalEvent(pool, msg)).kind, "invalid");
+      assert.equal((await handleClosingMessage(pool, msg)).kind, "invalid");
     }
     assert.deepEqual(await balanceOf(pool, requester), { available: 90, reserved: 10 });
     assert.deepEqual(await balanceOf(pool, courier), { available: 100, reserved: 0 });
+  });
+});
+
+describe("ReservationTimedOut", () => {
+  it("releases a held reservation and closes it as TIMED_OUT", async () => {
+    const requester = await activeAccount(pool);
+    const reserve = await reserved(requester, 15);
+    const timedOut = timedOutMsg(reserve);
+
+    assert.equal((await handleClosingMessage(pool, timedOut)).kind, "applied");
+    assert.equal((await handleClosingMessage(pool, timedOut)).kind, "duplicate"); // redelivery
+    assert.deepEqual(await balanceOf(pool, requester), { available: 100, reserved: 0 });
+    assert.deepEqual(await transactionTypes(pool, requester), ["INITIAL_GRANT", "RESERVE", "RELEASE"]);
+    const { rows } = await pool.query("SELECT status, closed_by FROM credit_reservations WHERE order_id = $1", [
+      reserve.orderId,
+    ]);
+    assert.deepEqual(rows[0], { status: "RELEASED", closed_by: "TIMED_OUT" });
+  });
+
+  it("does nothing when the reserve was rejected, every time it arrives", async () => {
+    const requester = await activeAccount(pool);
+    const reserve = reserveMsg(requester, 500);
+    assert.equal((await handleReserveRequested(pool, reserve)).kind, "rejected");
+
+    const timedOut = timedOutMsg(reserve);
+    assert.equal((await handleClosingMessage(pool, timedOut)).kind, "no_hold");
+    assert.equal((await handleClosingMessage(pool, timedOut)).kind, "no_hold");
+    assert.deepEqual(await transactionTypes(pool, requester), ["INITIAL_GRANT"]);
+  });
+
+  it("sends a mismatch, or a second closing message, to the DLQ", async () => {
+    const requester = await activeAccount(pool);
+    const reserve = await reserved(requester, 10);
+    assert.equal((await handleClosingMessage(pool, { ...timedOutMsg(reserve), amount: 11 })).kind, "invalid");
+
+    assert.equal((await handleClosingMessage(pool, timedOutMsg(reserve))).kind, "applied");
+    assert.equal((await handleClosingMessage(pool, terminalMsg("OrderCancelled", reserve))).kind, "invalid");
+    assert.deepEqual(await balanceOf(pool, requester), { available: 100, reserved: 0 });
   });
 });
 
@@ -248,11 +287,11 @@ describe("forfeit on CLOSED", () => {
     const rejected = await handleReserveRequested(pool, reserveMsg(requester, 1));
     assert.equal(rejected.kind === "rejected" && rejected.reason, "ACCOUNT_NOT_ACTIVE");
 
-    await handleTerminalEvent(pool, terminalMsg("OrderCancelled", first));
+    await handleClosingMessage(pool, terminalMsg("OrderCancelled", first));
     assert.deepEqual(await balanceOf(pool, requester), { available: 80, reserved: 20 });
 
     const courier = await activeAccount(pool);
-    await handleTerminalEvent(pool, terminalMsg("OrderCompleted", second, courier));
+    await handleClosingMessage(pool, terminalMsg("OrderCompleted", second, courier));
     assert.deepEqual(await balanceOf(pool, requester), { available: 0, reserved: 0 });
     assert.deepEqual(await transactionTypes(pool, requester), [
       "INITIAL_GRANT", "RESERVE", "RESERVE", "RELEASE", "CAPTURE_DEBIT", "FORFEIT",
