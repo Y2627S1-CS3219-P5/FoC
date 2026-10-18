@@ -23,6 +23,9 @@
  * disposable User database credentials and an audit key required by the
  * current Compose stack for issue #42 CI.
  * Author review: Pending project-author review.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18; supplied
+ * disposable Credit database credentials now required by the Compose stack.
+ * Author review: Pending project-author review.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -60,6 +63,9 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const testEnvironment = {
   ...process.env,
   AUDIT_HMAC_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  CREDIT_DB_ADMIN_PASSWORD: "supplier-smoke-credit-admin-password",
+  CREDIT_DB_APP_PASSWORD: "supplier-smoke-credit-runtime-password",
+  CREDIT_DB_MIGRATION_PASSWORD: "supplier-smoke-credit-migration-password",
   JWT_SECRET: "supplier-smoke-only-jwt-secret-32-characters",
   SUPPLIER_DB_ADMIN_PASSWORD: "supplier-smoke-admin-password",
   SUPPLIER_DB_ADMIN_USER: "supplier_bootstrap",

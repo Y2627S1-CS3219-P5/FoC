@@ -8,6 +8,10 @@
  * required by the current Compose stack, and retained failure diagnostics for
  * the issue #42 CI artifact.
  * Author review: Pending project-author review.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18.
+ * Scope: Supplied the disposable Credit database credentials now required by
+ * the Compose stack.
+ * Author review: Pending project-author review.
  */
 import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
@@ -30,6 +34,9 @@ const memberPassword = 'SupplierUiMember1'
 const environment = {
   ...process.env,
   AUDIT_HMAC_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  CREDIT_DB_ADMIN_PASSWORD: 'supplier-ui-credit-admin-password',
+  CREDIT_DB_APP_PASSWORD: 'supplier-ui-credit-runtime-password',
+  CREDIT_DB_MIGRATION_PASSWORD: 'supplier-ui-credit-migration-password',
   JWT_SECRET: 'supplier-ui-smoke-only-jwt-secret-32-characters',
   SUPPLIER_DB_ADMIN_PASSWORD: 'supplier-ui-smoke-admin-password',
   SUPPLIER_DB_MIGRATION_PASSWORD: 'supplier-ui-smoke-migration-password',
