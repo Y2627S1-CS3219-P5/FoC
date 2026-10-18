@@ -166,6 +166,11 @@ export class FoundationStack extends Stack {
     );
     output("ClusterName", this.cluster.clusterName, "FoC ECS cluster name");
     output("ClusterArn", this.cluster.clusterArn, "FoC ECS cluster ARN");
+    // Keep the existing automatic export while Application drops its old event
+    // rule import. Foundation deploys first, so removing both in one release
+    // would fail while the deployed consumer still uses the export. Any later
+    // removal must be separately reviewed after all consumers are decoupled.
+    this.exportValue(this.cluster.clusterArn);
     output(
       "ServiceConnectNamespaceName",
       this.serviceConnectNamespace.namespaceName,

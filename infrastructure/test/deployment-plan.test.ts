@@ -169,7 +169,7 @@ test("synth, diff, and deploy use the configured AWS profile", () => {
 
 test("release order establishes every real CDK export before its consumer", () => {
   // This is the actual first-deploy seam: the image-independent phase has no
-  // consumers, so CDK has not yet generated its cross-stack exports.
+  // consumers, so only the pinned compatibility export is present initially.
   const foundationAssembly = createFocDemoApp(
     validConfig(),
     undefined,
@@ -187,8 +187,13 @@ test("release order establishes every real CDK export before its consumer", () =
   assert.ok(isRecord(initialTemplate));
   assert.ok(isRecord(reconciledTemplate));
   const availableExports = exportsIn(initialTemplate);
-  assert.equal(availableExports.size, 0);
-  assert.ok(exportsIn(reconciledTemplate).size > 0);
+  assert.deepEqual(
+    availableExports,
+    new Set([
+      "foc-demo-foundation:ExportsOutputFnGetAttClusterEB0386A7Arn2F2E3C3F",
+    ]),
+  );
+  assert.ok(exportsIn(reconciledTemplate).size > availableExports.size);
   // Publishing the newly generated outputs does not replace or alter resources.
   assert.deepEqual(initialTemplate.Resources, reconciledTemplate.Resources);
 
@@ -217,6 +222,40 @@ test("release order establishes every real CDK export before its consumer", () =
       for (const name of exportsIn(stack.template)) availableExports.add(name);
     }
   });
+});
+
+test("preserves the deployed cluster ARN export after Application drops its import", () => {
+  const foundationAssembly = createFocDemoApp(
+    validConfig(),
+    undefined,
+    "foundation",
+  ).synth();
+  const releaseAssembly = createFocDemoApp(
+    validConfig(),
+    validReleaseManifest(),
+    "release",
+  ).synth();
+  const exportId = "ExportsOutputFnGetAttClusterEB0386A7Arn2F2E3C3F";
+  const exportName = `foc-demo-foundation:${exportId}`;
+  const expectedOutput = {
+    Value: { "Fn::GetAtt": ["ClusterEB0386A7", "Arn"] },
+    Export: { Name: exportName },
+  };
+  const initial: unknown =
+    foundationAssembly.getStackArtifact("FoCDemoFoundation").template;
+  const reconciled: unknown =
+    releaseAssembly.getStackArtifact("FoCDemoFoundation").template;
+  assert.ok(isRecord(initial) && isRecord(initial.Outputs));
+  assert.ok(isRecord(reconciled) && isRecord(reconciled.Outputs));
+  assert.deepEqual(initial.Outputs[exportId], expectedOutput);
+  assert.deepEqual(reconciled.Outputs[exportId], expectedOutput);
+  assert.deepEqual(initial.Resources, reconciled.Resources);
+  assert.equal(
+    importsIn(
+      releaseAssembly.getStackArtifact("FoCDemoApplication").template,
+    ).has(exportName),
+    false,
+  );
 });
 
 test("binds release approval to the reconciled Foundation template", () => {

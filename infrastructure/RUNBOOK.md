@@ -120,9 +120,14 @@ The wrapper enforces this order:
 5. deploy Edge only and wait for CloudFront to report deployed; and
 6. run the existing Bash API journeys and Playwright browser journeys through CloudFront.
 
-CDK generates Foundation's cross-stack exports only when Data and Application consumers
-are present. The initial phase therefore lacks these exports, even though it creates the
-same resources. The release plan includes all four templates and diffs in its approval
+CDK generates most Foundation cross-stack exports only when Data and Application consumers
+are present. The initial phase therefore lacks those exports, even though it creates the
+same resources. The cluster ARN compatibility export is explicitly retained with
+`Stack.exportValue`: Application's corrected event rule no longer imports it, but a
+previously deployed Application still does until its update succeeds. Removing both ends
+in one Foundation-first release would fail. Keep this harmless output until a separate
+review confirms no remaining consumers before cleanup. The release plan includes all four
+templates and diffs in its approval
 token, then publishes Foundation's generated outputs before Data imports them. A failed
 Foundation reconciliation stops the release before Data or any database job. This keeps
 the four approved stacks and avoids copying generated physical ARNs. See the

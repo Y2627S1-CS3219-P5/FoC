@@ -2539,3 +2539,30 @@ fix. Infrastructure `npm run check` passed typecheck, lint, formatting, and all 
 tests (including strict four-stack pinned-CLI offline synthesis); `npm run build`
 passed, `npm audit --offline` reported zero vulnerabilities, and `git diff --check`
 passed. Deployment and real alarm delivery remain the coordinator's live checks.
+
+## 2026-10-18 — Preserve the deployed cluster export while decoupling its consumer
+
+Tool: OpenAI Codex (GPT-6). Contributor: @ron (AI-assisted).
+Issue: #52. Implementation review: PENDING.
+
+The coordinator's reviewed release plan exposed one removed Foundation output:
+`ExportsOutputFnGetAttClusterEB0386A7Arn2F2E3C3F`. Its read-only live import inventory
+still named the deployed Application stack, so the approved Foundation-first order
+could not safely remove that export and its consumer in one release. No apply was
+attempted with that stale plan.
+
+Following the AWS CDK skill and [Stack.exportValue documentation](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.Stack.html#exportvalueexportedvalue-options),
+Codex first added a failing assembly regression, then explicitly retained the generated
+export with `this.exportValue(this.cluster.clusterArn)`. The regression proves the
+exact prior output logical ID, export name, and value survive in both phases while
+Application no longer imports it, and Foundation resources remain identical. The
+initial-phase export-count expectation and runbook now describe the compatibility
+output truthfully; its harmless removal is deferred to a separately reviewed cleanup.
+The complete parent-plan diff contained no other removed outputs. Stack/resource
+identities, deployment order, IAM, application settings, and RDS were not changed.
+
+Verification: red then green regression; infrastructure `npm run check` passed typecheck,
+lint, formatting, and all 141 tests, including actual pinned-CLI strict four-stack offline
+synthesis. Build passed; offline audit reported zero vulnerabilities; `git diff --check`
+passed. This implementer made no AWS calls, push, or primary-branch changes. New release
+evidence and approval must be generated for the new revision before deployment.
