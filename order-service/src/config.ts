@@ -16,6 +16,10 @@
  * Scope: AUTH_MODE=user-service with its URL and timeout, and a startup check that refuses
  *        CREDIT_MODE=kafka with stub sessions.
  * Author review of additional changes: Reviewed and approved by @phuc
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: http mode for AUTH_MODE and SUPPLIER_MODE, with the User and Supplier base URLs and
+ *        timeouts, per the User and Supplier integration plan.
+ * Author review: Reviewed and approved by @mattis.
  */
 
 // The only file that reads process.env. Each part loads only what it needs, so the
@@ -54,71 +58,68 @@ export function loadOrderConfig(): { confirmationWindowMinutes: number; reservat
   };
 }
 
-const STUB_ONLY = "stub";
+export type AdapterMode = "stub" | "http";
+
+export interface UpstreamConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
 
 // AUTH_MODE, SUPPLIER_MODE and CREDIT_MODE pick the adapter for User, Supplier and Credit
-// Service. Supplier only has a stub so far; Auth can ask User Service, and Credit can use Kafka.
-function stubMode(name: string): "stub" {
-  const value = process.env[name] || STUB_ONLY;
-  if (value !== STUB_ONLY) throw new Error(`${name}=${value} is not implemented yet`);
-  return STUB_ONLY;
+// Service. User and Supplier have stub and http adapters; Credit has stub and kafka.
+function mode<M extends string>(name: string, allowed: readonly M[]): M {
+  const value = process.env[name] || "stub";
+  if (!(allowed as readonly string[]).includes(value)) throw new Error(`${name}=${value} is not implemented yet`);
+  return value as M;
 }
 
-export type CreditMode = "stub" | "kafka";
-export type AuthMode = "stub" | "user-service";
-
-function authMode(): AuthMode {
-  const value = process.env.AUTH_MODE || STUB_ONLY;
-  if (value !== "stub" && value !== "user-service") throw new Error(`AUTH_MODE must be stub or user-service, not ${value}`);
-  return value;
-}
-
-function creditMode(): CreditMode {
-  const value = process.env.CREDIT_MODE || STUB_ONLY;
-  if (value !== "stub" && value !== "kafka") throw new Error(`CREDIT_MODE must be stub or kafka, not ${value}`);
-  return value;
-}
-
-export function loadAdapterConfig(): {
-  authMode: AuthMode;
-  supplierMode: "stub";
-  creditMode: CreditMode;
-  stubCreditLimit: number;
-  stubCreditDelayMs: number;
-  stubCreditSilentAmount: number;
-} {
-  const auth = authMode();
-  const credit = creditMode();
-  // A stub session is whatever UUID the caller writes in the token. With real credits behind
-  // it, anyone who knows another user's id could spend that user's credits
-  if (credit === "kafka" && auth !== "user-service") {
-    throw new Error("CREDIT_MODE=kafka moves real credits, so it needs AUTH_MODE=user-service (stub sessions can impersonate any user)");
-  }
-  return {
-    authMode: auth,
-    supplierMode: stubMode("SUPPLIER_MODE"),
-    creditMode: credit,
-    stubCreditLimit: positiveInteger("STUB_CREDIT_LIMIT", 100),
-    stubCreditDelayMs: positiveInteger("STUB_CREDIT_DELAY_MS", 500),
-    // A ReserveRequested for exactly this amount gets no reply, to demonstrate the timeout
-    stubCreditSilentAmount: positiveInteger("STUB_CREDIT_SILENT_AMOUNT", 999),
-  };
-}
-
-/** User Service session verification, read only when AUTH_MODE=user-service. */
-export function loadUserServiceConfig(): { baseUrl: string; timeoutMs: number } {
-  const baseUrl = required("USER_SERVICE_BASE_URL");
+function upstream(urlName: string, timeoutName: string, defaultTimeoutMs: number): UpstreamConfig {
+  const baseUrl = required(urlName);
   let protocol: string;
   try {
     protocol = new URL(baseUrl).protocol;
   } catch {
     protocol = "";
   }
-  // "user-service:3001" parses as a URL with scheme "user-service:", so the scheme is checked too
-  if (protocol !== "http:" && protocol !== "https:") {
-    throw new Error("USER_SERVICE_BASE_URL must be an absolute http(s) URL, e.g. http://user-service:3001");
-  }
-  return { baseUrl, timeoutMs: positiveInteger("USER_SERVICE_VERIFY_TIMEOUT_MS", 1000) };
+  if (protocol !== "http:" && protocol !== "https:") throw new Error(`${urlName} must be an http or https URL`);
+  return { baseUrl, timeoutMs: positiveInteger(timeoutName, defaultTimeoutMs) };
+}
+
+export type CreditMode = "stub" | "kafka";
+
+function creditMode(): CreditMode {
+  const value = process.env.CREDIT_MODE || "stub";
+  if (value !== "stub" && value !== "kafka") throw new Error(`CREDIT_MODE must be stub or kafka, not ${value}`);
+  return value;
+}
+
+export function loadAdapterConfig(): {
+  authMode: AdapterMode;
+  supplierMode: AdapterMode;
+  creditMode: CreditMode;
+  userService?: UpstreamConfig;
+  supplierService?: UpstreamConfig;
+  stubCreditLimit: number;
+  stubCreditDelayMs: number;
+  stubCreditSilentAmount: number;
+} {
+  const authMode = mode<AdapterMode>("AUTH_MODE", ["stub", "http"]);
+  const supplierMode = mode<AdapterMode>("SUPPLIER_MODE", ["stub", "http"]);
+  return {
+    authMode,
+    supplierMode,
+    creditMode: creditMode(),
+    ...(authMode === "http" && {
+      userService: upstream("USER_SERVICE_BASE_URL", "USER_SERVICE_VERIFY_TIMEOUT_MS", 1000),
+    }),
+    ...(supplierMode === "http" && {
+      supplierService: upstream("SUPPLIER_SERVICE_BASE_URL", "SUPPLIER_SERVICE_LOOKUP_TIMEOUT_MS", 2000),
+    }),
+    stubCreditLimit: positiveInteger("STUB_CREDIT_LIMIT", 100),
+    stubCreditDelayMs: positiveInteger("STUB_CREDIT_DELAY_MS", 500),
+    // A ReserveRequested for exactly this amount gets no reply, to demonstrate the timeout
+    stubCreditSilentAmount: positiveInteger("STUB_CREDIT_SILENT_AMOUNT", 999),
+  };
 }
 
 /** Kafka connection, read only when CREDIT_MODE=kafka. */

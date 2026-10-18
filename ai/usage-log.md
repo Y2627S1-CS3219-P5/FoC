@@ -1863,3 +1863,66 @@ Verification: type-check clean. The new consumer lifecycle tests passed (4/4), a
 failed against the old start/stop logic (two hung until the 5 s test timeout, one left the
 consumer connected). The verifier, 503 and configuration tests passed (10/10). The full suite
 against real Kafka and PostgreSQL was not re-run after these changes.
+
+## 2026-10-18 — Order Service: User and Supplier integration decisions
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Mode:** explain
+- **Allowed-use scope:** requirements work (interpreting and formatting the author's decisions); learning support (summarising the existing stubs and the real User and Supplier APIs). No decisions or rationale written by the AI.
+- **Repository files affected:** `docs/superpowers/specs/2026-10-18-order-user-supplier-integration.md`, `docs/superpowers/plans/2026-10-18-order-user-supplier-integration.md`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Lets work on the last bit of code first which is the integration with user and supplier service, credit service will be integrated in a seperate PR. Summarise the user and supplier stubs at the moment
+
+> 1. Order Service should reject the creation of an errand for an archived supplier, with an appropriate error message indicating that supplier is archived, unarchive to create a new errand 2. When services are down, the user should get an internal server error message, these services are critical in order lifecycle and as long as one of them are unavailable during order creation we cannot proceed with the lifecycle. 3. keeping things simple, we should just forward the callers token to the supplier service. 4. yes stubs can stay as a selectable mode
+
+> to resolve the conflict between answers 1 and 3, keep forwarding the token and narrow the requirement. This needs no change to Supplier and no new credential. for the other gaps what i propose is this. 1. Archived response: 422 SUPPLIER_ARCHIVED, with the message "Supplier is archived; restore it to create an errand." It's a 422 for the same reason as the existing SUPPLIER_UNAVAILABLE: the request is well formed but refers to a supplier that can't be used. 2. Unknown supplier: keep 422 SUPPLIER_UNAVAILABLE for an ID that doesn't exist, and for any archived supplier a member asks for. 3. When service is down we can use 503 SERVICE_UNAVAILABLE instead of 500. 4. User service down we should return the same 503. 5. For timeouts we can use 1000ms for user verify and 2000 for supplier lookup, make both configurable via environment variables. 6. AUTH_MODE=http and SUPPLIER_MODE=http. 7: copy in my answers word for word as answered here
+
+> feat/order-service-core has been merged, it should go on a new branch that branches of main, env vars should be called USER_SERVICE_VERIFY_TIMEOUT_MS, SUPPLIER_SERVICE_LOOKUP_TIMEOUT and USER_SERVICE_BASE_URL and SUPPLIER_SERVICE_BASE_URL.
+
+> add the _MS suffix
+
+> Q1: If Supplier returns 401, Order returns 401. If it returns 404, Order returns 422 SUPPLIER_UNAVAILABLE. On 400 or 403 which should not occur,  Order returns 500 and logs it. A 5xx, timeout or network error gives 503. Q2: If User returns a 5xx, time out or can't be reached, Order returns 503. Any 4xx other than 401 returns 500. Q3: If either service returns a 200 with a payload that Order service does not expect, order will return 500 and log. Q4: No retries needed. Q5: Yes, refuse to start if unset Q6: Yes, compose runs in http mode by default. Q7: Order should get its own setting here, so there is less coupling Q8: we can switch to real logins, keep stubs for unit tests Q9: just use the message Service temporarily unavailable, please try again
+
+> Q1: order-serivce should wait for user-service and supplier-service to start first 2. Prefix them with ORDER_ 3. Actually we can just keep the existing message Q4: the same UNAUTHENTICATED, "A valid session is required" as the Order Services own 401, so frontend only need to handle one status code
+
+### Key response
+
+Claude summarised the two stubs (`StubSessionVerifier`, `StubSupplierDirectory`) and, from the services' code, the real `GET /auth/verify` and `GET /api/v1/suppliers/:id`, correcting its earlier note that verify is a POST. It asked four questions (archived supplier for an administrator; behaviour when User or Supplier is down; which token to send to Supplier; whether the stubs stay selectable). After the author's answers it pointed out that Supplier returns 404 to members for an archived supplier, so answers 1 and 3 conflict, and asked seven follow-up questions (archived status and code; unknown supplier; meaning of "internal server error"; User down on other requests; timeouts; mode values; how to record the decisions). It copied the author's answers word for word into the spec, asked for the names of the four new environment variables and which branch to use, copied that answer in too, asked whether `SUPPLIER_SERVICE_LOOKUP_TIMEOUT` should carry an `_MS` suffix and recorded the answer, then asked nine questions about behaviours the spec did not cover (other upstream status codes, unexpected payloads, retries, missing base URLs, compose defaults, a shared timeout setting, the demo, and the 503 message) and recorded the answers word for word, then asked four follow-ups (compose start order, the `.env` names for Order's timeouts, the database 503 message, Order's 401 body) and recorded those answers too, then broke the spec into a four-task implementation plan, listing its own internal choices (names, signatures, file layout, interpretations of two ambiguous answers) for the author to review, and created `feat/order-user-supplier-integration` from `origin/main`.
+
+## 2026-10-18 — Order Service: User and Supplier HTTP adapters
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Mode:** generate
+- **Allowed-use scope:** implementation code and tests once the author had finalised the requirements and design (spec and plan, both reviewed by the author); boilerplate configuration; documentation.
+- **Repository files affected:** `order-service/src/config.ts`, `order-service/src/adapters/upstream.ts`, `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/adapters/supplierDirectory.ts`, `order-service/src/http/errors.ts`, `order-service/src/http/routes.ts`, `order-service/src/index.ts`, `order-service/test/adapters.test.ts`, `order-service/test/http.test.ts`, `order-service/scripts/demo.sh`, `order-service/README.md`, `compose.yaml`, `.env.example`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> native, go ahead, and i have also reviewed all the files feel free to change the author review statuses to reviewed
+
+### Key response
+
+Claude marked the spec, the plan and the decisions entry as reviewed by @mattis, then carried out the plan's four tasks test-first: `http` mode and the four settings in `config.ts`; `HttpSessionVerifier` and the 503 mapping; `HttpSupplierDirectory` and the archived, unavailable and unauthenticated outcomes in `POST /errands`; the compose, `.env.example`, README and demo changes. Deviations from the plan, each noted in the execution ledger: the HTTP tests call `/errands/...` (the app's own routes) rather than `/api/v1/errands/...`; `upstream.ts` gained a `readJson` helper so a body that times out is a 503 and a non-JSON body a 500; the demo password is `DemoPassword1` because User Service requires at least 12 characters; the demo does not call `/whoami` because no later step uses the ids. Tests: 145/145 on PostgreSQL 16.8 (Docker was unresponsive, so the stack was not started); type check clean; the entry point was also run in `http` mode against fake User and Supplier servers to confirm the 202, 422 (both codes), 401 and 503 responses and the refusal to start without a base URL.
+
+## 2026-10-18 — Order Service: rebase of the User and Supplier integration onto the Kafka integration
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Mode:** refactor
+- **Allowed-use scope:** merge-conflict resolution and refactoring that carry out the author's decisions (spec round 6); no new design.
+- **Repository files affected:** `order-service/src/config.ts`, `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/http/auth.ts`, `order-service/src/index.ts`, `order-service/test/adapters.test.ts`, `order-service/test/userServiceVerifier.test.ts` (deleted), `order-service/README.md`, `compose.yaml`, `.env.example`, `ai/usage-log.md`, `docs/superpowers/specs/2026-10-18-order-user-supplier-integration.md`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> merged, go ahead and rebase
+
+The author's four choices are quoted in the spec, round 6.
+
+### Key response
+
+Claude rebased `feat/order-user-supplier-integration` onto `origin/main` at `fed362c` and resolved the conflicts as the author chose: `AUTH_MODE=stub|http` with `HttpSessionVerifier`; `CREDIT_MODE=stub|kafka` and all Kafka settings kept from main; main's `AuthMode`, `AUTH_MODE=user-service`, `loadUserServiceConfig`, `UserServiceSessionVerifier`, `SessionVerificationUnavailableError`, the `auth.ts` 503 catch, the `CREDIT_MODE=kafka` startup check and `test/userServiceVerifier.test.ts` removed. Compose keeps main's `${ORDER_AUTH_MODE:-...}` override with the default changed to `http`, and `.env.example` sets `ORDER_AUTH_MODE=http`. The usage-log conflict kept both sides. The test for an invalid `CREDIT_MODE` now expects main's message ("CREDIT_MODE must be stub or kafka, not http"). Tests: 173/173 on PostgreSQL 16.8 (the Kafka integration suite needs `TEST_KAFKA_BROKERS` and did not run); type check clean.
+

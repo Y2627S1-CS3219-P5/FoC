@@ -6,28 +6,22 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: 503, never 401, when the session can't be verified (User Service unreachable).
  * Author review of additional changes: Reviewed and approved by @phuc
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: removed the SessionVerificationUnavailableError handling; HttpSessionVerifier's errors
+ *        reach the error handler (503 or 500), per the author.
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { NextFunction, Request, Response } from "express";
-import { SessionVerificationUnavailableError, type Principal, type SessionVerifier } from "../adapters/sessionVerifier";
+import type { Principal, SessionVerifier } from "../adapters/sessionVerifier";
 import { sendError } from "./errors";
 
 /**
- * Rejects requests without a valid session (401 UNAUTHENTICATED), or with 503 when the session
- * can't be checked; otherwise sets res.locals.user. 503 rather than 401, so a User Service
- * outage never looks like being logged out.
+ * Rejects requests without a valid session (401 UNAUTHENTICATED); otherwise sets res.locals.user.
+ * When User Service can't be asked the verifier throws, and the error handler answers 503 (or 500).
  */
 export function authenticate(verifier: SessionVerifier) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    let principal: Principal | null;
-    try {
-      principal = await verifier.verify(req.header("authorization"));
-    } catch (err) {
-      if (err instanceof SessionVerificationUnavailableError) {
-        sendError(res, 503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable");
-        return;
-      }
-      throw err;
-    }
+    const principal = await verifier.verify(req.header("authorization"));
     if (principal === null) {
       sendError(res, 401, "UNAUTHENTICATED", "A valid session is required");
       return;

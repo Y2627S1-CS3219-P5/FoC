@@ -4,12 +4,26 @@
  * Scope: SupplierDirectory interface (the Order Service's only view of Supplier Service) and a stub
  *        with three fixed suppliers, implementing the approved plan.
  * Author review: Reviewed and approved by @mattis.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: findSupplier with four outcomes and HttpSupplierDirectory, which asks the Supplier
+ *        Service's GET /api/v1/suppliers/:id with the caller's token, per the User and Supplier
+ *        integration plan.
+ * Author review: Reviewed and approved by @mattis.
  */
+import type { UpstreamConfig } from "../config";
 import type { SupplierSnapshot } from "../errands/errand";
+import { fetchWithTimeout, readJson, UpstreamContractError, UpstreamUnavailableError } from "./upstream";
+
+export type SupplierLookup =
+  | { kind: "active"; supplier: SupplierSnapshot }
+  // Supplier shows archived suppliers to administrators only
+  | { kind: "archived" }
+  | { kind: "unavailable" }
+  | { kind: "unauthenticated" };
 
 export interface SupplierDirectory {
-  /** The supplier's current details, or null if it doesn't exist or isn't active. */
-  getActiveSupplier(id: string): Promise<SupplierSnapshot | null>;
+  /** Looks the supplier up on behalf of the caller whose Authorization header is given. */
+  findSupplier(id: string, authorization: string): Promise<SupplierLookup>;
 }
 
 export const STUB_SUPPLIERS: readonly SupplierSnapshot[] = [
@@ -34,7 +48,42 @@ export const STUB_SUPPLIERS: readonly SupplierSnapshot[] = [
 ];
 
 export class StubSupplierDirectory implements SupplierDirectory {
-  async getActiveSupplier(id: string): Promise<SupplierSnapshot | null> {
-    return STUB_SUPPLIERS.find((s) => s.id === id) ?? null;
+  async findSupplier(id: string, _authorization: string): Promise<SupplierLookup> {
+    const supplier = STUB_SUPPLIERS.find((s) => s.id === id);
+    return supplier ? { kind: "active", supplier } : { kind: "unavailable" };
+  }
+}
+
+const nonEmpty = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+/**
+ * Forwards the caller's Authorization header to Supplier Service GET /api/v1/suppliers/:id.
+ * 404 is unavailable, 401 unauthenticated; 5xx, timeout or network error throws
+ * UpstreamUnavailableError (503); any other status or an unexpected body throws
+ * UpstreamContractError (500).
+ */
+export class HttpSupplierDirectory implements SupplierDirectory {
+  constructor(private readonly config: UpstreamConfig, private readonly fetchImpl: typeof fetch = globalThis.fetch) {}
+
+  async findSupplier(id: string, authorization: string): Promise<SupplierLookup> {
+    // Callers pass a validated uuid, so the id needs no escaping
+    const url = new URL(`/api/v1/suppliers/${id}`, this.config.baseUrl);
+    const res = await fetchWithTimeout(this.fetchImpl, url, { headers: { authorization } }, this.config.timeoutMs, "supplier");
+    if (res.status === 404) return { kind: "unavailable" };
+    if (res.status === 401) return { kind: "unauthenticated" };
+    if (res.status >= 500) throw new UpstreamUnavailableError("supplier", `status ${res.status}`);
+    if (res.status !== 200) throw new UpstreamContractError("supplier", `status ${res.status}`);
+    const b = (await readJson(res, "supplier")) as Record<string, unknown> | null;
+    if (
+      !nonEmpty(b?.id) || !nonEmpty(b.name) || !nonEmpty(b.buildingCode) || !nonEmpty(b.locationDescription) ||
+      (b.status !== "ACTIVE" && b.status !== "ARCHIVED")
+    ) {
+      throw new UpstreamContractError("supplier", "supplier body is missing a field or has an unknown status");
+    }
+    if (b.status === "ARCHIVED") return { kind: "archived" };
+    return {
+      kind: "active",
+      supplier: { id: b.id, name: b.name, buildingCode: b.buildingCode, locationDescription: b.locationDescription },
+    };
   }
 }

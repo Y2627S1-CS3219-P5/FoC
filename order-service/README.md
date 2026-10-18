@@ -10,6 +10,12 @@ Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
 Scope: Documented the Kafka integration with Credit Service (CREDIT_MODE=kafka), its settings,
        delivery guarantees, observability and tests, and session verification through User Service.
 Author review of additional changes: Reviewed and approved by @phuc
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+Scope: Documented the HTTP User and Supplier adapters, their settings and response codes.
+Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+Scope: The demo now runs against the real Credit Service.
+Author review: Reviewed and approved by @mattis.
 -->
 
 # Order Service
@@ -21,20 +27,28 @@ hold and when to settle credits.
 ## Status
 
 The core is done: the database, state machine, HTTP API, deadline sweeper, outbox publisher, container and
-gateway routes. Credit Service is reached over **Kafka** (see [Kafka integration](#kafka-integration)), and
-sessions are checked by User Service. Supplier Service is still a **stub**. `AUTH_MODE`, `SUPPLIER_MODE` and
-`CREDIT_MODE` pick the adapters:
+gateway routes. Credit Service is reached over **Kafka** (see [Kafka integration](#kafka-integration)); sessions
+and supplier lookups go to User Service and Supplier Service over HTTP. `AUTH_MODE`, `SUPPLIER_MODE` and
+`CREDIT_MODE` pick the adapters; the stubs stay selectable and the unit tests use them:
 
-| Neighbour | Real adapter | Stub | Follow-up |
-|---|---|---|---|
-| User Service sessions | `AUTH_MODE=user-service` (Compose default): `GET /auth/verify` with the caller's `Authorization` header | `AUTH_MODE=stub`: believes `Bearer stub.<uuid>.MEMBER` or `.ADMINISTRATOR`. Only allowed with `CREDIT_MODE=stub` | none |
-| Supplier Service | none yet | three fixed suppliers (`STUB_SUPPLIERS`) | `GET /api/v1/suppliers/:id` |
-| Credit Service | `CREDIT_MODE=kafka` (Compose default) | `CREDIT_MODE=stub` (default outside Compose): in memory, replies to `ReserveRequested`, checks every message against the contract | none |
+| Neighbour | Real adapter (Compose default) | Stub |
+|---|---|---|
+| User Service sessions | `AUTH_MODE=http`: `GET /auth/verify` with the caller's `Authorization` header | `AUTH_MODE=stub`: believes `Bearer stub.<uuid>.MEMBER` or `.ADMINISTRATOR` |
+| Supplier Service | `SUPPLIER_MODE=http`: `GET /api/v1/suppliers/:id` with the caller's `Authorization` header | `SUPPLIER_MODE=stub`: three fixed suppliers (`STUB_SUPPLIERS`) |
+| Credit Service | `CREDIT_MODE=kafka` | `CREDIT_MODE=stub` (default outside Compose): in memory, replies to `ReserveRequested`, checks every message against the contract |
 
-The service refuses to start with `CREDIT_MODE=kafka` and `AUTH_MODE=stub`: a stub token is whatever UUID the
-caller writes, so anyone who knew another user's id could make real credit operations on their behalf.
+How Order answers when User or Supplier does not give a usable reply (no retries):
 
-Not done yet: the real Supplier adapter, reacting to account suspensions (OS-F6), and the frontend pages.
+| User or Supplier reply | Order answers |
+|---|---|
+| User `401` | `401 UNAUTHENTICATED` |
+| Supplier `401` | `401 UNAUTHENTICATED`, same body as Order's own 401 |
+| Supplier `200` with `status: "ARCHIVED"` (administrator caller) | `422 SUPPLIER_ARCHIVED` |
+| Supplier `404` (unknown id, or an archived supplier for a member) | `422 SUPPLIER_UNAVAILABLE` |
+| `5xx`, no reply within the timeout, or unreachable | `503 SERVICE_UNAVAILABLE` |
+| Supplier `400`/`403`, User 4xx other than `401`, or a `200` body Order does not expect | `500 INTERNAL_ERROR`, logged |
+
+Not done yet: reacting to account suspensions (OS-F6), and the frontend pages.
 
 Message contract with Credit Service: [docs/order-credit-contract.md](docs/order-credit-contract.md).
 
@@ -103,8 +117,9 @@ responses carry `details` (one entry per bad field).
 | 409 | `INVALID_STATE` | any other action from the wrong state, including repeats |
 | 409 | `DEADLINE_PASSED` | the step's deadline has passed |
 | 413 / 415 | `PAYLOAD_TOO_LARGE` / `UNSUPPORTED_MEDIA_TYPE` | body problems |
+| 422 | `SUPPLIER_ARCHIVED` | an administrator chose an archived supplier |
 | 422 | `SUPPLIER_UNAVAILABLE` | the supplier does not exist or is not active |
-| 503 | `SERVICE_UNAVAILABLE` | the database is unreachable, or the session can't be checked (User Service unreachable or too slow) |
+| 503 | `SERVICE_UNAVAILABLE` | the database, User Service or Supplier Service is unreachable or too slow |
 | 500 | `INTERNAL_ERROR` | anything else |
 
 ## Design calls (decided: accepted by the author on 2026-10-16)
@@ -134,10 +149,11 @@ responses carry `details` (one entry per bad field).
 
 ## Run
 
-From the repository root, with a `.env` made from `.env.example` (the three `ORDER_DB_*` passwords are required):
+From the repository root, with a `.env` made from `.env.example` (the three `ORDER_DB_*` passwords are required;
+the demo also reads `ALLOWED_EMAIL_DOMAIN` and `BOOTSTRAP_ADMIN_*`):
 
 ```sh
-docker compose up -d --build order-service credit-service frontend
+docker compose up -d --build   # order-service waits for user-service and supplier-service to start
 docker compose ps          # order-db healthy, order-migrate exited 0, order-service healthy
 ```
 
@@ -146,18 +162,16 @@ forwards the `Authorization` header to User Service's `GET /auth/verify` on ever
 can't be reached, requests get `503 SERVICE_UNAVAILABLE`, never 401. A requester also needs a credit account:
 User Service creates one when an account first becomes `ACTIVE` (a `user.account-status` message).
 
-The demo script uses stub tokens and relies on the stub Credit's behaviour (its limit and its silent amount),
-so run it with both stubs. Stub sessions are refused with real credits:
+The demo script runs against the real User, Supplier and Credit services, the compose defaults:
 
 ```sh
-ORDER_AUTH_MODE=stub ORDER_CREDIT_MODE=stub docker compose up -d order-service
 bash order-service/scripts/demo.sh
 ```
 
-`scripts/demo.sh` (needs `curl` and `jq`) walks through the whole lifecycle through the gateway at
+`scripts/demo.sh` (needs `curl` and `jq`) registers three fresh members, logs them and the bootstrap administrator in
+through the User Service, picks the first active supplier, and walks through the whole lifecycle through the gateway at
 `http://localhost:8080/api/v1` (override with `BASE`) and exits non-zero at the first unexpected status.
-It takes about a minute because step 10b waits for the reservation timeout (`RESERVATION_TIMEOUT_SECONDS + 10`
-seconds; set the same variable in the shell if you changed it for the service).
+It doesn't show the reservation timeout, because the real Credit Service always answers.
 
 Settings (all read in `src/config.ts`):
 
@@ -167,10 +181,12 @@ Settings (all read in `src/config.ts`):
 | `PORT` | 3002 | HTTP port |
 | `CONFIRMATION_WINDOW_MINUTES` | 1440 | time to confirm a delivery |
 | `RESERVATION_TIMEOUT_SECONDS` | 30 | time for Credit to answer |
-| `AUTH_MODE` | `stub` (Compose: `user-service`, from `ORDER_AUTH_MODE`) | `user-service` or `stub`; `stub` is refused with `CREDIT_MODE=kafka` |
-| `USER_SERVICE_BASE_URL` | none, required with `user-service` | e.g. `http://user-service:3001` |
-| `USER_SERVICE_VERIFY_TIMEOUT_MS` | 1000 | how long to wait for `/auth/verify` before answering 503 |
-| `SUPPLIER_MODE` | `stub` | adapter choice (only `stub` exists) |
+| `AUTH_MODE` | `stub` (Compose: `http`, from `ORDER_AUTH_MODE`) | `http` or `stub` |
+| `USER_SERVICE_BASE_URL` | none, required in `http` mode | e.g. `http://user-service:3001` |
+| `USER_SERVICE_VERIFY_TIMEOUT_MS` | 1000 | wait for `/auth/verify` before answering 503 (compose: `ORDER_USER_SERVICE_VERIFY_TIMEOUT_MS`) |
+| `SUPPLIER_MODE` | `stub` (Compose: `http`) | `http` or `stub` |
+| `SUPPLIER_SERVICE_BASE_URL` | none, required in `http` mode | e.g. `http://supplier-service:3000` |
+| `SUPPLIER_SERVICE_LOOKUP_TIMEOUT_MS` | 2000 | wait for the supplier lookup before answering 503 (compose: `ORDER_SUPPLIER_SERVICE_LOOKUP_TIMEOUT_MS`) |
 | `CREDIT_MODE` | `stub` (Compose: `kafka`, from `ORDER_CREDIT_MODE`) | `kafka` or `stub` |
 | `KAFKA_BROKERS` | none, required with `kafka` | comma-separated `host:port` list |
 | `KAFKA_CLIENT_ID` | `order-service` | Kafka client id |
