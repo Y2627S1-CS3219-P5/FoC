@@ -2045,3 +2045,29 @@ The local browser run used a temporary external Compose override to exclude only
 services after the unchanged Credit init-script bind mount failed with exit 126 on this
 Mac; User, Supplier, Order, Kafka, and nginx still ran live. The disposable projects and
 volumes were cleaned after each attempt. Linux CI will validate the complete default stack.
+
+## 2026-10-18 — Pinned CDK diff compatibility
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Correct the issue #52 deployment-plan compatibility finding
+  during the authorized AWS deployment.
+- **Repository files affected:** `infrastructure/lib/deployment-plan.ts`,
+  `infrastructure/test/deployment-plan.test.ts`, and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+Codex inspected the installed, pinned CDK CLI 2.1031.0 help and confirmed that
+`cdk diff` supports the boolean `--change-set` option, defaulting to true, but does not
+support `--method=template`. Deployment planning now passes `--no-change-set` explicitly
+to keep the diff template-only and avoid creating a CloudFormation change set. A regression
+test checks that the generated diff command includes that supported flag and excludes the
+unsupported `--method` option. No AWS calls or resource mutations were performed by this
+correction.
+
+Verification passed: infrastructure typecheck, lint, formatting, all 97 tests, production
+TypeScript build, and `git diff --check`; the pinned CLI's local help confirmed the flag.

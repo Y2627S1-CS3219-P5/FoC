@@ -104,6 +104,20 @@ test("hashes the exact config, manifest, templates, stacks, and diff", () => {
   });
 });
 
+test("diff disables change sets using the pinned CDK CLI's supported flag", () => {
+  withPlanFiles((options, calls) => {
+    calculateDeploymentPlan(options);
+    const diffs = calls.filter(
+      ({ executable, args }) => executable === "npx" && args[1] === "diff",
+    );
+    assert.equal(diffs.length, 1);
+    assert.ok(diffs[0]?.args.includes("--no-change-set"));
+    assert.ok(
+      diffs[0]?.args.every((argument) => !argument.startsWith("--method")),
+    );
+  });
+});
+
 test("rejects an approval token when the recalculated diff changed", () => {
   withPlanFiles((options) => {
     const first = calculateDeploymentPlan(options);

@@ -139,7 +139,7 @@ export function calculateDeploymentPlan(
         "cdk",
         "diff",
         ...cdkIds,
-        "--method=template",
+        "--no-change-set",
         "--no-color",
         "--strict",
         "--exclusively",
