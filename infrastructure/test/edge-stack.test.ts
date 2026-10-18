@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -7,6 +8,52 @@ import { Stack } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import { createFocDemoApp } from "../lib/app.js";
 import { validConfig, validReleaseManifest } from "./fixtures.js";
+
+test("uses service-valid disabled caching, a flat WAF OR and zero error TTLs without response remaps", () => {
+  const { edgeTemplate } = synthesizedEdge();
+  edgeTemplate.resourceCountIs("AWS::CloudFront::CachePolicy", 0);
+  const distribution = onlyResource(
+    edgeTemplate,
+    "AWS::CloudFront::Distribution",
+  );
+  const config = distribution.Properties.DistributionConfig as {
+    CacheBehaviors: { PathPattern: string; CachePolicyId: string }[];
+    CustomErrorResponses?: {
+      ErrorCode: number;
+      ErrorCachingMinTTL: number;
+      ResponseCode?: number;
+      ResponsePagePath?: string;
+    }[];
+  };
+  assert.equal(
+    config.CacheBehaviors.find(({ PathPattern }) => PathPattern === "/api/*")
+      ?.CachePolicyId,
+    "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+  );
+  assert.deepEqual(
+    config.CustomErrorResponses?.map(({ ErrorCode }) => ErrorCode),
+    [400, 403, 404, 405, 414, 500, 501, 502, 503, 504],
+  );
+  for (const response of config.CustomErrorResponses ?? []) {
+    assert.equal(response.ErrorCachingMinTTL, 0);
+    assert.equal(response.ResponseCode, undefined);
+    assert.equal(response.ResponsePagePath, undefined);
+  }
+  const denied = rule(
+    onlyResource(edgeTemplate, "AWS::WAFv2::WebACL"),
+    "DenyInternalAndExcludedServicePaths",
+  );
+  const statement = denied.Statement as {
+    OrStatement: { Statements: Record<string, unknown>[] };
+  };
+  assert.equal(statement.OrStatement.Statements.length, 18);
+  assert.ok(
+    statement.OrStatement.Statements.every(
+      (leaf) =>
+        Object.keys(leaf).length === 1 && leaf.ByteMatchStatement !== undefined,
+    ),
+  );
+});
 
 type Resource = {
   readonly Type: string;
@@ -191,30 +238,19 @@ test("uses the generated HTTPS hostname and redirects every behavior", () => {
 
 test("forwards the exact API contract with zero caching and no compression", () => {
   const { edgeTemplate } = synthesizedEdge();
-  edgeTemplate.hasResourceProperties("AWS::CloudFront::CachePolicy", {
-    CachePolicyConfig: {
-      DefaultTTL: 0,
-      MaxTTL: 0,
-      MinTTL: 0,
-      Name: "foc-demo-api-no-cache",
-      ParametersInCacheKeyAndForwardedToOrigin: {
-        CookiesConfig: { CookieBehavior: "none" },
-        EnableAcceptEncodingBrotli: false,
-        EnableAcceptEncodingGzip: false,
-        HeadersConfig: {
-          HeaderBehavior: "whitelist",
-          Headers: ["Authorization"],
-        },
-        QueryStringsConfig: { QueryStringBehavior: "none" },
-      },
-    },
-  });
+  edgeTemplate.resourceCountIs("AWS::CloudFront::CachePolicy", 0);
   edgeTemplate.hasResourceProperties("AWS::CloudFront::OriginRequestPolicy", {
     OriginRequestPolicyConfig: {
       CookiesConfig: { CookieBehavior: "none" },
       HeadersConfig: {
         HeaderBehavior: "whitelist",
-        Headers: ["Content-Type", "Origin", "Accept", "If-Match"],
+        Headers: [
+          "Authorization",
+          "Content-Type",
+          "Origin",
+          "Accept",
+          "If-Match",
+        ],
       },
       Name: "foc-demo-api-forwarding",
       QueryStringsConfig: { QueryStringBehavior: "all" },
@@ -242,19 +278,10 @@ test("forwards the exact API contract with zero caching and no compression", () 
     "DELETE",
   ]);
   assert.equal(api.Compress, false);
-  assert.ok(api.CachePolicyId);
+  assert.equal(api.CachePolicyId, "4135ea2d-6df8-44a3-9df3-4b5a84be39ad");
   assert.ok(api.OriginRequestPolicyId);
   assert.equal(api.ResponseHeadersPolicyId, undefined);
 
-  const cachePolicy = onlyResource(
-    edgeTemplate,
-    "AWS::CloudFront::CachePolicy",
-  );
-  const cacheConfig = cachePolicy.Properties.CachePolicyConfig as {
-    readonly ParametersInCacheKeyAndForwardedToOrigin: {
-      readonly HeadersConfig: { readonly Headers: readonly string[] };
-    };
-  };
   const originPolicy = onlyResource(
     edgeTemplate,
     "AWS::CloudFront::OriginRequestPolicy",
@@ -263,11 +290,7 @@ test("forwards the exact API contract with zero caching and no compression", () 
     readonly HeadersConfig: { readonly Headers: readonly string[] };
   };
   assert.deepEqual(
-    new Set([
-      ...cacheConfig.ParametersInCacheKeyAndForwardedToOrigin.HeadersConfig
-        .Headers,
-      ...originConfig.HeadersConfig.Headers,
-    ]),
+    new Set(originConfig.HeadersConfig.Headers),
     new Set(["Authorization", "Content-Type", "Origin", "Accept", "If-Match"]),
   );
 });

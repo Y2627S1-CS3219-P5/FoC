@@ -2446,3 +2446,64 @@ TypeScript build, offline dependency audit (zero vulnerabilities), and `git diff
 Tests cover existing/missing groups and creation races, default/shared destination guards,
 function-absence proof, exact regional cleanup/residue, bootstrap ownership exclusions,
 capture receipts before deletion, and bounded scan-registration retries.
+
+## 2026-10-18 — Deployment review and service-validation corrections
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Resolve the independent standards/specification review and the
+  confirmed Edge service-validation failures under the approved AWS deployment scope.
+- **Repository files affected:** Infrastructure Edge, preflight/gate, shared canonical JSON,
+  SNS status, resumable teardown/receipt modules and tests, CLI/docs/disclosures, and
+  contributor-only headers across AI-assisted infrastructure/User Service files.
+- **Contributor:** @ron (AI-assisted).
+- **Author review:** Pending human project-author and User Service-owner review. Attribution
+  does not claim either approval.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+CloudFront rejected the custom disabled-cache policy's header behavior, while a separate
+live temporary-policy validation accepted the exact Authorization origin allowlist.
+Codex replaced it with managed CachingDisabled plus the same narrow five-header origin
+policy. The pinned CDK L2 has an obsolete Authorization restriction, so a checked L1
+escape hatch preserves its resource identity and sets only that validated header list.
+WAF's nested OR denial was flattened to the equivalent 18 byte-match leaves without
+changing paths or transformations. Explicit zero error TTLs preserve error statuses and
+bodies without page/status remaps. The regression failed on the previous custom cache
+policy and passes with the corrected template. [AWS header forwarding](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/add-origin-custom-headers.html)
+and [error-cache documentation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/custom-error-pages-expiration.html)
+support the correction. Service-validation evidence was supplied by the deployment
+coordinator; this implementer performed no AWS calls or mutations.
+
+Preflight now reads Lambda and exact stack inventories in both regions and simulates the
+provider retention/removal APIs without changing IAM. Its evidence binds to the current
+requirements fingerprint, so stale reports cannot satisfy the updated gate. SNS status
+requires the configured email's exact confirmed topic/account/protocol subscription;
+missing, mismatched, or pending subscriptions explicitly report NOT READY. A shared
+canonical JSON serializer replaces three copies, with literal pre-extraction fingerprints
+proving unchanged configuration/release hashes.
+
+Confirmed teardown no longer requires all four stacks or service outputs. It captures
+present stacks' validated ARNs/tags and exact resource identities, atomically saves an
+owner-only hashed receipt before mutation, and deletes by captured ARN. Explicit resume
+rechecks ownership and accepts only proven absence, handles DELETE_IN_PROGRESS, retains
+resource/provider inspection targets after interruption, and rejects modified receipts,
+wrong accounts, recreated names, newly present stacks, and unauthorized reads. Unresolved
+partial resource identities stop with an exact resource/status instead of guessed names.
+Provider cleanup remains exact and shared CDKToolkit resources remain protected. Teardown
+logic was extracted into its own module because the receipt workflow needs a coherent
+boundary; unrelated start/stop behavior and the larger operational refactor were deferred.
+
+Contributor headers name @ron as AI-assisted without fabricating review approval. Strict
+JSON attribution remains in the sidecar, and upstream CA bytes were not changed. The
+User Service owner must still review that service's changes before merge. Live acceptance
+remains the deployment coordinator's work and is not claimed complete by these tests.
+
+Verification: infrastructure `npm run check` passed (typecheck, lint, formatting, and
+139 tests, including the actual pinned-CLI strict four-stack offline synthesis),
+`npm run build` passed, and `npm audit --offline` reported zero vulnerabilities.
+User Service header-only changes passed typecheck, build, and 10 tests; its
+database-dependent outbox suite was not exercised. `git diff --check` passed.

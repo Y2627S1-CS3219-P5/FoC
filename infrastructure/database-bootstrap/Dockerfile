@@ -1,3 +1,4 @@
+# Contributor: @ron (AI-assisted); implementation review pending.
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 # Scope: dedicated non-root, immutable-base database bootstrap image for issue #48.
 # Additional scope: apply supported Alpine OS security patches for issue #52;

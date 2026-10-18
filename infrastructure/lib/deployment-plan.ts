@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -16,6 +17,7 @@ import {
 } from "./release-manifest.js";
 import { assertAwsIdentity, loadValidatedStack } from "./stack-outputs.js";
 import { ensureProviderLogRetention } from "./provider-logs.js";
+import { canonicalJson } from "./canonical-json.js";
 
 export type DeploymentPhase = "foundation" | "release";
 
@@ -245,7 +247,7 @@ export function deployExactStack(options: PlanOptions, key: StackKey): void {
 }
 
 export function deploymentPlanHash(plan: DeploymentPlan): string {
-  return sha256(JSON.stringify(canonicalize(plan)));
+  return sha256(canonicalJson(plan));
 }
 
 function validatePlanInputs(options: PlanOptions): void {
@@ -271,18 +273,6 @@ function cdkEnvironment(
     FOC_RELEASE_MANIFEST:
       options.phase === "release" ? options.releaseManifestPath : undefined,
   };
-}
-
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, child]) => [key, canonicalize(child)]),
-    );
-  }
-  return value;
 }
 
 function sha256(value: string | Buffer): string {

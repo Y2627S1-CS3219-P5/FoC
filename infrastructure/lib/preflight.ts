@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -6,6 +7,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { DeploymentConfig } from "./config.js";
 import { configFingerprint } from "./config.js";
+import { canonicalJson } from "./canonical-json.js";
 
 export type CheckStatus = "PASS" | "BLOCKED" | "WARNING";
 
@@ -20,6 +22,7 @@ export interface PreflightReport {
   readonly generatedAt: string;
   readonly validUntil: string;
   readonly configFingerprint: string;
+  readonly requirementsFingerprint: string;
   readonly accountId?: string;
   readonly callerArn?: string;
   readonly status: "PASS" | "BLOCKED";
@@ -46,6 +49,11 @@ export const REQUIRED_DIRECT_CAPABILITY_CHECK_IDS = [
   "waf-read",
   "cloudwatch-read",
   "logs-read",
+  "logs-read-edge",
+  "lambda-read-primary",
+  "lambda-read-edge",
+  "cloudformation-resources-primary",
+  "cloudformation-resources-edge",
   "secrets-manager-read",
   "sns-read",
   "budgets-read",
@@ -77,6 +85,10 @@ const REQUIRED_PROVISIONING_ACTIONS = [
   "cloudfront:CreateDistribution",
   "wafv2:CreateWebACL",
   "logs:CreateLogGroup",
+  "logs:PutRetentionPolicy",
+  "logs:DeleteLogGroup",
+  "lambda:GetFunctionConfiguration",
+  "cloudformation:ListStackResources",
   "secretsmanager:CreateSecret",
   "sns:CreateTopic",
   "budgets:CreateBudget",
@@ -195,6 +207,36 @@ function serviceReadCommands(config: DeploymentConfig): readonly AwsCommand[] {
       args: ["logs", "describe-log-groups", "--limit", "1"],
       detail: "CloudWatch Logs is readable",
     },
+    {
+      id: "logs-read-edge",
+      region: config.edgeRegion,
+      args: ["logs", "describe-log-groups", "--limit", "1"],
+      detail: "CloudWatch Logs is readable in the edge region",
+    },
+    ...([config.primaryRegion, config.edgeRegion] as const).flatMap(
+      (region) => {
+        const suffix = region === config.primaryRegion ? "primary" : "edge";
+        return [
+          {
+            id: `lambda-read-${suffix}`,
+            region,
+            args: ["lambda", "list-functions", "--max-items", "1"],
+            detail: `Provider Lambda control plane is readable in ${region}`,
+          },
+          {
+            id: `cloudformation-resources-${suffix}`,
+            region,
+            args: [
+              "cloudformation",
+              "list-stack-resources",
+              "--stack-name",
+              "CDKToolkit",
+            ],
+            detail: `Exact CloudFormation resource inventories are readable in ${region}`,
+          },
+        ];
+      },
+    ),
     {
       id: "secrets-manager-read",
       region: config.primaryRegion,
@@ -713,6 +755,7 @@ export function runPreflight(
     generatedAt,
     validUntil,
     configFingerprint: configFingerprint(config),
+    requirementsFingerprint: preflightRequirementsFingerprint(config),
     ...(identity?.Account === undefined ? {} : { accountId: identity.Account }),
     ...(callerArn === undefined ? {} : { callerArn }),
     status: checks.some(({ status }) => status === "BLOCKED")
@@ -724,4 +767,25 @@ export function runPreflight(
 
 export function preflightDigest(report: PreflightReport): string {
   return createHash("sha256").update(JSON.stringify(report)).digest("hex");
+}
+
+/** Bind evidence to the current read APIs and representative permission contract. */
+export function preflightRequirementsFingerprint(
+  config: DeploymentConfig,
+): string {
+  const commands = [
+    ...serviceReadCommands(config),
+    ...requiredCapabilityCommands(config),
+  ].map(({ id, region, args }) => ({ id, region, args }));
+  return createHash("sha256")
+    .update(
+      canonicalJson({
+        contractVersion: 2,
+        commands,
+        requiredDirectChecks: REQUIRED_DIRECT_CAPABILITY_CHECK_IDS,
+        requiredQuotaChecks: REQUIRED_QUOTA_CHECK_IDS,
+        provisioningActions: REQUIRED_PROVISIONING_ACTIONS,
+      }),
+    )
+    .digest("hex");
 }

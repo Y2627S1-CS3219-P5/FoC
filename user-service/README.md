@@ -1,3 +1,4 @@
+<!-- Contributor: @ron (AI-assisted); implementation review pending. -->
 <!-- Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing implementation and verification notes. Author review: PENDING. -->
 <!-- Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: issue #49
 cloud publisher flag and request logging guidance. Author review: PENDING. -->

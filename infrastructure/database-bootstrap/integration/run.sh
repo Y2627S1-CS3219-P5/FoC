@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Contributor: @ron (AI-assisted); implementation review pending.
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 # Scope: opt-in PostgreSQL 17.11 bootstrap/migration/seed/isolation verification for issue #48.
 # Author review: PENDING.

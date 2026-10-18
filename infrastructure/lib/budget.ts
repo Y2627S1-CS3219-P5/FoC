@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: exact-name monitoring-only budget creation, inspection, and teardown.
 // Author review: PENDING.

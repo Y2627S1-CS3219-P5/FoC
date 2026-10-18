@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: Verify the pinned CLI can consume the deployed construct library's assembly.
 // Author review: PENDING.

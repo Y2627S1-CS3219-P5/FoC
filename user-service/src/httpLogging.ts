@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: issue #49 server-owned request IDs and non-sensitive completion logs.
 // Author review: PENDING.

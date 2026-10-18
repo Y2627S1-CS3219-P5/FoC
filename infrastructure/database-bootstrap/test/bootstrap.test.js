@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: issue #48 tests for idempotency, isolation, repair, and cleanup.
 // Author review: PENDING.

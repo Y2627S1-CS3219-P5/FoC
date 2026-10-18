@@ -1,3 +1,4 @@
+<!-- Contributor: @ron (AI-assisted); implementation review pending. -->
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-18
@@ -192,10 +193,11 @@ public ALB origin.
 The default SPA behavior is uncached and compressed. `/assets/*` uses CloudFront's
 optimized cache and compression. `/api/*` permits all REST methods, forwards all query
 strings and only `Authorization`, `Content-Type`, `Origin`, `Accept`, and `If-Match`, and
-has zero minimum/default/maximum TTL. CloudFront does not allow `Authorization` in an
-origin-request-policy allowlist, so the exact forwarding contract is split between a
-zero-TTL cache policy (`Authorization`) and an origin request policy (the remaining four
-headers and all query strings). API compression is disabled because CloudFront can turn a
+uses AWS's managed CachingDisabled policy. Current CloudFront supports the narrow
+Authorization origin-request allowlist. The pinned CDK L2 retains an obsolete validation,
+so a checked L1 escape hatch sets that exact five-header list without widening forwarding.
+Supported cacheable error statuses have explicit zero error TTLs without response status
+or page remaps. API compression is disabled because CloudFront can turn a
 strong origin ETag into a weak ETag when it compresses a response, which would break the
 Supplier `If-Match` contract. No response-headers policy removes or overwrites `ETag` or
 `X-Request-Id`.
@@ -295,6 +297,10 @@ npm run synth
   checks identity, account and region, service read access, PostgreSQL/Fargate/CloudFront/WAF
   capabilities, live Service Quotas or the narrow recorded NUS fallback, representative
   provisioning permissions, and modern CDK bootstrap state in Singapore and `us-east-1`.
+  Provider lifecycle checks include both regions' Lambda/exact-stack inventories and
+  representative GetFunctionConfiguration/CreateLogGroup/PutRetentionPolicy/DeleteLogGroup
+  permission simulation. The report binds to a fingerprint of the current requirement
+  contract; older evidence cannot pass the gate after requirements change.
 - `gate` requires matching configuration and pricing fingerprints, a matching recalculated
   estimate, named and timestamped cost approval, a passing preflight, and preflight
   evidence less than 24 hours old.

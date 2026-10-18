@@ -1,3 +1,4 @@
+<!-- Contributor: @ron (AI-assisted); implementation review pending. -->
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-18
@@ -166,7 +167,7 @@ User and Supplier before frontend, verifies ECS rollout state and counts, and ru
 CloudFront readiness check. It does not rerun migrations.
 
 `status` is read-only. It reports exact stack/RDS/ECS/CloudFront state, digest-qualified
-task images, target health, non-OK alarms, pending SNS confirmation, the reproducible
+task images, target health, non-OK alarms, explicit SNS delivery readiness, the reproducible
 estimate total, approver/timestamp, and exact configuration and pricing fingerprints. It
 also reminds the operator that the NUS tracking portal is authoritative for credit.
 
@@ -218,7 +219,27 @@ completion, read-only checks report any exact repository, cluster, database, dis
 log group, stack, or tagged-resource residue for manual review. This includes the
 14-day Container Insights performance group. The matching account-wide monitoring budget
 is also removed and checked; missing permission is reported as budget residue requiring
-manual inspection. Local evidence is retained.
+manual inspection. Local evidence is retained. Initial partial deployments need no
+service outputs: exact resource inventories establish the inspection targets. If a
+partially created resource lacks a physical identity, teardown stops with that exact
+resource/status for investigation instead of guessing a name.
+
+Before the first deletion, `artifacts/teardown-receipt.json` atomically records the exact
+stack ARNs, ownership tags, account/regions, resources, provider destinations, and an
+integrity fingerprint. It is owner-only and retained for recovery. To continue an
+interrupted teardown, rerun with the same reviewed configuration and explicit confirmation:
+
+```sh
+npm run destroy -- --resume --allow-data-loss --confirm foc-demo:DESTROY:656253649128
+```
+
+Resume validates the receipt and every present stack's current ARN/tags before mutation.
+Already absent stacks are skipped only after a successful absence check; a same-name
+replacement, newly present stack, wrong owner/account/region, or unauthorized read blocks
+deletion. Mutations address captured stack ARNs, never a name that could point to a
+replacement. A DELETE_IN_PROGRESS stack is waited for rather than deleted again. An
+existing receipt cannot be silently replaced by a fresh teardown; archive it only after
+reviewing a completed teardown and before a distinct later deployment.
 
 CDK's four helper Lambda functions keep their existing IDs, roles, and default log
 destinations. Some core cross-region helpers are generated after CDK aspects run, so the
@@ -228,8 +249,8 @@ default destination, and ensures 14-day retention. Existing default groups are r
 missing groups are created with an exact name, including safe handling of a concurrent
 Lambda creation. Any custom/shared destination stops for manual review.
 
-Before teardown deletes stacks, it saves the validated provider names, regions, and default
-groups in owner-only `artifacts/provider-log-teardown-inventory.json`. After all stack
+The teardown receipt includes validated provider names, regions, and default groups.
+After all captured stack
 deletions complete, every captured function must be confirmed absent before any provider
 group is removed. Only those exact groups are deleted, then inspected in Singapore or
 `us-east-1` as appropriate. Permission failures and remaining functions/groups are residue,
@@ -239,6 +260,10 @@ outside the current inventory and require separate exact-name evidence/manual re
 Shared `CDKToolkit` resources are never deleted. Tagged residue excludes only exact ARNs
 proven by the corresponding region's `CDKToolkit` stack inventory; unreadable inventories,
 similar names, and unrecognized tagged resources still require review.
+
+SNS delivery is ready only when the configured email has a confirmed subscription with
+the exact topic, email protocol, and account identity. Missing, mismatched, and pending
+subscriptions are explicitly NOT READY, even if another address has confirmed.
 
 Foundation apply records `artifacts/budget.json`: created, matching, or permission
 unavailable. The configured actual/forecast alert percentages are visible in this receipt

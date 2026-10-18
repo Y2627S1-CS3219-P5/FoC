@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -14,6 +15,7 @@ import type { PreflightReport } from "../lib/preflight.js";
 import {
   REQUIRED_DIRECT_CAPABILITY_CHECK_IDS,
   REQUIRED_QUOTA_CHECK_IDS,
+  preflightRequirementsFingerprint,
 } from "../lib/preflight.js";
 import { validConfig } from "./fixtures.js";
 
@@ -44,10 +46,16 @@ function withArtifacts(
         generatedAt: "2026-10-18T08:00:00.000Z",
         validUntil: "2026-10-19T08:00:00.000Z",
         configFingerprint: configFingerprint(config),
+        requirementsFingerprint: preflightRequirementsFingerprint(config),
         accountId: config.accountId,
         callerArn: "arn:aws:sts::656253649128:assumed-role/NusRole/tester",
         status: "PASS",
         checks: [
+          {
+            id: "provisioning-permission-simulation",
+            status: "PASS",
+            detail: "current required actions allowed",
+          },
           ...REQUIRED_DIRECT_CAPABILITY_CHECK_IDS.map((id) => ({
             id,
             status: "PASS" as const,
@@ -87,6 +95,26 @@ test("allows a current matching preflight and cost approval", () => {
           paths,
           new Date("2026-10-18T09:00:00Z"),
         ),
+      ),
+  );
+});
+
+test("rejects preflight evidence from a previous capability contract", () => {
+  withArtifacts(
+    ({ preflight }) => {
+      Object.assign(preflight, {
+        requirementsFingerprint: "previous-provider-contract",
+      });
+    },
+    (paths) =>
+      assert.throws(
+        () =>
+          assertDeploymentGate(
+            validConfig(),
+            paths,
+            new Date("2026-10-18T09:00:00Z"),
+          ),
+        /outdated capability contract/,
       ),
   );
 });

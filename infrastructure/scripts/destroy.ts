@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -7,6 +8,8 @@ import { destroyEnvironment } from "../lib/operations.js";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeOwnerOnlyJson } from "../lib/private-json.js";
+import { existsSync } from "node:fs";
+import { readDestroyReceipt } from "../lib/destroy-receipt.js";
 
 try {
   const args = process.argv.slice(2);
@@ -14,6 +17,19 @@ try {
   const confirmation =
     confirmationIndex < 0 ? undefined : args[confirmationIndex + 1];
   const { config } = loadDeploymentConfig();
+  const receiptPath = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "artifacts",
+    "teardown-receipt.json",
+  );
+  const resume = args.includes("--resume");
+  if (!resume && existsSync(receiptPath)) {
+    throw new Error(
+      "A teardown receipt already exists; use --resume to continue it, or archive it only after reviewing a completed teardown",
+    );
+  }
+  const receipt = resume ? readDestroyReceipt(receiptPath, config) : undefined;
   console.error(
     "WARNING: Supplier/User data, secrets, images, and retained logs will be permanently removed.",
   );
@@ -21,21 +37,9 @@ try {
     {
       config,
       runner: systemCommandRunner,
-      recordProviderLogTargets: (targets) =>
-        writeOwnerOnlyJson(
-          resolve(
-            dirname(fileURLToPath(import.meta.url)),
-            "..",
-            "artifacts",
-            "provider-log-teardown-inventory.json",
-          ),
-          {
-            schemaVersion: 1,
-            accountId: config.accountId,
-            capturedAt: new Date().toISOString(),
-            targets,
-          },
-        ),
+      ...(receipt === undefined ? {} : { resumeReceipt: receipt }),
+      recordDestroyReceipt: (inventory) =>
+        writeOwnerOnlyJson(receiptPath, inventory),
     },
     args.includes("--allow-data-loss"),
     confirmation,
@@ -46,7 +50,7 @@ try {
     );
   }
   console.log(
-    "PASS: all four exact FoC demo stacks were deleted with no known residue.",
+    "PASS: captured FoC demo stacks are absent with no known residue; teardown receipt retained.",
   );
 } catch (error: unknown) {
   console.error(error instanceof Error ? error.message : String(error));

@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -10,6 +11,7 @@ import type { Construct } from "constructs";
 import type { DeploymentConfig } from "./config.js";
 
 const API_ORIGIN_REQUEST_HEADERS = [
+  "Authorization",
   "Content-Type",
   "Origin",
   "Accept",
@@ -55,15 +57,11 @@ function uriPathMatch(
   };
 }
 
-function protectedPath(path: string): wafv2.CfnWebACL.StatementProperty {
-  return {
-    orStatement: {
-      statements: [
-        uriPathMatch(path, "EXACTLY"),
-        uriPathMatch(`${path}/`, "STARTS_WITH"),
-      ],
-    },
-  };
+function protectedPath(path: string): wafv2.CfnWebACL.StatementProperty[] {
+  return [
+    uriPathMatch(path, "EXACTLY"),
+    uriPathMatch(`${path}/`, "STARTS_WITH"),
+  ];
 }
 
 function visibilityConfig(
@@ -95,22 +93,6 @@ export class EdgeStack extends Stack {
 
     this.webAcl = this.createWebAcl(props.config);
 
-    // CloudFront forbids allowlisting Authorization in an origin-request
-    // policy. A zero-TTL cache policy is therefore the narrow supported way
-    // to forward it without enabling shared API caching.
-    const apiCachePolicy = new cloudfront.CachePolicy(this, "ApiCachePolicy", {
-      cachePolicyName: "foc-demo-api-no-cache",
-      comment: "Disable API caching while forwarding Authorization",
-      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
-      defaultTtl: Duration.seconds(0),
-      enableAcceptEncodingBrotli: false,
-      enableAcceptEncodingGzip: false,
-      headerBehavior: cloudfront.CacheHeaderBehavior.allowList("Authorization"),
-      maxTtl: Duration.seconds(0),
-      minTtl: Duration.seconds(0),
-      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
-    });
-
     const apiOriginRequestPolicy = new cloudfront.OriginRequestPolicy(
       this,
       "ApiOriginRequestPolicy",
@@ -119,11 +101,25 @@ export class EdgeStack extends Stack {
           "Forward only FoC identity, content, CORS, and optimistic-concurrency headers",
         cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
         headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
-          ...API_ORIGIN_REQUEST_HEADERS,
+          ...API_ORIGIN_REQUEST_HEADERS.filter(
+            (header) => header !== "Authorization",
+          ),
         ),
         originRequestPolicyName: "foc-demo-api-forwarding",
         queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(),
       },
+    );
+    // The pinned L2 still rejects Authorization despite current service support.
+    // Preserve its resource identity and set the exact service-validated L1 list.
+    const originPolicyResource = apiOriginRequestPolicy.node.defaultChild;
+    if (!(originPolicyResource instanceof cloudfront.CfnOriginRequestPolicy)) {
+      throw new Error(
+        "Expected the API origin request policy's CloudFormation resource",
+      );
+    }
+    originPolicyResource.addPropertyOverride(
+      "OriginRequestPolicyConfig.HeadersConfig.Headers",
+      [...API_ORIGIN_REQUEST_HEADERS],
     );
 
     const origin = origins.VpcOrigin.withApplicationLoadBalancer(
@@ -149,7 +145,7 @@ export class EdgeStack extends Stack {
       additionalBehaviors: {
         "/api/*": {
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          cachePolicy: apiCachePolicy,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           // Compression can weaken a strong origin ETag, making Supplier
           // If-Match preconditions invalid for later mutations.
           compress: false,
@@ -166,6 +162,9 @@ export class EdgeStack extends Stack {
         },
       },
       defaultRootObject: "index.html",
+      errorResponses: [400, 403, 404, 405, 414, 500, 501, 502, 503, 504].map(
+        (httpStatus) => ({ httpStatus, ttl: Duration.seconds(0) }),
+      ),
       webAclId: this.webAcl.attrArn,
     });
 
@@ -240,9 +239,10 @@ export class EdgeStack extends Stack {
           priority: 0,
           statement: {
             orStatement: {
-              statements: [...INTERNAL_PATHS, ...EXCLUDED_SERVICE_PATHS].map(
-                protectedPath,
-              ),
+              statements: [
+                ...INTERNAL_PATHS,
+                ...EXCLUDED_SERVICE_PATHS,
+              ].flatMap(protectedPath),
             },
           },
           visibilityConfig: visibilityConfig(

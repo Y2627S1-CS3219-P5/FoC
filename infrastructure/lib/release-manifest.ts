@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -7,6 +8,7 @@ import { writeOwnerOnlyJson } from "./private-json.js";
 import { resolve } from "node:path";
 import { z } from "zod";
 import { ConfigurationError } from "./config.js";
+import { canonicalJson } from "./canonical-json.js";
 
 const digestSchema = z
   .string()
@@ -107,22 +109,8 @@ export function loadReleaseManifest(path = process.env.FOC_RELEASE_MANIFEST): {
   return { manifest: parseReleaseManifest(input), path: absolutePath };
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, child]) => [key, canonicalize(child)]),
-    );
-  }
-  return value;
-}
-
 export function releaseManifestHash(manifest: ReleaseManifest): string {
-  return createHash("sha256")
-    .update(JSON.stringify(canonicalize(manifest)))
-    .digest("hex");
+  return createHash("sha256").update(canonicalJson(manifest)).digest("hex");
 }
 
 export function writeReleaseManifest(

@@ -1,34 +1,16 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
 import type { DeploymentConfig } from "./config.js";
-import { readBootstrapResourceArns } from "./bootstrap-resource-arns.js";
+import type { ProviderLogTarget } from "./provider-logs.js";
+import { readMonitoringBudget, type BudgetEvidence } from "./budget.js";
+import { parseJson, runChecked, type CommandRunner } from "./commands.js";
 import {
-  captureProviderLogTargets,
-  removeProviderLogGroups,
-  type ProviderLogTarget,
-} from "./provider-logs.js";
-import {
-  BUDGET_NAME,
-  readMonitoringBudget,
-  removeMonitoringBudget,
-  type BudgetEvidence,
-} from "./budget.js";
-import {
-  parseJson,
-  runChecked,
-  safeCommandFailure,
-  type CommandResult,
-  type CommandRunner,
-} from "./commands.js";
-import {
-  REPOSITORY_NAMES,
-  SERVICE_LOG_OUTPUTS,
   SERVICE_NAMES,
   SERVICE_OUTPUTS,
   SERVICE_START_ORDER,
   SERVICE_STOP_ORDER,
-  STACKS,
   type ServiceKey,
   type StackKey,
 } from "./deployment-names.js";
@@ -99,6 +81,9 @@ interface SubscriptionsResponse {
   readonly Subscriptions?: readonly {
     readonly Endpoint?: string;
     readonly SubscriptionArn?: string;
+    readonly Protocol?: string;
+    readonly TopicArn?: string;
+    readonly Owner?: string;
   }[];
 }
 
@@ -144,6 +129,9 @@ export interface EnvironmentStatus {
     readonly state: string;
   }[];
   readonly pendingSnsConfirmation: boolean;
+  readonly snsDeliveryReady: boolean;
+  readonly snsSubscriptionState:
+    "CONFIRMED" | "PENDING" | "MISSING" | "MISMATCHED";
   readonly monthlyBudgetUsd: number;
   readonly monitoringBudget: BudgetEvidence;
   readonly costApproval: DeploymentConfig["costApproval"];
@@ -336,6 +324,33 @@ export function readEnvironmentStatus(
     "read CloudFront distribution",
     context.config.edgeRegion,
   );
+  const topicArn = requireOutput(inventory.application, "AlertTopicArn");
+  const expectedTopic = `arn:aws:sns:${context.config.primaryRegion}:${context.config.accountId}:foc-demo-alerts`;
+  const rows = subscriptions.Subscriptions ?? [];
+  const matching = rows.filter(
+    (subscription) =>
+      topicArn === expectedTopic &&
+      subscription.TopicArn === topicArn &&
+      subscription.Owner === context.config.accountId &&
+      subscription.Protocol === "email" &&
+      subscription.Endpoint === context.config.alertEmail,
+  );
+  const confirmed = matching.some(
+    ({ SubscriptionArn }) =>
+      SubscriptionArn?.startsWith(`${topicArn}:`) === true &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        SubscriptionArn.slice(topicArn.length + 1),
+      ),
+  );
+  const snsSubscriptionState = confirmed
+    ? "CONFIRMED"
+    : matching.some(
+          ({ SubscriptionArn }) => SubscriptionArn === "PendingConfirmation",
+        )
+      ? "PENDING"
+      : rows.length === 0
+        ? "MISSING"
+        : "MISMATCHED";
   return {
     accountId: identity.accountId,
     callerArn: identity.arn,
@@ -361,9 +376,9 @@ export function readEnvironmentStatus(
       }),
     ),
     alarmsNotOk: alarmRows,
-    pendingSnsConfirmation: (subscriptions.Subscriptions ?? []).some(
-      ({ SubscriptionArn }) => SubscriptionArn === "PendingConfirmation",
-    ),
+    pendingSnsConfirmation: snsSubscriptionState === "PENDING",
+    snsDeliveryReady: confirmed,
+    snsSubscriptionState,
     monthlyBudgetUsd: context.config.monthlyBudgetUsd,
     monitoringBudget: readMonitoringBudget(context.config, context.runner),
     costApproval: context.config.costApproval,
@@ -372,76 +387,10 @@ export function readEnvironmentStatus(
   };
 }
 
-export function assertDestroyConfirmation(
-  config: DeploymentConfig,
-  allowDataLoss: boolean,
-  confirmation: string | undefined,
-): void {
-  if (!allowDataLoss) throw new Error("destroy requires --allow-data-loss");
-  const expected = `foc-demo:DESTROY:${config.accountId}`;
-  if (confirmation !== expected) {
-    throw new Error(`destroy requires --confirm ${expected}`);
-  }
-}
-
-export function destroyEnvironment(
-  context: OperationContext,
-  allowDataLoss: boolean,
-  confirmation: string | undefined,
-): readonly string[] {
-  assertDestroyConfirmation(context.config, allowDataLoss, confirmation);
-  assertAwsIdentity(context.config, context.runner);
-  const inventory = loadInventory(context);
-  const residualTargets = captureResidualTargets(context, inventory);
-  context.recordProviderLogTargets?.(residualTargets.providerLogs);
-  for (const key of ["edge", "application", "data", "foundation"] as const) {
-    const stack = STACKS[key];
-    const region =
-      stack.region === "primary"
-        ? context.config.primaryRegion
-        : context.config.edgeRegion;
-    runChecked(
-      context.runner,
-      {
-        executable: "aws",
-        args: awsArgs(context.config, region, [
-          "cloudformation",
-          "delete-stack",
-          "--stack-name",
-          stack.name,
-        ]),
-      },
-      `delete exact stack ${stack.name}`,
-    );
-    runChecked(
-      context.runner,
-      {
-        executable: "aws",
-        args: awsArgs(context.config, region, [
-          "cloudformation",
-          "wait",
-          "stack-delete-complete",
-          "--stack-name",
-          stack.name,
-        ]),
-      },
-      `wait for exact stack ${stack.name} deletion`,
-    );
-  }
-  const providerCleanup = removeProviderLogGroups(
-    context.config,
-    context.runner,
-    residualTargets.providerLogs,
-  );
-  const budget = removeMonitoringBudget(context.config, context.runner);
-  return [
-    ...providerCleanup,
-    ...inspectResiduals(context, residualTargets),
-    ...(budget.state === "ABSENT"
-      ? []
-      : [`budget:${BUDGET_NAME}:${budget.state}`]),
-  ];
-}
+export {
+  assertDestroyConfirmation,
+  destroyEnvironment,
+} from "./destroy-environment.js";
 
 function operationalInventory(
   context: OperationContext,
@@ -694,242 +643,4 @@ function awsWait(
   label: string,
 ): void {
   awsMutation(context, args, label);
-}
-
-interface ResidualTargets {
-  readonly clusterName: string;
-  readonly databaseIdentifier: string;
-  readonly distributionId: string;
-  readonly logGroups: readonly {
-    readonly name: string;
-    readonly region: string;
-  }[];
-  readonly providerLogs: readonly ProviderLogTarget[];
-}
-
-function captureResidualTargets(
-  context: OperationContext,
-  inventory: ReturnType<typeof loadInventory>,
-): ResidualTargets {
-  const providerLogs = captureProviderLogTargets(
-    context.config,
-    context.runner,
-    Object.values(inventory),
-  );
-  return {
-    providerLogs,
-    clusterName: requireOutput(inventory.foundation, "ClusterName"),
-    databaseIdentifier: requireOutput(
-      inventory.data,
-      "DatabaseInstanceIdentifier",
-    ),
-    distributionId: requireOutput(inventory.edge, "DistributionId"),
-    logGroups: [
-      ...providerLogs.map(({ logGroupName, region }) => ({
-        name: logGroupName,
-        region,
-      })),
-      ...[
-        ...Object.values(SERVICE_LOG_OUTPUTS).flatMap((key) => {
-          const value = inventory.application.outputs[key];
-          return value === undefined ? [] : [value];
-        }),
-        "/foc/demo/jobs/database-bootstrap",
-        "/foc/demo/jobs/user-migration",
-        "/foc/demo/jobs/supplier-migration",
-        "/foc/demo/jobs/supplier-seed",
-        "/aws/ecs/containerinsights/foc-demo-cluster/performance",
-        "/foc/demo/events/ecs-deployment-failures",
-      ].map((name) => ({ name, region: context.config.primaryRegion })),
-    ],
-  };
-}
-
-function inspectResiduals(
-  context: OperationContext,
-  targets: ResidualTargets,
-): readonly string[] {
-  const residuals: string[] = [];
-  for (const [key, stack] of Object.entries(STACKS) as [
-    StackKey,
-    (typeof STACKS)[StackKey],
-  ][]) {
-    const region =
-      stack.region === "primary"
-        ? context.config.primaryRegion
-        : context.config.edgeRegion;
-    if (
-      resourceStillExists(
-        context.runner({
-          executable: "aws",
-          args: awsArgs(context.config, region, [
-            "cloudformation",
-            "describe-stacks",
-            "--stack-name",
-            stack.name,
-          ]),
-        }),
-        /ValidationError.*(?:does not exist|not exist)/i,
-      )
-    )
-      residuals.push(`stack:${key}`);
-  }
-  for (const repository of Object.values(REPOSITORY_NAMES)) {
-    if (
-      resourceStillExists(
-        context.runner({
-          executable: "aws",
-          args: awsArgs(context.config, context.config.primaryRegion, [
-            "ecr",
-            "describe-repositories",
-            "--repository-names",
-            repository,
-          ]),
-        }),
-        /RepositoryNotFoundException/i,
-      )
-    )
-      residuals.push(`ecr:${repository}`);
-  }
-  if (
-    resourceStillExists(
-      context.runner({
-        executable: "aws",
-        args: awsArgs(context.config, context.config.primaryRegion, [
-          "ecs",
-          "describe-clusters",
-          "--clusters",
-          targets.clusterName,
-        ]),
-      }),
-      undefined,
-      true,
-    )
-  )
-    residuals.push(`ecs:${targets.clusterName}`);
-  if (
-    resourceStillExists(
-      context.runner({
-        executable: "aws",
-        args: awsArgs(context.config, context.config.primaryRegion, [
-          "rds",
-          "describe-db-instances",
-          "--db-instance-identifier",
-          targets.databaseIdentifier,
-        ]),
-      }),
-      /DBInstanceNotFound/i,
-    )
-  )
-    residuals.push(`rds:${targets.databaseIdentifier}`);
-  if (
-    resourceStillExists(
-      context.runner({
-        executable: "aws",
-        args: awsArgs(context.config, context.config.edgeRegion, [
-          "cloudfront",
-          "get-distribution",
-          "--id",
-          targets.distributionId,
-        ]),
-      }),
-      /NoSuchDistribution/i,
-    )
-  )
-    residuals.push(`cloudfront:${targets.distributionId}`);
-  for (const { name: logGroup, region } of targets.logGroups) {
-    const result = context.runner({
-      executable: "aws",
-      args: awsArgs(context.config, region, [
-        "logs",
-        "describe-log-groups",
-        "--log-group-name-prefix",
-        logGroup,
-      ]),
-    });
-    if (result.status !== 0) {
-      residuals.push(`logs-check-failed:${region}:${logGroup}`);
-      continue;
-    }
-    const response = parseJson<{
-      readonly logGroups?: readonly { readonly logGroupName?: string }[];
-    }>(result.stdout, "CloudWatch Logs residual check");
-    if (
-      (response.logGroups ?? []).some(
-        ({ logGroupName }) => logGroupName === logGroup,
-      )
-    ) {
-      residuals.push(`logs:${region}:${logGroup}`);
-    }
-  }
-  for (const region of [
-    context.config.primaryRegion,
-    context.config.edgeRegion,
-  ]) {
-    const tagged = context.runner({
-      executable: "aws",
-      args: awsArgs(context.config, region, [
-        "resourcegroupstaggingapi",
-        "get-resources",
-        "--tag-filters",
-        "Key=Project,Values=FoC",
-        "Key=Environment,Values=demo",
-      ]),
-    });
-    if (tagged.status === 0) {
-      const response = parseJson<{
-        readonly ResourceTagMappingList?: readonly {
-          readonly ResourceARN?: string;
-        }[];
-      }>(tagged.stdout, `tagged residual check in ${region}`);
-      if ((response.ResourceTagMappingList?.length ?? 0) > 0) {
-        try {
-          const bootstrap = readBootstrapResourceArns(
-            context.config,
-            context.runner,
-            region,
-          );
-          if (
-            response.ResourceTagMappingList?.some(
-              ({ ResourceARN }) =>
-                ResourceARN === undefined || !bootstrap.has(ResourceARN),
-            )
-          ) {
-            residuals.push(`tagged-resources:${region}`);
-          }
-        } catch {
-          residuals.push(`bootstrap-inventory-check-failed:${region}`);
-          residuals.push(`tagged-resources:${region}`);
-        }
-      }
-    } else {
-      residuals.push(`tagged-resource-check-failed:${region}`);
-    }
-  }
-  return residuals;
-}
-
-function resourceStillExists(
-  result: CommandResult,
-  expectedNotFound?: RegExp,
-  inspectCluster = false,
-): boolean {
-  if (result.status !== 0) {
-    const diagnostic = result.stderr || result.stdout;
-    if (expectedNotFound?.test(diagnostic) === true) return false;
-    throw new Error(
-      `Residual inspection failed: ${safeCommandFailure(result)}`,
-    );
-  }
-  if (!inspectCluster) return true;
-  try {
-    const response = parseJson<{
-      readonly clusters?: readonly { readonly status?: string }[];
-    }>(result.stdout, "ECS residual check");
-    return (response.clusters ?? []).some(
-      ({ status }) => status !== "INACTIVE",
-    );
-  } catch {
-    return true;
-  }
 }

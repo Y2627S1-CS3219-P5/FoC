@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -51,7 +52,7 @@ try {
       `Non-OK alarms: ${status.alarmsNotOk.map(({ name, state }) => `${name}=${state}`).join(", ") || "none"}`,
     );
     console.log(
-      `SNS confirmation pending: ${status.pendingSnsConfirmation ? "yes" : "no"}`,
+      `SNS alert delivery: ${status.snsDeliveryReady ? "ready" : "NOT READY"} (${status.snsSubscriptionState})`,
     );
     console.log(`Approved monthly budget: USD ${status.monthlyBudgetUsd}`);
     console.log(

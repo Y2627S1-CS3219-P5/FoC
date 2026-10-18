@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -5,6 +6,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { canonicalJson } from "./canonical-json.js";
 
 const regionSchema = z.enum(["ap-southeast-1"]);
 const edgeRegionSchema = z.enum(["us-east-1"]);
@@ -220,24 +222,8 @@ export class ConfigurationError extends Error {
   }
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(canonicalize);
-  }
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, child]) => [key, canonicalize(child)]),
-    );
-  }
-  return value;
-}
-
 export function configFingerprint(config: DeploymentConfig): string {
-  return createHash("sha256")
-    .update(JSON.stringify(canonicalize(config)))
-    .digest("hex");
+  return createHash("sha256").update(canonicalJson(config)).digest("hex");
 }
 
 export function parseDeploymentConfig(input: unknown): DeploymentConfig {

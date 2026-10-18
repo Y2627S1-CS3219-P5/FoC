@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: Exact-stack provider log retention and guarded post-deletion cleanup.
 // Author review: PENDING.

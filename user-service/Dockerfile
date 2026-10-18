@@ -1,3 +1,4 @@
+# Contributor: @ron (AI-assisted); implementation review pending.
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-09. Scope: rewrote the
 # image as the author decided (two stages, fresh production install, allowlisted runtime
 # contents, non-root user, pinned base image, NODE_ENV in the runtime stage only).

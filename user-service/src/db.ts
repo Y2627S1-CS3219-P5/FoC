@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 // Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: consumed the
 // verified-TLS discrete database configuration added for issue #48. Author review: PENDING.

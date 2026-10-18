@@ -1,3 +1,4 @@
+<!-- Contributor: @ron (AI-assisted); implementation review pending. -->
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-5), date: 2026-10-18

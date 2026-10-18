@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: idempotent isolated-database and role bootstrap implementation for issue #48.
 // Author review: PENDING.

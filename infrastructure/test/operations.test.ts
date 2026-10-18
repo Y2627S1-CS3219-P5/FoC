@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -21,6 +22,13 @@ import {
   success,
 } from "./release-tooling-fixtures.js";
 
+function stackNameArgument(request: CommandRequest): string {
+  const value = argumentAfter(request, "--stack-name") ?? "";
+  return value.startsWith("arn:aws:cloudformation:")
+    ? (value.split("/")[1] ?? "")
+    : value;
+}
+
 function operationRunner(options: {
   readonly calls: CommandRequest[];
   readonly initialRdsState?: "available" | "stopped";
@@ -43,7 +51,7 @@ function operationRunner(options: {
     if (service === "cloudformation") {
       if (operation === "list-stack-resources")
         return success(JSON.stringify({ StackResourceSummaries: [] }));
-      const stack = argumentAfter(request, "--stack-name") ?? "";
+      const stack = stackNameArgument(request);
       return stackOutput(config, stack);
     }
     if (service === "rds" && operation === "describe-db-instances") {
@@ -239,6 +247,56 @@ test("status is read-only and reports that stopped is not zero-cost", () => {
   );
 });
 
+test("SNS readiness requires the configured email's confirmed subscription and exact topic identity", () => {
+  const config = validConfig();
+  const topic = `arn:aws:sns:${config.primaryRegion}:${config.accountId}:foc-demo-alerts`;
+  const confirmed = {
+    Endpoint: config.alertEmail,
+    Protocol: "email",
+    TopicArn: topic,
+    Owner: config.accountId,
+    SubscriptionArn: `${topic}:12345678-1234-1234-1234-123456789abc`,
+  };
+  for (const [subscriptions, state] of [
+    [[], "MISSING"],
+    [[{ ...confirmed, Endpoint: "wrong@u.nus.edu" }], "MISMATCHED"],
+    [[{ ...confirmed, SubscriptionArn: "PendingConfirmation" }], "PENDING"],
+    [[{ ...confirmed, Owner: "111122223333" }], "MISMATCHED"],
+    [[{ ...confirmed, TopicArn: `${topic}-wrong` }], "MISMATCHED"],
+    [[{ ...confirmed, Protocol: "https" }], "MISMATCHED"],
+    [[confirmed], "CONFIRMED"],
+  ] as const) {
+    const base = operationRunner({ calls: [] });
+    const status = readEnvironmentStatus(
+      {
+        config,
+        runner: (request) => {
+          if (request.args[0] === "sns")
+            return success(JSON.stringify({ Subscriptions: subscriptions }));
+          if (
+            request.args[0] === "cloudformation" &&
+            argumentAfter(request, "--stack-name") === "foc-demo-application"
+          ) {
+            const response = JSON.parse(base(request).stdout) as {
+              Stacks: {
+                Outputs: { OutputKey: string; OutputValue: string }[];
+              }[];
+            };
+            response.Stacks[0]!.Outputs.find(
+              ({ OutputKey }) => OutputKey === "AlertTopicArn",
+            )!.OutputValue = topic;
+            return success(JSON.stringify(response));
+          }
+          return base(request);
+        },
+      },
+      configFingerprint(config),
+    );
+    assert.equal(status.snsSubscriptionState, state);
+    assert.equal(status.snsDeliveryReady, state === "CONFIRMED");
+  }
+});
+
 test("destroy refuses missing confirmation before any command", () => {
   const calls: CommandRequest[] = [];
   assert.throws(
@@ -276,18 +334,31 @@ test("destroy deletes only the four exact stacks in reverse dependency order", (
       );
     }
     if (service === "cloudformation" && operation === "delete-stack") {
-      deleted.add(argumentAfter(request, "--stack-name") ?? "");
+      deleted.add(stackNameArgument(request));
       return success();
     }
     if (service === "cloudformation" && operation === "wait") return success();
     if (service === "cloudformation" && operation === "describe-stacks") {
-      const stack = argumentAfter(request, "--stack-name") ?? "";
+      const stack = stackNameArgument(request);
       return deleted.has(stack)
         ? failure("ValidationError: does not exist")
         : stackOutput(config, stack);
     }
     if (service === "cloudformation" && operation === "list-stack-resources")
-      return success(JSON.stringify({ StackResourceSummaries: [] }));
+      return success(
+        JSON.stringify({
+          StackResourceSummaries:
+            stackNameArgument(request) === "foc-demo-foundation"
+              ? [
+                  {
+                    ResourceType: "AWS::Logs::LogGroup",
+                    PhysicalResourceId:
+                      "/aws/ecs/containerinsights/foc-demo-cluster/performance",
+                  },
+                ]
+              : [],
+        }),
+      );
     if (service === "ecs" && operation === "describe-clusters") {
       return success(JSON.stringify({ clusters: [{ status: "INACTIVE" }] }));
     }
@@ -302,7 +373,7 @@ test("destroy deletes only the four exact stacks in reverse dependency order", (
     throw new Error(`Unexpected command: ${request.args.join(" ")}`);
   };
   const residuals = destroyEnvironment(
-    { config, runner },
+    { config, runner, recordDestroyReceipt: () => undefined },
     true,
     `foc-demo:DESTROY:${config.accountId}`,
   );
@@ -320,7 +391,7 @@ test("destroy deletes only the four exact stacks in reverse dependency order", (
     .filter(
       ({ args }) => args[0] === "cloudformation" && args[1] === "delete-stack",
     )
-    .map((request) => argumentAfter(request, "--stack-name"));
+    .map(stackNameArgument);
   assert.deepEqual(order, [
     "foc-demo-edge",
     "foc-demo-application",
@@ -360,11 +431,11 @@ test("destroy fails closed when a residual check is unauthorized", () => {
   assert.throws(
     () =>
       destroyEnvironment(
-        { config, runner },
+        { config, runner, recordDestroyReceipt: () => undefined },
         true,
         `foc-demo:DESTROY:${config.accountId}`,
       ),
-    /Residual inspection failed: AccessDenied/,
+    /AccessDenied/,
   );
 });
 
@@ -386,7 +457,7 @@ function providerDestroyFixture(
   const runner: CommandRunner = (request) => {
     calls.push(request);
     const [service, operation] = request.args;
-    const stack = argumentAfter(request, "--stack-name") ?? "";
+    const stack = stackNameArgument(request);
     const region = argumentAfter(request, "--region") ?? "";
     if (service === "sts")
       return success(
@@ -500,6 +571,7 @@ test("destroy captures provider groups before stack deletion and checks/cleans S
       {
         config,
         runner,
+        recordDestroyReceipt: () => undefined,
         recordProviderLogTargets: (targets) => {
           assert.equal(targets.length, 2);
           assert.equal(
@@ -547,7 +619,7 @@ test("destroy captures provider groups before stack deletion and checks/cleans S
 test("destroy reports edge provider group residue and cleanup permission failures", () => {
   const { config, runner } = providerDestroyFixture({ retainEdgeGroup: true });
   const residuals = destroyEnvironment(
-    { config, runner },
+    { config, runner, recordDestroyReceipt: () => undefined },
     true,
     `foc-demo:DESTROY:${config.accountId}`,
   );
@@ -565,7 +637,7 @@ test("tagged residue excludes only exact bootstrap inventory and fails closed on
   for (const options of [{ extraTagged: true }, { denyBootstrap: true }]) {
     const { config, runner } = providerDestroyFixture(options);
     const residuals = destroyEnvironment(
-      { config, runner },
+      { config, runner, recordDestroyReceipt: () => undefined },
       true,
       `foc-demo:DESTROY:${config.accountId}`,
     );

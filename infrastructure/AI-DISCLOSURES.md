@@ -1,3 +1,4 @@
+<!-- Contributor: @ron (AI-assisted); implementation review pending. -->
 <!--
 AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 Scope: Per-file attribution manifest for schema-strict AWS configuration and upstream assets.
@@ -14,6 +15,9 @@ constitute approval of all implementation files.
 ## Strict JSON and generated files
 
 The following exact files were created or modified with AI assistance on 2026-10-18.
+Contributor for these infrastructure changes: @ron (AI-assisted); implementation review
+remains pending. This attribution does not claim project-author or User Service-owner
+approval. Upstream certificate bytes remain unmodified.
 They remain valid strict JSON. CDK, Zod, pricing hashes, and npm lockfile consumers require
 their existing schema, so this dedicated per-file manifest supplies attribution without
 adding schema-breaking comment properties. This follows the repository's disclosure

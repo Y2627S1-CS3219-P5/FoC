@@ -1,3 +1,4 @@
+-- Contributor: @ron (AI-assisted); implementation review pending.
 -- AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 -- Scope: test-only RDS-like master privileges, deliberately without SUPERUSER.
 -- Author review: PENDING.

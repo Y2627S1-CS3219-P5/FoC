@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -10,6 +11,7 @@ import { estimateMonthlyCost, pricingSnapshotHash } from "./cost.js";
 import {
   REQUIRED_DIRECT_CAPABILITY_CHECK_IDS,
   REQUIRED_QUOTA_CHECK_IDS,
+  preflightRequirementsFingerprint,
   type PreflightReport,
 } from "./preflight.js";
 
@@ -74,6 +76,14 @@ export function assertDeploymentGate(
       "preflight report was generated for different configuration inputs",
     );
   }
+  if (
+    preflight.requirementsFingerprint !==
+    preflightRequirementsFingerprint(config)
+  ) {
+    failures.push(
+      "preflight report uses an outdated capability contract; run npm run preflight again",
+    );
+  }
   if (preflight.accountId !== config.accountId) {
     failures.push(
       "preflight caller account does not match the approved account",
@@ -92,6 +102,17 @@ export function assertDeploymentGate(
   if (!directCapabilitiesPassed) {
     failures.push(
       "preflight report does not contain passing direct service and capability checks",
+    );
+  }
+  if (
+    !preflight.checks.some(
+      (check) =>
+        check.id === "provisioning-permission-simulation" &&
+        check.status === "PASS",
+    )
+  ) {
+    failures.push(
+      "preflight report lacks a passing current permission simulation",
     );
   }
   const quotaChecks = REQUIRED_QUOTA_CHECK_IDS.map((id) =>

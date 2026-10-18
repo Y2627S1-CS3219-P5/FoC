@@ -1,3 +1,4 @@
+<!-- Contributor: @ron (AI-assisted); implementation review pending. -->
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-18

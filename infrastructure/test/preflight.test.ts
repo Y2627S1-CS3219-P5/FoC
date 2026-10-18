@@ -1,3 +1,4 @@
+// Contributor: @ron (AI-assisted); implementation review pending.
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
@@ -21,6 +22,10 @@ const requestedActions = [
   "cloudfront:CreateDistribution",
   "wafv2:CreateWebACL",
   "logs:CreateLogGroup",
+  "logs:PutRetentionPolicy",
+  "logs:DeleteLogGroup",
+  "lambda:GetFunctionConfiguration",
+  "cloudformation:ListStackResources",
   "secretsmanager:CreateSecret",
   "sns:CreateTopic",
   "budgets:CreateBudget",
@@ -224,6 +229,36 @@ test("passes when all required read-only capabilities and bootstrap stacks are p
   );
 });
 
+test("requires direct Lambda and exact stack-inventory reads in both provider regions", () => {
+  const calls: string[][] = [];
+  const report = runPreflight(validConfig(), fakeRunner({}, calls));
+  assert.equal(report.status, "PASS");
+  assert.match(report.requirementsFingerprint, /^[0-9a-f]{64}$/);
+  for (const region of ["ap-southeast-1", "us-east-1"]) {
+    assert.ok(
+      calls.some(
+        (call) =>
+          call.includes("list-functions") &&
+          call[call.indexOf("--region") + 1] === region,
+      ),
+    );
+    assert.ok(
+      calls.some(
+        (call) =>
+          call.includes("list-stack-resources") &&
+          call[call.indexOf("--region") + 1] === region,
+      ),
+    );
+  }
+  assert.equal(
+    runPreflight(
+      validConfig(),
+      fakeRunner({ denyService: "lambda:list-functions" }),
+    ).status,
+    "BLOCKED",
+  );
+});
+
 test("blocks a caller authenticated to the wrong AWS account", () => {
   const report = runPreflight(
     validConfig(),
@@ -342,10 +377,10 @@ test("reports the actual denied provisioning action from AWS simulation", () => 
 test("rejects missing, duplicate, unexpected, and unnamed action evaluations", () => {
   const all = allowedEvaluations();
   for (const [evaluations, expected] of [
-    [all.slice(0, 14), /missing action results: ssm:PutParameter/],
+    [all.slice(0, -1), /missing action results: ssm:PutParameter/],
     [
       [
-        ...all.slice(0, 14),
+        ...all.slice(0, -1),
         {
           EvalActionName: "cloudformation:CreateStack",
           EvalDecision: "allowed",
@@ -355,13 +390,13 @@ test("rejects missing, duplicate, unexpected, and unnamed action evaluations", (
     ],
     [
       [
-        ...all.slice(0, 14),
+        ...all.slice(0, -1),
         { EvalActionName: "iam:DeleteRole", EvalDecision: "allowed" },
       ],
       /unexpected action result: iam:DeleteRole/,
     ],
     [
-      [...all.slice(0, 14), { EvalDecision: "allowed" }],
+      [...all.slice(0, -1), { EvalDecision: "allowed" }],
       /unexpected action result: missing action name/,
     ],
   ] as const) {
