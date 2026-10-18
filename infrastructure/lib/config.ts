@@ -196,6 +196,10 @@ export const deploymentConfigSchema = z
       }, "pricingCalculatorEstimateUrl must be an AWS Pricing Calculator URL"),
     quotaApproval: z
       .object({
+        serviceQuotasApiRestriction: z.literal(
+          "NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY",
+        ),
+        reviewedQuota: z.literal("fargate:L-3032A538"),
         confirmedBy: z.string().trim().min(1),
         confirmedAt: z.string().datetime({ offset: true }),
         evidenceReference: z.string().trim().min(1),

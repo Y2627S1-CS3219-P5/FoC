@@ -59,6 +59,38 @@ test("requires a positive ECR image retention count", () => {
   assert.throws(() => parseDeploymentConfig(invalid), /retainedImageCount/);
 });
 
+test("requires the exact NUS quota restriction and reviewed Fargate quota", () => {
+  const wrongRestriction = structuredClone(validConfig()) as Record<
+    string,
+    unknown
+  >;
+  wrongRestriction.quotaApproval = {
+    ...validConfig().quotaApproval,
+    serviceQuotasApiRestriction: "GENERIC_ACCESS_DENIED",
+  };
+  assert.throws(
+    () => parseDeploymentConfig(wrongRestriction),
+    /NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY/,
+  );
+
+  const wrongQuota = structuredClone(validConfig()) as Record<string, unknown>;
+  wrongQuota.quotaApproval = {
+    ...validConfig().quotaApproval,
+    reviewedQuota: "ec2:some-other-quota",
+  };
+  assert.throws(() => parseDeploymentConfig(wrongQuota), /fargate:L-3032A538/);
+});
+
+test("requires named manual quota approval evidence", () => {
+  const missingEvidence = validConfig();
+  missingEvidence.quotaApproval.confirmedBy = "";
+  missingEvidence.quotaApproval.evidenceReference = "";
+  assert.throws(
+    () => parseDeploymentConfig(missingEvidence),
+    /quotaApproval\.(confirmedBy|evidenceReference)/,
+  );
+});
+
 test("rejects sub-minute periods for standard-resolution metrics", () => {
   const invalid = validConfig();
   invalid.alarms.ecsRunningTaskShortfall.periodSeconds = 45;

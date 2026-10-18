@@ -3,7 +3,8 @@ AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-5), date: 2026-10-18
 Scope: Structured and drafted the AWS deployment specification from the architecture,
 security, cost, lifecycle, and verification decisions explicitly reviewed and approved by
-@ron during the issue #44 grilling session. No AWS resources were created.
+@ron during the issue #44 grilling session, then recorded the approved issue #52 quota
+evidence rule and cloud-only service boundaries. No AWS resources were created.
 Author review: The recorded design decisions were reviewed and approved by @ron on
 2026-10-18. Final document wording remains subject to pull-request review.
 -->
@@ -84,6 +85,10 @@ nginx continues to own the public route mapping:
 - `/assets/suppliers...` to Supplier Service.
 - All other non-API routes to the React SPA fallback.
 
+The cloud nginx target contains only these User and Supplier routes. It deliberately omits
+the existing Order route stubs until Order Service is part of the deployed scope. Local
+Compose keeps its existing routes and development behavior.
+
 nginx must not expose User Service `/auth/verify`, either backend `/health`, Supplier
 `/api/docs`, or Supplier `/api/docs-json`.
 
@@ -104,6 +109,8 @@ localhost CORS configuration.
 - User and Supplier records persist in PostgreSQL.
 - User audit records persist in PostgreSQL; audit checkpoint messages also go to the User
   Service CloudWatch log group.
+- User outbox records remain durable, but the cloud task does not start its Kafka publisher
+  while Kafka is outside this deployment. Local Compose keeps publishing enabled.
 - The approved 21-row Supplier CSV and six allowlisted images remain bundled in the
   Supplier image.
 - The deployment does not introduce mutable object storage or image upload.
@@ -291,9 +298,16 @@ application-enforced.
 - Deployment controller: ECS rolling update.
 - Deployment circuit breaker: enabled with automatic rollback.
 
-CPU, memory, and scaling target percentages must be selected after the current containers
-are measured under the existing integration workload. They are explicit blockers rather
-than guessed values.
+The approved values below come from the existing integration journeys plus a bounded run
+of 500 authenticated reads at concurrency 20. Observed local peaks were 4.41% CPU/33.69
+MiB for frontend, 80.18%/35.68 MiB for User, and 66.74%/83.22 MiB for Supplier. The larger
+cloud allocations include startup, Service Connect, and short traffic-burst headroom.
+
+| Service | Fargate CPU | Memory | CPU target | Memory target |
+| --- | ---: | ---: | ---: | ---: |
+| Frontend nginx | 512 (0.5 vCPU) | 1,024 MiB | 60% | 70% |
+| User Service | 1,024 (1 vCPU) | 2,048 MiB | 55% | 70% |
+| Supplier Service | 1,024 (1 vCPU) | 2,048 MiB | 55% | 70% |
 
 ### 10.2 Health and shutdown
 
@@ -444,6 +458,7 @@ variables in CloudFormation.
 | `ALLOWED_EMAIL_DOMAIN` | `u.nus.edu` |
 | `CORS_ORIGINS` | Empty because browser traffic is same-origin through nginx |
 | `AUDIT_HMAC_KEY` | At least 32 random bytes encoded as hexadecimal |
+| `ACCOUNT_STATUS_PUBLISHING_ENABLED` | `false`; Kafka is not deployed, while outbox records remain durable |
 | `BOOTSTRAP_ADMIN_USERNAME` | Approved non-secret deployment input |
 | `BOOTSTRAP_ADMIN_EMAIL` | Approved NUS email input |
 | `BOOTSTRAP_ADMIN_PASSWORD` | Generated secret |
@@ -691,7 +706,11 @@ Before CDK bootstrap or provisioning, run read-only checks for:
 - Ability to describe VPC, ECS, ECR, RDS, CloudFront, WAF, CloudWatch, Secrets Manager,
   SNS, Budgets, IAM, and CloudFormation capabilities.
 - PostgreSQL engine and instance-class availability.
-- Service quotas required by the design.
+- Service quotas required by the design. If and only if both Service Quotas calls return
+  the recorded NUS Organizations SCP explicit-deny signature, the preflight may use the
+  validated named manual review for `fargate:L-3032A538`. Every direct service and required
+  capability check must still pass. Generic access denials, missing evidence, mixed API
+  results, or a failed capability check remain blockers.
 - Existing CDK bootstrap state.
 
 CDK bootstrap is a reviewed, explicit mutation because it creates deployment support
@@ -751,7 +770,6 @@ These are not architecture decisions and must be supplied or measured before pro
 - NUS team budget and approved `monthlyBudgetUsd` alert threshold.
 - Operational owner and confirmed alert email.
 - Bootstrap administrator username and NUS email.
-- ECS CPU/memory allocations and target-tracking percentages from measurement.
 - WAF rate thresholds from bounded load testing.
 - CloudWatch alarm thresholds and evaluation periods from baseline measurements.
 - Initial and maximum RDS storage plus backup-retention days from the cost estimate.

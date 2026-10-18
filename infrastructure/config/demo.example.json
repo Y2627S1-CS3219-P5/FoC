@@ -122,6 +122,8 @@
     "pricingCalculatorEstimateUrl": "REPLACE_WITH_SHARED_AWS_PRICING_CALCULATOR_URL"
   },
   "quotaApproval": {
+    "serviceQuotasApiRestriction": "NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY",
+    "reviewedQuota": "fargate:L-3032A538",
     "confirmedBy": "REPLACE_WITH_REVIEWER",
     "confirmedAt": "REPLACE_WITH_ISO_8601_TIMESTAMP",
     "evidenceReference": "REPLACE_WITH_NUS_CONFIRMATION_OR_QUOTA_REVIEW_REFERENCE"

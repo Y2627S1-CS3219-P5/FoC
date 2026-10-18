@@ -8,6 +8,10 @@ import { configFingerprint } from "../lib/config.js";
 import { estimateMonthlyCost, type PricingSnapshot } from "../lib/cost.js";
 import { assertDeploymentGate, DeploymentGateError } from "../lib/gate.js";
 import type { PreflightReport } from "../lib/preflight.js";
+import {
+  REQUIRED_DIRECT_CAPABILITY_CHECK_IDS,
+  REQUIRED_QUOTA_CHECK_IDS,
+} from "../lib/preflight.js";
 import { validConfig } from "./fixtures.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -40,7 +44,18 @@ function withArtifacts(
         accountId: config.accountId,
         callerArn: "arn:aws:sts::656253649128:assumed-role/NusRole/tester",
         status: "PASS",
-        checks: [],
+        checks: [
+          ...REQUIRED_DIRECT_CAPABILITY_CHECK_IDS.map((id) => ({
+            id,
+            status: "PASS" as const,
+            detail: "verified",
+          })),
+          ...REQUIRED_QUOTA_CHECK_IDS.map((id) => ({
+            id,
+            status: "PASS" as const,
+            detail: "verified live",
+          })),
+        ],
       } satisfies PreflightReport,
       estimate: estimateMonthlyCost(config, pricing),
     };
@@ -69,6 +84,56 @@ test("allows a current matching preflight and cost approval", () => {
           paths,
           new Date("2026-10-18T09:00:00Z"),
         ),
+      ),
+  );
+});
+
+test("allows the complete NUS SCP and manual quota-review fallback", () => {
+  withArtifacts(
+    ({ preflight }) => {
+      for (const check of preflight.checks) {
+        if (
+          (REQUIRED_QUOTA_CHECK_IDS as readonly string[]).includes(check.id)
+        ) {
+          Object.assign(check, { status: "WARNING" });
+        }
+      }
+    },
+    (paths) =>
+      assert.doesNotThrow(() =>
+        assertDeploymentGate(
+          validConfig(),
+          paths,
+          new Date("2026-10-18T09:00:00Z"),
+        ),
+      ),
+  );
+});
+
+test("blocks quota fallback evidence without direct capability evidence", () => {
+  withArtifacts(
+    ({ preflight }) => {
+      const requiredCheck = preflight.checks.find(
+        ({ id }) => id === REQUIRED_DIRECT_CAPABILITY_CHECK_IDS[0],
+      );
+      Object.assign(requiredCheck ?? {}, { status: "BLOCKED" });
+      for (const check of preflight.checks) {
+        if (
+          (REQUIRED_QUOTA_CHECK_IDS as readonly string[]).includes(check.id)
+        ) {
+          Object.assign(check, { status: "WARNING" });
+        }
+      }
+    },
+    (paths) =>
+      assert.throws(
+        () =>
+          assertDeploymentGate(
+            validConfig(),
+            paths,
+            new Date("2026-10-18T09:00:00Z"),
+          ),
+        /direct service and capability checks/,
       ),
   );
 });

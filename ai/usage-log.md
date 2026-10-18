@@ -1889,3 +1889,27 @@ smoke reuse, and exact start/stop/status/destroy state machines. Fake-runner tes
 fail-closed ordering and safety; local API and browser behavior remains compatible, while
 persistent cloud smoke avoids assuming administrator-editable seed names and archives its
 unique Supplier fixture.
+
+## 2026-10-18 — AWS deployment approval guardrail follow-up
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** issue #52 documentation and deployment-gate implementation for
+  the approved NUS Service Quotas restriction and cloud-only service boundaries
+- **Repository files affected:** `infrastructure/{SPEC.md,README.md,config,docs,lib,test}`
+  and this disclosure
+- **Author review:** The deployment interpretation was approved by @ron; final code and
+  wording remain pending pull-request review.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+> sure demo_admin works, and i confirm the necessary deployment interpretation
+
+### Key response
+
+Codex recorded the measured Fargate sizes and the cloud-only decision to disable the User
+Kafka publisher and omit Order routes until those services are deployed. It narrowed the
+quota fallback to the exact NUS Organizations SCP denial, a named manual review of the
+Fargate On-Demand vCPU quota, and independently passing service/capability checks. It did
+not provision or mutate AWS resources.

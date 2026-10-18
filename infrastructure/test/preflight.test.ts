@@ -8,6 +8,7 @@ interface FakeOptions {
   readonly accountId?: string;
   readonly bootstrapExists?: boolean;
   readonly quotasReadable?: boolean;
+  readonly quotaFailure?: string;
   readonly denyService?: string;
 }
 
@@ -80,9 +81,19 @@ function fakeRunner(
       operation === "service-quotas:list-services" ||
       operation === "service-quotas:get-service-quota"
     ) {
-      return options.quotasReadable === false
-        ? failure("AccessDeniedException: explicit deny in Organizations SCP")
-        : success(JSON.stringify({ Quota: { Value: 6 } }));
+      if (options.quotaFailure !== undefined) {
+        return failure(options.quotaFailure);
+      }
+      if (options.quotasReadable === false) {
+        const action =
+          operation === "service-quotas:list-services"
+            ? "ListServices"
+            : "GetServiceQuota";
+        return failure(
+          `AccessDeniedException: servicequotas:${action} is not authorized, with an explicit deny in Organizations SCP`,
+        );
+      }
+      return success(JSON.stringify({ Quota: { Value: 6 } }));
     }
     if (operation === "cloudformation:describe-stacks") {
       return options.bootstrapExists === false
@@ -138,15 +149,50 @@ test("blocks a caller authenticated to the wrong AWS account", () => {
   );
 });
 
-test("blocks an explicit school SCP denial of Service Quotas", () => {
+test("accepts only the recorded school SCP denial with direct capability evidence", () => {
   const report = runPreflight(
     validConfig(),
     fakeRunner({ quotasReadable: false }),
   );
-  assert.equal(report.status, "BLOCKED");
+  assert.equal(report.status, "PASS");
+  assert.equal(
+    report.checks.find(({ id }) => id === "service-quotas")?.status,
+    "WARNING",
+  );
+  assert.equal(
+    report.checks.find(({ id }) => id === "fargate-vcpu-quota")?.status,
+    "WARNING",
+  );
   assert.match(
     report.checks.find(({ id }) => id === "service-quotas")?.detail ?? "",
-    /Organizations SCP/,
+    /manually confirmed by course-team-leader/,
+  );
+});
+
+test("blocks an unrecognized Service Quotas access denial", () => {
+  const report = runPreflight(
+    validConfig(),
+    fakeRunner({ quotaFailure: "AccessDeniedException: denied by policy" }),
+  );
+  assert.equal(report.status, "BLOCKED");
+  assert.equal(
+    report.checks.find(({ id }) => id === "service-quotas")?.status,
+    "BLOCKED",
+  );
+});
+
+test("does not accept the SCP fallback when a required capability is denied", () => {
+  const report = runPreflight(
+    validConfig(),
+    fakeRunner({
+      quotasReadable: false,
+      denyService: "secretsmanager:list-secrets",
+    }),
+  );
+  assert.equal(report.status, "BLOCKED");
+  assert.equal(
+    report.checks.find(({ id }) => id === "service-quotas")?.status,
+    "BLOCKED",
   );
 });
 

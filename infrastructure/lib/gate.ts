@@ -4,7 +4,11 @@ import type { DeploymentConfig } from "./config.js";
 import { configFingerprint } from "./config.js";
 import type { CostEstimate, PricingSnapshot } from "./cost.js";
 import { estimateMonthlyCost, pricingSnapshotHash } from "./cost.js";
-import type { PreflightReport } from "./preflight.js";
+import {
+  REQUIRED_DIRECT_CAPABILITY_CHECK_IDS,
+  REQUIRED_QUOTA_CHECK_IDS,
+  type PreflightReport,
+} from "./preflight.js";
 
 export interface GatePaths {
   readonly preflightReport: string;
@@ -75,6 +79,33 @@ export function assertDeploymentGate(
   const validUntil = Date.parse(preflight.validUntil);
   if (!Number.isFinite(validUntil) || validUntil <= now.getTime()) {
     failures.push("preflight report is expired; run npm run preflight again");
+  }
+  const directCapabilitiesPassed = REQUIRED_DIRECT_CAPABILITY_CHECK_IDS.every(
+    (id) =>
+      preflight.checks.some(
+        (check) => check.id === id && check.status === "PASS",
+      ),
+  );
+  if (!directCapabilitiesPassed) {
+    failures.push(
+      "preflight report does not contain passing direct service and capability checks",
+    );
+  }
+  const quotaChecks = REQUIRED_QUOTA_CHECK_IDS.map((id) =>
+    preflight.checks.find((check) => check.id === id),
+  );
+  const quotasVerifiedLive = quotaChecks.every(
+    (check) => check?.status === "PASS",
+  );
+  const quotasVerifiedByNusFallback =
+    quotaChecks.every((check) => check?.status === "WARNING") &&
+    config.quotaApproval.serviceQuotasApiRestriction ===
+      "NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY" &&
+    config.quotaApproval.reviewedQuota === "fargate:L-3032A538";
+  if (!quotasVerifiedLive && !quotasVerifiedByNusFallback) {
+    failures.push(
+      "preflight report has neither live quota evidence nor the complete NUS SCP/manual-review fallback",
+    );
   }
 
   if (estimate.schemaVersion !== 1) {

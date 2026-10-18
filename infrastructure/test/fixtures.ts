@@ -136,6 +136,8 @@ export function validConfig(): DeploymentConfig {
         "https://calculator.aws/#/estimate?id=reviewed",
     },
     quotaApproval: {
+      serviceQuotasApiRestriction: "NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY",
+      reviewedQuota: "fargate:L-3032A538",
       confirmedBy: "course-team-leader",
       confirmedAt: "2026-10-18T08:00:00.000Z",
       evidenceReference: "NUS quota confirmation ticket EXAMPLE-1",

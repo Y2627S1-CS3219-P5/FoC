@@ -244,9 +244,12 @@ Git SHA and each image as a full lowercase `sha256:` digest. Tags such as `lates
 manifests, unknown keys, and mutable image references are rejected. This seam lets the
 later release runner use one reviewed set of immutable artifacts across jobs and services.
 
-Because the NUS SCP currently hides Service Quotas, the configuration also requires a
-named quota confirmation and evidence reference. That manual record does not turn a failed
-live quota API check into a pass; both are required unless the spec is explicitly revised.
+Because the NUS SCP currently hides Service Quotas, the configuration records the exact
+`NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY` restriction, names
+`fargate:L-3032A538`, and requires a reviewer, timestamp, and evidence reference. The
+preflight accepts that manual evidence only when both quota calls return the known NUS SCP
+explicit-deny signature and every direct service/capability read passes. An unknown denial,
+partial/mixed result, missing evidence, or failed capability check remains blocked.
 
 ## Run the gates
 
@@ -261,8 +264,8 @@ npm run synth
   AWS pricing snapshot. It fails when the estimate is above `monthlyBudgetUsd`.
 - `preflight` runs AWS CLI `get`, `list`, `describe`, and IAM simulation calls only. It
   checks identity, account and region, service read access, PostgreSQL/Fargate/CloudFront/WAF
-  capabilities, Service Quotas, representative provisioning permissions, and modern CDK
-  bootstrap state in Singapore and `us-east-1`.
+  capabilities, live Service Quotas or the narrow recorded NUS fallback, representative
+  provisioning permissions, and modern CDK bootstrap state in Singapore and `us-east-1`.
 - `gate` requires matching configuration fingerprints, a matching recalculated estimate,
   named cost approval, a passing preflight, and preflight evidence less than 24 hours old.
 - `synth` runs `gate` first and then `cdk synth --strict`. Direct CDK invocation is also
@@ -279,9 +282,9 @@ blockers are resolved and the human review required by the spec is complete.
 
 The read-only account survey on 2026-10-18 is recorded in
 [`docs/PREFLIGHT-2026-10-18.md`](docs/PREFLIGHT-2026-10-18.md). It found the required
-service capabilities but also found two hard blockers: the school SCP denies Service
-Quotas APIs, and neither required region has a `CDKToolkit` stack. Missing deployment
-inputs and NUS budget approval are separate blockers.
+service capabilities, the exact school SCP denial now covered by the narrow manual-evidence
+rule above, and no `CDKToolkit` stack in either required region. Bootstrap and any other
+missing reviewed deployment inputs remain separate blockers.
 
 ## Development checks
 

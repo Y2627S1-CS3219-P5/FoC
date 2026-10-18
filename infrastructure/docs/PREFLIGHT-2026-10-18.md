@@ -20,16 +20,19 @@ Author review: Pending pull-request review by @ron.
 | Existing FoC resources     | None found in the scoped service inventories                                                                                |
 | AWS Budget                 | API readable; no account budget configured                                                                                  |
 | CDK bootstrap              | **Blocked:** no `CDKToolkit` stack or bootstrap version parameter in either required region                                 |
-| Service Quotas             | **Blocked:** explicit school Organizations SCP denial                                                                       |
+| Service Quotas             | Known restriction: exact explicit school Organizations SCP denial                                                           |
 
 The successful read calls prove only describe/list access. They do not prove that every
 create, update, delete, `iam:PassRole`, or CDK bootstrap operation is permitted. The new
 preflight adds read-only IAM simulation, but the first real denial during reviewed
 bootstrap/deploy must still be reported exactly rather than bypassed.
 
-The Service Quotas denial is an organization-level restriction. The team must ask the
-course AWS administrator to expose quota reads or confirm the required quotas. An IAM
-permission on the SSO role cannot override an explicit SCP deny.
+The Service Quotas denial is an organization-level restriction. An IAM permission on the
+SSO role cannot override an explicit SCP deny. Deployment may proceed through the narrow
+manual-evidence path only when the configuration records this exact restriction, names the
+reviewer and evidence for `fargate:L-3032A538`, both quota calls show the known SCP denial,
+and all direct required service and capability reads pass. Other access failures remain
+blockers.
 
 CDK bootstrap is deliberately not performed by the preflight because it is a mutation that
 creates an S3 bucket, ECR repository, SSM parameter, and deployment roles. Both Singapore

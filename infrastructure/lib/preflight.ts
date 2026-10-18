@@ -33,6 +33,33 @@ export type CommandRunner = (
   args: readonly string[],
 ) => CommandResult;
 
+export const REQUIRED_DIRECT_CAPABILITY_CHECK_IDS = [
+  "vpc-read",
+  "ecs-read",
+  "ecr-read",
+  "rds-read",
+  "cloudfront-read",
+  "waf-read",
+  "cloudwatch-read",
+  "logs-read",
+  "secrets-manager-read",
+  "sns-read",
+  "budgets-read",
+  "iam-read",
+  "cloudformation-read-primary",
+  "cloudformation-read-edge",
+  "postgres-engine",
+  "postgres-instance",
+  "fargate-capacity-provider",
+  "cloudfront-origin-prefix-list",
+  "waf-common-rules",
+] as const;
+
+export const REQUIRED_QUOTA_CHECK_IDS = [
+  "service-quotas",
+  "fargate-vcpu-quota",
+] as const;
+
 export const systemCommandRunner: CommandRunner = (executable, args) => {
   const result = spawnSync(executable, args, {
     encoding: "utf8",
@@ -57,6 +84,21 @@ interface AwsCommand {
 function summarizeFailure(result: CommandResult): string {
   const text = (result.stderr || result.stdout).replace(/\s+/g, " ").trim();
   return text === "" ? `command exited ${result.status}` : text.slice(0, 500);
+}
+
+function isExpectedNusServiceQuotasScpDenial(
+  result: CommandResult,
+  action: "ListServices" | "GetServiceQuota",
+): boolean {
+  if (result.status === 0) {
+    return false;
+  }
+  const detail = `${result.stderr} ${result.stdout}`;
+  return (
+    /AccessDeniedException/i.test(detail) &&
+    detail.includes(`servicequotas:${action}`) &&
+    /explicit deny in (?:the )?Organizations SCP/i.test(detail)
+  );
 }
 
 function awsArgs(
@@ -399,15 +441,6 @@ export function runPreflight(
     "aws",
     awsArgs(config, config.primaryRegion, ["service-quotas", "list-services"]),
   );
-  checks.push({
-    id: "service-quotas",
-    status: quotaResult.status === 0 ? "PASS" : "BLOCKED",
-    detail:
-      quotaResult.status === 0
-        ? "Service Quotas APIs are readable; service-specific quotas require review before deploy"
-        : summarizeFailure(quotaResult),
-  });
-
   const fargateQuota = runner(
     "aws",
     awsArgs(config, config.primaryRegion, [
@@ -419,13 +452,61 @@ export function runPreflight(
       "L-3032A538",
     ]),
   );
+
+  const directCapabilitiesPassed = REQUIRED_DIRECT_CAPABILITY_CHECK_IDS.every(
+    (id) => checks.some((check) => check.id === id && check.status === "PASS"),
+  );
+  const expectedRestrictionObserved =
+    isExpectedNusServiceQuotasScpDenial(quotaResult, "ListServices") &&
+    isExpectedNusServiceQuotasScpDenial(fargateQuota, "GetServiceQuota");
+  const manualFallbackAccepted =
+    directCapabilitiesPassed &&
+    expectedRestrictionObserved &&
+    config.quotaApproval.serviceQuotasApiRestriction ===
+      "NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY" &&
+    config.quotaApproval.reviewedQuota === "fargate:L-3032A538";
+  const manualFallbackDetail =
+    `the known NUS Organizations SCP denial was observed; required service and capability reads passed; ` +
+    `fargate:L-3032A538 was manually confirmed by ${config.quotaApproval.confirmedBy} ` +
+    `with evidence ${config.quotaApproval.evidenceReference}`;
+
+  checks.push({
+    id: "service-quotas",
+    status:
+      quotaResult.status === 0
+        ? "PASS"
+        : manualFallbackAccepted
+          ? "WARNING"
+          : "BLOCKED",
+    detail:
+      quotaResult.status === 0
+        ? "Service Quotas APIs are readable"
+        : manualFallbackAccepted
+          ? manualFallbackDetail
+          : summarizeFailure(quotaResult),
+  });
+
+  const quotaValue = parseJson<{ Quota?: { Value?: number } }>(fargateQuota)
+    ?.Quota?.Value;
+  const validQuotaValue =
+    fargateQuota.status === 0 &&
+    quotaValue !== undefined &&
+    Number.isFinite(quotaValue) &&
+    quotaValue > 0;
   checks.push({
     id: "fargate-vcpu-quota",
-    status: fargateQuota.status === 0 ? "PASS" : "BLOCKED",
-    detail:
-      fargateQuota.status === 0
-        ? "Fargate On-Demand vCPU quota is readable and must be reviewed in the report"
-        : summarizeFailure(fargateQuota),
+    status: validQuotaValue
+      ? "PASS"
+      : manualFallbackAccepted
+        ? "WARNING"
+        : "BLOCKED",
+    detail: validQuotaValue
+      ? `Fargate On-Demand vCPU quota is ${quotaValue}`
+      : manualFallbackAccepted
+        ? manualFallbackDetail
+        : fargateQuota.status === 0
+          ? "Fargate On-Demand vCPU quota response had no positive numeric value"
+          : summarizeFailure(fargateQuota),
   });
 
   for (const region of [config.primaryRegion, config.edgeRegion]) {
