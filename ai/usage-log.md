@@ -69,6 +69,10 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-10
 Scope: Drafted the User Service author's contributor-template entry below; the author edited and approved it.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Designed, implemented, documented, and verified the issue #42 pull-request CI
+foundation after a project-author-approved grilling round.
+Author review: Pending project-author review.
 -->
 
 # AI Usage Log
@@ -1358,7 +1362,7 @@ tests, rollout prerequisites and open decisions, including the separate activati
 No service implementation changed or runtime tests run.
 
 
-## 2026-10-18 ? Implement account-status publishing
+## 2026-10-18 — Implement account-status publishing
 
 - **Tool:** Codex (GPT-6)
 - **Allowed-use scope:** implementation requested by the author after review of the publishing proposal
@@ -1390,3 +1394,47 @@ Validation: User Service build and typecheck passed; 12 User Service tests and 3
 tests passed against an isolated PostgreSQL 17 container. The real Kafka end-to-end test passed
 against an isolated broker. User Service Docker build passed, and its runtime image successfully
 loaded the Kafka native binding. Test databases and temporary containers were cleaned up.
+
+## 2026-10-18 — Pull-request CI foundation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Researching current primary-source CI guidance, sharpening the
+  implementation decisions with the project author, and implementing GitHub issue #42.
+- **Repository files affected:** `.github/workflows/pr-ci.yml`, `docs/ci.md`,
+  both disposable Compose test runners, `frontend/playwright.config.ts`, the Frontend and
+  Supplier disclosure sidecars, and this usage log.
+- **Author review:** Pending project-author review.
+
+### Prompts
+
+> "for github actions should we create one such that each PR will have to go through npm
+> typecheck and npm test and e2e and integration tests all pass before that PR can be merged
+> to main? or are there any other better software industry practices not just for github
+> actions but also for nest + react vite frontend projects, do some research $research maybe
+> spawn a research subagent or two and then come back to me with your findings, feel free to
+> search the web, make sure findings are easy to understand but deailed enough im new to
+> github actions"
+
+> "$grill-with-docs ok lets go with that"
+
+> "agreed please proceed"
+
+### Key response
+
+Codex created one least-privilege, SHA-pinned Node 22 workflow for pull requests, pushes to
+`main`, and manual runs. It runs the Frontend, Supplier Service, User Service build, live
+Supplier integration, and Chromium Supplier UI checks independently before an always-reporting
+`CI / gate`. Superseded pull-request runs are cancelled, jobs have explicit timeouts, failed
+browser runs retain Playwright evidence and Compose diagnostics for seven days, and
+focused/retried Playwright tests cannot silently produce a partial green run in CI. A concise
+operator guide maps each hosted check to its local command and records the post-first-run
+`main` ruleset steps. The existing
+live runners received only the disposable User database-role passwords and audit key required
+by the current Compose stack. No application behavior, User Service tests, scheduled security
+jobs, deployment workflow, or Node migration was added.
+
+Verification on 2026-10-18: `actionlint` accepted the workflow; Frontend lint, 32 Vitest
+tests and production build passed; Supplier typecheck, 213 Jest tests and Nest build passed;
+the User Service build passed; the complete live Supplier integration suite passed; both
+Chromium member/administrator journeys passed; and both disposable Compose projects removed
+their containers and volumes.
