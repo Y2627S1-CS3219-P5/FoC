@@ -2359,3 +2359,41 @@ static local/cloud gateway contracts, lint, TypeScript/Vite production build, an
 `git diff --check`. Full and production-only npm audits each report zero vulnerabilities.
 The parent deployment workflow will run combined CI and rebuild/rescan the exact release;
 these dependency checks do not replace cloud image scanning or live acceptance.
+
+## 2026-10-18 — Supplier Handlebars build dependency security patch
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Resolve the issue #52 compatible Critical development-tool
+  dependency advisory discovered during container release verification; no Supplier
+  contract or AWS resource was changed.
+- **Repository files affected:** `supplier-service/package-lock.json`,
+  `supplier-service/AI-DISCLOSURES.md`, and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+The Supplier build's full npm audit identified Critical Handlebars advisories in
+development-only ts-jest. The upstream
+[AST validation advisory](https://github.com/handlebars-lang/handlebars.js/security/advisories/GHSA-8r5x-fm3f-whwj)
+and [property-check advisory](https://github.com/handlebars-lang/handlebars.js/security/advisories/GHSA-p8wg-vrv2-v86f)
+identify 4.7.10 as patched. Official npm metadata confirms its checksum and ts-jest's
+existing `^4.7.9` accepts it. A targeted npm lock refresh changes only the Handlebars
+package entry from 4.7.9 to 4.7.10, including its upstream minimist constraint metadata;
+minimist's resolved version and every unrelated package entry remain unchanged.
+The scoped Swagger YAML 5.4.1 override is preserved. No package.json edit, forced audit
+fix, major upgrade, production template functionality, or application change was added.
+
+Verification passed: clean `npm ci --ignore-scripts`, Supplier typecheck, all 25 suites
+and 217 tests (including real localhost Swagger JSON/YAML responses), production build,
+dependency-tree assertions, and `git diff --check`. The initial sandboxed test invocation
+could not bind its localhost fixture; the approved local-network rerun passed. Production
+audit reports zero vulnerabilities. Full audit now reports zero Critical/High findings
+and 24 Moderate development-tooling findings through esbuild/Drizzle and sprintf-js/Jest.
+Those require separate dependency maintenance: npm's offered fixes include incompatible
+toolchain downgrades, and this correction does not silently accept or force those changes.
+Combined CI and immutable-release ECR rescanning remain the deployment workflow's next
+checks; ECR Basic scanning does not cover npm dependencies.
