@@ -6,6 +6,10 @@ Author review: Reviewed and approved by @mattis.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Documented the pickup-timeout re-listing deviation, the single-publisher requirement and the typecheck script.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+Scope: Documented the Kafka integration with Credit Service (CREDIT_MODE=kafka), its settings,
+       delivery guarantees, observability and tests, and session verification through User Service.
+Author review of additional changes: Reviewed and approved by @phuc
 -->
 
 # Order Service
@@ -17,17 +21,20 @@ hold and when to settle credits.
 ## Status
 
 The core is done: the database, state machine, HTTP API, deadline sweeper, outbox publisher, container and
-gateway routes. The three neighbours are still **stubs**, chosen by `AUTH_MODE`, `SUPPLIER_MODE` and
-`CREDIT_MODE` (only `stub` is accepted today):
+gateway routes. Credit Service is reached over **Kafka** (see [Kafka integration](#kafka-integration)), and
+sessions are checked by User Service. Supplier Service is still a **stub**. `AUTH_MODE`, `SUPPLIER_MODE` and
+`CREDIT_MODE` pick the adapters:
 
-| Neighbour | Stub | Follow-up |
-|---|---|---|
-| User Service sessions | `Authorization: Bearer stub.<uuid>.MEMBER` or `.ADMINISTRATOR` | call `/auth/verify` |
-| Supplier Service | three fixed suppliers (`STUB_SUPPLIERS`) | `GET /api/v1/suppliers/:id` |
-| Credit Service | in memory, replies to `ReserveRequested`, checks every message against the contract | Kafka producer and consumer |
+| Neighbour | Real adapter | Stub | Follow-up |
+|---|---|---|---|
+| User Service sessions | `AUTH_MODE=user-service` (Compose default): `GET /auth/verify` with the caller's `Authorization` header | `AUTH_MODE=stub`: believes `Bearer stub.<uuid>.MEMBER` or `.ADMINISTRATOR`. Only allowed with `CREDIT_MODE=stub` | none |
+| Supplier Service | none yet | three fixed suppliers (`STUB_SUPPLIERS`) | `GET /api/v1/suppliers/:id` |
+| Credit Service | `CREDIT_MODE=kafka` (Compose default) | `CREDIT_MODE=stub` (default outside Compose): in memory, replies to `ReserveRequested`, checks every message against the contract | none |
 
-Not done yet: the real adapters above, Credit Service support for `ReservationTimedOut`, reacting to
-account suspensions (OS-F6), and the frontend pages.
+The service refuses to start with `CREDIT_MODE=kafka` and `AUTH_MODE=stub`: a stub token is whatever UUID the
+caller writes, so anyone who knew another user's id could make real credit operations on their behalf.
+
+Not done yet: the real Supplier adapter, reacting to account suspensions (OS-F6), and the frontend pages.
 
 Message contract with Credit Service: [docs/order-credit-contract.md](docs/order-credit-contract.md).
 
@@ -88,7 +95,7 @@ responses carry `details` (one entry per bad field).
 | Status | `error` | When |
 |---|---|---|
 | 400 | `VALIDATION_ERROR` | bad body, query or JSON; unknown fields |
-| 401 | `UNAUTHENTICATED` | missing or invalid token |
+| 401 | `UNAUTHENTICATED` | missing or invalid token (User Service answered 401) |
 | 403 | `FORBIDDEN` | wrong party for the action, or a non-administrator on `/admin` |
 | 403 | `CANNOT_ACCEPT_OWN_ERRAND` | the requester tries to accept |
 | 404 | `NOT_FOUND` | no such errand, or you may not see it, or no such route |
@@ -97,7 +104,7 @@ responses carry `details` (one entry per bad field).
 | 409 | `DEADLINE_PASSED` | the step's deadline has passed |
 | 413 / 415 | `PAYLOAD_TOO_LARGE` / `UNSUPPORTED_MEDIA_TYPE` | body problems |
 | 422 | `SUPPLIER_UNAVAILABLE` | the supplier does not exist or is not active |
-| 503 | `SERVICE_UNAVAILABLE` | the database is unreachable |
+| 503 | `SERVICE_UNAVAILABLE` | the database is unreachable, or the session can't be checked (User Service unreachable or too slow) |
 | 500 | `INTERNAL_ERROR` | anything else |
 
 ## Design calls (decided: accepted by the author on 2026-10-16)
@@ -105,7 +112,7 @@ responses carry `details` (one entry per bad field).
 1. **Database: PostgreSQL 17, own `order-db`.** Row locks and conditional updates give single-winner accepts, and the outbox row is written in the same transaction as the errand change.
 2. **A state before `OPEN`.** `PENDING_RESERVATION` is hidden from couriers. It becomes `OPEN` on `CreditReserved`, or `RESERVATION_REJECTED` (terminal, reason stored) on `CreditReservationRejected`.
 3. **The first outcome is final, and a reply has a time limit.** With no reply by `reservation_deadline` (`RESERVATION_TIMEOUT_SECONDS`, default 30) the sweeper moves the errand to `RESERVATION_TIMED_OUT` and sends `ReservationTimedOut`, which releases a hold if one exists. A late `CreditReserved` for a rejected errand writes an `OrderCancelled` to release the hold. Other late replies are ignored.
-4. **Duplicates are caught by the state guards.** A repeated credit reply finds the errand already moved, so there is no `processed_messages` table.
+4. **Duplicates are caught twice.** A redelivered Kafka reply is skipped by its `event_id` (`processed_credit_results`, written in the same transaction as the reply's effect), and a repeated reply with a new `event_id` finds the errand already moved (the state guards).
 5. **Supplier snapshot.** The errand copies the supplier's name, building code and location at creation. New errands need an `ACTIVE` supplier.
 6. **Users are referenced by ID only.** The frontend looks up usernames.
 7. **Confirmation deadline** is `delivered_at + CONFIRMATION_WINDOW_MINUTES` (default 1440).
@@ -124,16 +131,26 @@ responses carry `details` (one entry per bad field).
   `withdraw`s after the listing deadline) is already past its listing deadline. No other courier can accept it,
   and the sweeper expires it in the same tick, releasing the credits through `OrderExpired`. OS-F2.2.2 promises
   re-listing for another courier. The behaviour is kept for now and the author decides whether to change it.
-- **One outbox publisher.** Contract rule 5 (messages for one errand arrive in order) relies on a single outbox
-  publisher (one replica), or on per-key serialisation once the Kafka adapter exists.
 
 ## Run
 
 From the repository root, with a `.env` made from `.env.example` (the three `ORDER_DB_*` passwords are required):
 
 ```sh
-docker compose up -d --build order-service frontend
+docker compose up -d --build order-service credit-service frontend
 docker compose ps          # order-db healthy, order-migrate exited 0, order-service healthy
+```
+
+Callers log in through User Service (`POST /api/v1/auth/login`) and send its access token. Order Service
+forwards the `Authorization` header to User Service's `GET /auth/verify` on every request. If User Service
+can't be reached, requests get `503 SERVICE_UNAVAILABLE`, never 401. A requester also needs a credit account:
+User Service creates one when an account first becomes `ACTIVE` (a `user.account-status` message).
+
+The demo script uses stub tokens and relies on the stub Credit's behaviour (its limit and its silent amount),
+so run it with both stubs. Stub sessions are refused with real credits:
+
+```sh
+ORDER_AUTH_MODE=stub ORDER_CREDIT_MODE=stub docker compose up -d order-service
 bash order-service/scripts/demo.sh
 ```
 
@@ -150,12 +167,76 @@ Settings (all read in `src/config.ts`):
 | `PORT` | 3002 | HTTP port |
 | `CONFIRMATION_WINDOW_MINUTES` | 1440 | time to confirm a delivery |
 | `RESERVATION_TIMEOUT_SECONDS` | 30 | time for Credit to answer |
-| `AUTH_MODE`, `SUPPLIER_MODE`, `CREDIT_MODE` | `stub` | adapter choice (only `stub` exists) |
+| `AUTH_MODE` | `stub` (Compose: `user-service`, from `ORDER_AUTH_MODE`) | `user-service` or `stub`; `stub` is refused with `CREDIT_MODE=kafka` |
+| `USER_SERVICE_BASE_URL` | none, required with `user-service` | e.g. `http://user-service:3001` |
+| `USER_SERVICE_VERIFY_TIMEOUT_MS` | 1000 | how long to wait for `/auth/verify` before answering 503 |
+| `SUPPLIER_MODE` | `stub` | adapter choice (only `stub` exists) |
+| `CREDIT_MODE` | `stub` (Compose: `kafka`, from `ORDER_CREDIT_MODE`) | `kafka` or `stub` |
+| `KAFKA_BROKERS` | none, required with `kafka` | comma-separated `host:port` list |
+| `KAFKA_CLIENT_ID` | `order-service` | Kafka client id |
 | `STUB_CREDIT_LIMIT` | 100 | the stub rejects larger amounts |
 | `STUB_CREDIT_DELAY_MS` | 500 | the stub's reply delay |
 | `STUB_CREDIT_SILENT_AMOUNT` | 999 | an amount the stub never answers, to show the timeout |
 
 Without Docker: `npm ci`, `npm run build`, then `DATABASE_URL=... npm run migrate` and `npm start`.
+
+## Kafka integration
+
+With `CREDIT_MODE=kafka`, Order Service and Credit Service talk only through Kafka, following
+[docs/order-credit-contract.md](docs/order-credit-contract.md). The client is `@confluentinc/kafka-javascript`,
+as in Credit and User Service.
+
+| | Topic | Key | Order Service code |
+|---|---|---|---|
+| Commands out | `credit.commands` | `order_id` | `KafkaCreditPublisher` (`src/kafka/creditPublisher.ts`), fed by the outbox |
+| Replies in | `credit.results` | `order_id` | consumer group `order-service` (`src/kafka/creditResultsConsumer.ts`) |
+| Unusable replies | `credit.results.dlq` | original key | written by the consumer; created by `kafka/create-topics.sh` |
+
+**Sending (outbox to `credit.commands`).**
+
+- Every errand change, its history row and its outbox row commit in one transaction. The outbox payload is
+  sent unchanged, so its `operation_id` is the same on every retry.
+- The producer is idempotent with `acks=all`. A row is marked published only after Kafka acknowledges it. If
+  the process dies between the acknowledgement and the marking, the row is sent again with the same
+  `operation_id`, and Credit applies it once.
+- Rows go out in sequential-id order (`outbox.id`), up to 100 per send, without waiting for a full batch. A
+  shared advisory lock lets one replica publish at a time, so per-errand order (contract rule 5) holds with
+  several replicas.
+- A commit that adds a row wakes the publisher (`NOTIFY order_outbox`). The fallback poll is 200 ms. A failed
+  send backs off from 400 ms up to 5 s, and wake-ups do not shorten the back-off.
+
+**Receiving (`credit.results`).**
+
+- Offsets are committed by hand (`autoCommit=false`), one message at a time, after the message is handled.
+- Each message is checked by `parseCreditResult()`. Its key must equal `order_id`, and its `operation_id` must
+  be the errand's reservation operation. It is then applied by `handleCreditResult()`. That records its
+  `event_id` in `processed_credit_results` in the same transaction, so a redelivery is skipped. The state
+  guards and the late-reply compensation (`OrderCancelled` for a late `CreditReserved` on a rejected errand)
+  are unchanged.
+- Malformed JSON, an invalid payload, a wrong key, an unknown errand or another operation's reply go to
+  `credit.results.dlq` with the reason. So does a reply that fails 5 times in a row for any other reason. The
+  DLQ write is acknowledged before the offset is committed.
+- A database or Kafka outage is not counted as a failure. The message is redelivered, with growing pauses up
+  to 5 s, until the outage ends.
+
+**Startup and shutdown.** Kafka is never waited for. The producer connects on first send, and the consumer
+connects, checks its topics and subscribes in the background, retrying. So `/health` and the API depend only
+on the database. On SIGTERM the service stops taking requests, then stops the consumer, the sweeper and the
+publisher with the producer, then closes the pool. It exits within 9 s. Stopping the consumer disconnects its
+client at once, whether it is still connecting, subscribing or running; a running consumer first finishes the
+message in progress.
+
+**Observability.** One-line JSON logs:
+
+| Event | Meaning |
+|---|---|
+| `outbox_published` | a batch sent: `count`, `durationMs` |
+| `outbox_publish_failed` | sending failed: `failures`, `retryInMs` (logged at the first failure and at each 5 s back-off) |
+| `credit_result_processed` | a reply handled: `type`, `orderId`, `eventId`, `outcome` (`already_processed` for a redelivery) |
+| `credit_result_retry` / `credit_result_retry_outage` | a reply being retried in place / redelivered during an outage |
+| `credit_result_dead_lettered` | a reply sent to the DLQ, with `reason` and `attempts` |
+| `credit_results_consumer_start_failed` / `_started` | background connection attempts |
+| `credit_kafka_metrics` | every 60 s: counters since start (published, failures, retries, outage retries, dead-lettered, duplicates), publish latency (commit to acknowledgement) and reply lag (Kafka timestamp to handled), last and max, plus `outboxPending` and `outboxOldestMs` |
 
 ## Test
 
@@ -167,3 +248,11 @@ cd order-service
 TEST_DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres npm test
 npm run typecheck   # src and test
 ```
+
+The Kafka integration suite (`test/kafka.integration.test.ts`) is skipped unless `TEST_KAFKA_BROKERS` is set.
+`npm run test:kafka` (`scripts/test-kafka.sh`) starts a throwaway PostgreSQL and a single-node Kafka with the
+real topics, runs every test against them, and removes both containers. They use their own names and ports, so
+the dev stack is not touched. It needs Docker and bash. The suite plays Credit Service against the real
+publisher and consumer: reserve and rejection, completion and release, timeouts and late replies, duplicates,
+the DLQ, a crash before the offset commit, concurrent publishers, a paused broker, and startup with Kafka
+unreachable.

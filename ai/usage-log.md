@@ -1102,7 +1102,7 @@ ACTIVE, SUSPENDED and CLOSED (never set). It then made the author's changes to t
 - **Tool:** Claude Code (Claude Opus 5.5)
 - **Allowed-use scope:** applying the author's decision record (D1 to D8) to the proposal text; no new design decisions
 - **Repository files affected:** `credit-service/docs/implementation-proposal.md`
-- **Author review:** PENDING
+- **Author review:** Reviewed and approved by @phuc
 
 ### Prompts
 
@@ -1124,7 +1124,7 @@ change, marked as needing Order Service agreement; §6.5 uses the reservation-ro
 - **Tool:** Claude Code (Claude Opus 5.5)
 - **Allowed-use scope:** writing implementation code and tests once the author had decided the schema and flows (docs/decision-record.md D1 to D8); boilerplate copied from User Service patterns. No new design decisions
 - **Repository files affected:** `credit-service/` (package.json, tsconfig.json, Dockerfile, .dockerignore, README.md, docker/postgres/init-roles.sh, migrations/0001_create_credit_tables.sql, src/*.ts, test/*.ts), `compose.yaml`, `.env.example`
-- **Author review:** PENDING
+- **Author review:** Reviewed and approved by @phuc
 
 ### Prompts
 
@@ -1233,7 +1233,7 @@ npm 12 blocked the client's install script; Claude approved it for that one pack
 - **Tool:** Claude Code (Claude Opus 5.5)
 - **Allowed-use scope:** documentation of how to implement a contract the author already decided (credit-service/docs/implementation-proposal.md §5); undecided design items are listed as author decisions, not chosen
 - **Repository files affected:** `user-service/docs/account-status-publishing.md` (new)
-- **Author review:** PENDING
+- **Author review:** Reviewed and approved by @phuc
 
 ### Prompts
 
@@ -1329,7 +1329,7 @@ password hashing inside the transaction, backfill, test setup).
 - **Tool:** Codex (GPT-6)
 - **Allowed-use scope:** documentation changes requested after explaining outbox reliability and batching
 - **Repository files affected:** `user-service/docs/account-status-publishing.md`, `ai/usage-log.md`
-- **Author review:** PENDING
+- **Author review:** Reviewed and approved by @phuc
 
 ### Prompt
 
@@ -1379,7 +1379,7 @@ No service implementation changed or runtime tests run.
 - **Tool:** Codex (GPT-6)
 - **Allowed-use scope:** implementation requested by the author after review of the publishing proposal
 - **Repository files affected:** User Service account creation/bootstrap/status mutations, transaction helper, Kafka configuration/producer/outbox/publisher, migration runner and new migration, package manifests, database and end-to-end tests; Credit Service status handler, deduplication migration and regression tests; Compose, environment example and service documentation
-- **Author review:** PENDING
+- **Author review:** Reviewed and approved by @phuc
 
 ### Prompt
 
@@ -1718,3 +1718,122 @@ Claude mapped oversized bodies to 413 and unsupported charset or encoding to 415
 ### Key response
 
 Claude documented the pickup-timeout re-listing deviation as an open question for the author, added `StubCreditBus.restore()` so a restart causes no false violations, added demo self-checks, hid the current state and history actor ids from non-parties, strengthened the accept-vs-expiry race test, type-checked the tests, and recorded the disclosures.
+
+## 2026-10-18 — Order Service: Kafka integration with Credit Service
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementing the author's specified Kafka integration (producer, consumer, migrations, configuration, Compose wiring, documentation and tests) on top of the existing Order Service core and the Order–Credit contract; the existing state machine, payload builders, deadline sweeper, credit-result handling and stub Credit adapter were kept
+- **Repository files affected:** `order-service/src/kafka/{client,creditPublisher,creditResultsConsumer}.ts`, `order-service/src/metrics.ts`, `order-service/src/outbox.ts`, `order-service/src/credit/creditResults.ts`, `order-service/src/config.ts`, `order-service/src/index.ts`, `order-service/src/adapters/creditBus.ts`, `order-service/migrations/0002_kafka_credit_integration.sql`, `order-service/scripts/test-kafka.sh`, `order-service/test/{kafkaFixtures,kafkaPublisher.test,creditResultsConsumer.test,kafka.integration.test,appRole.test}.ts`, `order-service/test/{adapters,sweeper}.test.ts`, `order-service/package.json`, `order-service/README.md`, `order-service/docs/order-credit-contract.md`, `kafka/create-topics.sh`, `kafka/test-topics.sh`, `compose.yaml`, `.env.example`
+- **Author review:** Reviewed and approved by @phuc
+
+### Prompts
+
+> "Dont remove the stub.
+> Implement real Kafka integration for Order Service on feat/order-service-core, replacing
+> StubCreditBus. Do not read AGENTS.md or update the AI usage log.
+>
+> Preserve the existing state machine, payload builders, deadline sweeper, and credit-result
+> handling.
+>
+> Producer:
+> - Implement KafkaCreditPublisher behind MessagePublisher using @confluentinc/kafka-javascript.
+> - Publish existing outbox payloads to credit.commands, keyed by order_id.
+> - Keep errand changes, history, and outbox inserts in one database transaction.
+> - Publish up to 100 events per send without waiting for a full batch; use idempotence and
+>   acks=all.
+> - Mark published only after acknowledgment; preserve operation_id across retries.
+> - Add sequential outbox IDs and a shared advisory lock to preserve publication order across
+>   replicas.
+> - Use wake-on-commit, a 200 ms fallback poll, and outage back-off.
+>
+> Consumer:
+> - Consume credit.results with group order-service and autoCommit=false.
+> - Validate payloads, keys, and reservation-operation correlation; reuse parseCreditResult() and
+>   handleCreditResult().
+> - Deduplicate by event_id transactionally with business effects; retain existing state guards
+>   and late-reply compensation.
+> - Commit offsets only after successful handling.
+> - Retry outages; route invalid or repeatedly failing replies to credit.results.dlq, awaiting
+>   acknowledgment before committing. Provision this topic explicitly.
+>
+> Run Kafka connection/retry work in the background so HTTP startup and database readiness remain
+> independent of Kafka. Implement graceful shutdown and backlog, latency, retry, and DLQ
+> observability.
+>
+> Add migrations, configuration, Compose wiring, documentation, and meaningful tests for
+> reserve/rejection, completion/release, timeout and late replies, duplicates, concurrent
+> publishers, crash recovery, outages, and DLQ handling. Run builds, typechecks, and isolated
+> PostgreSQL/Kafka integration tests."
+
+`feat/order-service-core` had already been merged into `main` (PR #41), so the work was done on
+`feat/order-credit-intergration`, which pointed at that merge. This entry was added later, at the
+author's request.
+
+### Key response
+
+Claude added `KafkaCreditPublisher` (an idempotent `acks=all` producer from
+`@confluentinc/kafka-javascript`) behind `MessagePublisher`, with `CREDIT_MODE=kafka|stub` so the
+stub stays selectable. The outbox gained sequential ids (migration `0002`) and is published in id
+order under a shared advisory lock, up to 100 rows per send. A row is marked only after Kafka
+acknowledges it, so a retry resends the same `operation_id`. A commit wakes the publisher through
+`LISTEN/NOTIFY`, with a 200 ms fallback poll and a back-off up to 5 s that wake-ups do not shorten.
+
+The `credit.results` consumer (group `order-service`, `autoCommit=false`) checks each reply with
+`parseCreditResult()`, requires the Kafka key to equal `order_id`, and applies it with
+`handleCreditResult()`. That now records the `event_id` in `processed_credit_results` in the same
+transaction as the errand change, and leaves no record for unknown errands or another
+operation's reply. Invalid, uncorrelated and repeatedly failing replies go to the new
+`credit.results.dlq` (created in `kafka/create-topics.sh`), acknowledged before the offset is
+committed. Outages are redelivered rather than dead-lettered. Kafka is connected in the
+background, shutdown is ordered and time-limited, and a log line every 60 s reports the outbox
+backlog, publish latency, reply lag, retries and DLQ counts. Compose defaults Order Service to
+`CREDIT_MODE=kafka`, and the README and contract document the integration.
+
+Verification: build and type-check clean. 144/144 tests passed without Kafka, and 155/155 with
+`npm run test:kafka` (a throwaway PostgreSQL and Kafka). That covered reserve and rejection,
+completion and release, timeout and late replies, duplicates, the DLQ, a crash before the offset
+commit, concurrent publishers, a paused broker and startup with Kafka unreachable. An end-to-end
+run in an isolated Compose project against the real Credit Service found a missing `UPDATE` grant
+on `processed_credit_results`. It was fixed in migration `0002`, with a new test that runs these
+paths as the `order_app` role. The rerun then passed reserve and complete, reserve and cancel,
+rejection, and a timeout while Credit was stopped (`closed_by = 'TIMED_OUT'`, late reply ignored),
+with both DLQs empty and a clean shutdown. Claude also changed the author-approved accept-vs-expiry
+race test, which failed whenever another test file ran first: it now alternates which side starts
+first, and the never-both assertion is unchanged.
+
+## 2026-10-18 — Order Service: User Service sessions with real credits, and consumer shutdown fix
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fixing two review findings raised by the author: session verification through User Service, following supplier-service's existing verifier, and a shutdown race in the Kafka consumer; no new design decisions
+- **Repository files affected:** `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/http/auth.ts`, `order-service/src/config.ts`, `order-service/src/index.ts`, `order-service/src/kafka/creditResultsConsumer.ts`, `order-service/test/userServiceVerifier.test.ts`, `order-service/test/consumerLifecycle.test.ts`, `order-service/README.md`, `compose.yaml`, `.env.example`
+- **Author review:** Reviewed and approved by @phuc
+
+### Prompts
+
+> "Real credit operations still trust forged stub identities. [Compose (line 107)] combines stub
+> authentication with Kafka credit processing. remove the stub omeone knowing another user's UUID
+> can impersonate them and trigger real credit operations.
+>
+> Shutdown can leave a connecting consumer undisconnected. [`stop()` (line 231)] awaits startup
+> before disconnecting, but the consumer reference is assigned only after connection/subscription"
+
+### Key response
+
+Claude added `UserServiceSessionVerifier`, which forwards the caller's `Authorization` header to
+User Service's `GET /auth/verify` with a timeout (`USER_SERVICE_VERIFY_TIMEOUT_MS`, default 1000),
+like supplier-service's verifier. A 401 means not logged in. A timeout, network error, 5xx,
+redirect or malformed answer fails closed and is answered with `503 SERVICE_UNAVAILABLE`, never
+401. Compose now runs Order Service with `AUTH_MODE=user-service` (`ORDER_AUTH_MODE`). The stub
+session verifier was kept only for the stub Credit demo: the service refuses to start with
+`CREDIT_MODE=kafka` and `AUTH_MODE=stub`, so forged identities can never reach real credits.
+
+For the shutdown race, the consumer and the topic check's admin client are now tracked from the
+moment they are created. `stop()` disconnects them at once, which aborts a connect in progress,
+checks for stopping before each startup step, and disconnects whatever client the loop ended
+with. Previously a consumer connected during `stop()` was never disconnected, and a hanging
+connect blocked `stop()` until it timed out.
+
+Verification: type-check clean. The new consumer lifecycle tests passed (4/4), and three of them
+failed against the old start/stop logic (two hung until the 5 s test timeout, one left the
+consumer connected). The verifier, 503 and configuration tests passed (10/10). The full suite
+against real Kafka and PostgreSQL was not re-run after these changes.
