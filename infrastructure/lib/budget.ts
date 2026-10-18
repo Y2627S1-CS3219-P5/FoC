@@ -117,7 +117,8 @@ export function readMonitoringBudget(
       (row) =>
         row.NotificationType === type &&
         row.Threshold === threshold &&
-        row.ThresholdType === "PERCENTAGE" &&
+        (row.ThresholdType === undefined ||
+          row.ThresholdType === "PERCENTAGE") &&
         row.ComparisonOperator === "GREATER_THAN",
     );
     if (!notification)
@@ -128,7 +129,14 @@ export function readMonitoringBudget(
         "--budget-name",
         BUDGET_NAME,
         "--notification",
-        JSON.stringify(notification),
+        // AWS may omit optional ThresholdType and return transient state. Verify
+        // the exact percentage notification with its canonical lookup identity.
+        JSON.stringify({
+          NotificationType: type,
+          ComparisonOperator: "GREATER_THAN",
+          Threshold: threshold,
+          ThresholdType: "PERCENTAGE",
+        }),
       ]),
     );
     if (subscribers.status !== 0) {

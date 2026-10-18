@@ -2181,3 +2181,34 @@ Integration retained the independent CLI/profile regression tests and all three
 disclosure entries while resolving adjacent append conflicts. The combined branch
 passed infrastructure typecheck, lint, formatting, all 102 tests, and the production
 TypeScript build; the generated Singapore lookup context was preserved.
+
+## 2026-10-18 — AWS Budget notification round-trip compatibility
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Correct the issue #52 live deployment reader failure using the
+  captured AWS Budget response; no AWS calls or mutations were performed by this fix.
+- **Repository files affected:** `infrastructure/lib/budget.ts`,
+  `infrastructure/test/budget.test.ts`, and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+Codex reproduced the budget reader failure with the actual notification response: approved
+ACTUAL/80 and FORECASTED/100 alerts have `NotificationState: OK` but omit `ThresholdType`.
+The [official Notification API](https://docs.aws.amazon.com/aws-cost-management/latest/APIReference/API_budgets_Notification.html)
+marks that field optional. The reader now permits an omitted type only while verifying each
+alert through an explicit canonical `PERCENTAGE` subscriber lookup. It never forwards the
+transient notification state as part of the lookup identity. Explicit absolute/unknown
+threshold types, changed thresholds/operators, failed canonical lookups, and missing
+configured email subscribers still fail without overwriting or deleting a budget.
+
+The captured-response regression failed before the fix with the same missing ACTUAL-alert
+error and passed afterward. Negative regressions exercise both ensure and removal paths
+through the existing public budget/command-runner boundary.
+
+Verification passed: infrastructure typecheck, lint, formatting, all 104 tests, production
+TypeScript build, offline dependency audit (zero vulnerabilities), and `git diff --check`.

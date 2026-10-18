@@ -88,6 +88,151 @@ test("never overwrites or deletes a same-name budget with different settings", (
   assert.throws(() => removeMonitoringBudget(validConfig(), runner), /differs/);
 });
 
+test("verifies omitted notification threshold types with explicit percentage subscriber lookups", () => {
+  const config = validConfig();
+  const runner: CommandRunner = (request) => {
+    switch (request.args[1]) {
+      case "describe-budget":
+        return success(
+          JSON.stringify({
+            Budget: {
+              BudgetName: "foc-demo-monthly",
+              BudgetLimit: {
+                Amount: String(config.monthlyBudgetUsd),
+                Unit: "USD",
+              },
+              TimeUnit: "MONTHLY",
+              BudgetType: "COST",
+            },
+          }),
+        );
+      case "describe-notifications-for-budget":
+        return success(
+          JSON.stringify({
+            Notifications: [
+              {
+                NotificationType: "ACTUAL",
+                ComparisonOperator: "GREATER_THAN",
+                Threshold: 80,
+                NotificationState: "OK",
+              },
+              {
+                NotificationType: "FORECASTED",
+                ComparisonOperator: "GREATER_THAN",
+                Threshold: 100,
+                NotificationState: "OK",
+              },
+            ],
+          }),
+        );
+      case "describe-subscribers-for-notification": {
+        const notification = parseJson<Record<string, unknown>>(
+          request.args[request.args.indexOf("--notification") + 1]!,
+          "canonical percentage lookup",
+        );
+        assert.ok(
+          notification.NotificationType === "ACTUAL" ||
+            notification.NotificationType === "FORECASTED",
+        );
+        assert.deepEqual(notification, {
+          NotificationType: notification.NotificationType,
+          ComparisonOperator: "GREATER_THAN",
+          Threshold: notification.NotificationType === "ACTUAL" ? 80 : 100,
+          ThresholdType: "PERCENTAGE",
+        });
+        return success(
+          JSON.stringify({
+            Subscribers: [
+              { SubscriptionType: "EMAIL", Address: config.alertEmail },
+            ],
+          }),
+        );
+      }
+      default:
+        throw new Error("Unexpected or mutating budget command");
+    }
+  };
+  assert.equal(ensureMonitoringBudget(config, runner).state, "MATCHES");
+});
+
+test("rejects changed notification values, unverified percentages, and subscribers without mutation", () => {
+  const config = validConfig();
+  const scenarios = [
+    { patch: { ThresholdType: "ABSOLUTE_VALUE" }, expected: /lacks.*ACTUAL/ },
+    { patch: { ThresholdType: "UNKNOWN" }, expected: /lacks.*ACTUAL/ },
+    { patch: { Threshold: 81 }, expected: /lacks.*ACTUAL/ },
+    { patch: { ComparisonOperator: "EQUAL_TO" }, expected: /lacks.*ACTUAL/ },
+    {
+      patch: {},
+      subscriberResponse: failure("NotFoundException"),
+      expected: /Read FoC budget subscribers failed/,
+    },
+    {
+      patch: {},
+      subscriberResponse: success(
+        JSON.stringify({
+          Subscribers: [
+            { SubscriptionType: "EMAIL", Address: "different@u.nus.edu" },
+          ],
+        }),
+      ),
+      expected: /lacks the configured email subscriber/,
+    },
+  ];
+  for (const scenario of scenarios) {
+    const runner: CommandRunner = (request) => {
+      switch (request.args[1]) {
+        case "describe-budget":
+          return success(
+            JSON.stringify({
+              Budget: {
+                BudgetName: "foc-demo-monthly",
+                BudgetLimit: {
+                  Amount: String(config.monthlyBudgetUsd),
+                  Unit: "USD",
+                },
+                TimeUnit: "MONTHLY",
+                BudgetType: "COST",
+              },
+            }),
+          );
+        case "describe-notifications-for-budget":
+          return success(
+            JSON.stringify({
+              Notifications: [
+                {
+                  NotificationType: "ACTUAL",
+                  ComparisonOperator: "GREATER_THAN",
+                  Threshold: 80,
+                  NotificationState: "OK",
+                  ...scenario.patch,
+                },
+                {
+                  NotificationType: "FORECASTED",
+                  ComparisonOperator: "GREATER_THAN",
+                  Threshold: 100,
+                  NotificationState: "OK",
+                },
+              ],
+            }),
+          );
+        case "describe-subscribers-for-notification":
+          return scenario.subscriberResponse ?? success("{}");
+        default:
+          throw new Error("Unexpected or mutating budget command");
+      }
+    };
+    assert.throws(
+      () => ensureMonitoringBudget(config, runner),
+      scenario.expected,
+    );
+    assert.throws(
+      () => removeMonitoringBudget(config, runner),
+      scenario.expected,
+    );
+  }
+});
+
 test("validates subscribers and deletes only the matching budget then checks absence", () => {
   const config = validConfig();
   let deleted = false;
