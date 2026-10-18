@@ -1211,3 +1211,182 @@ Result: 23 passed, 0 failed; the test stack and its volumes were removed. It als
 DLQ topics in the author's dev Kafka by re-running `kafka-init` (topic tests: 30 passed).
 npm 12 blocked the client's install script; Claude approved it for that one package
 (`allowScripts` in package.json).
+
+## 2026-10-18 — User Service: implementation notes for publishing `user.account-status`
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** documentation of how to implement a contract the author already decided (credit-service/docs/implementation-proposal.md §5); undecided design items are listed as author decisions, not chosen
+- **Repository files affected:** `user-service/docs/account-status-publishing.md` (new)
+- **Author review:** PENDING
+
+### Prompts
+
+```text
+Integrate with User Service’s account-status publishing contract below. Inspect the existing implementation before making changes, and preserve this wire format.
+
+Kafka contract
+- Topic: user.account-status
+- Key: account_id (UUID string)
+- Value: UTF-8 JSON
+- Delivery: at least once; duplicates are possible.
+- Ordering: preserve notification order per account.
+- Each consuming service uses its own consumer group, e.g. credit-service or order-service.
+
+Payload:
+{
+  "operation_id": "5b0e8f0a-2a4b-4c7e-9a3f-0d2c1e4b5a69",
+  "account_id": "a1111111-1111-4111-8111-111111111111",
+  "new_status": "ACTIVE",
+  "first_active": true,
+  "occurred_at": "2026-10-18T09:00:00.000Z",
+  "schema_version": 1
+}
+
+Field rules
+- operation_id: globally unique UUID per status change; unchanged across publication retries.
+- account_id: the affected user’s UUID; must match the Kafka key.
+- new_status: ACTIVE, SUSPENDED, or CLOSED.
+- first_active: true only for the first activation; false for restore, suspension, and closure.
+- occurred_at: ISO-8601 timestamp.
+- schema_version: integer 1.
+- There is no type field or per-account status version.
+- Do not use occurred_at as a substitute for an ordering/version guarantee.
+
+Producer behavior
+- User Service writes the account mutation and outbox notification in the same PostgreSQL transaction.
+- Registration and first-admin bootstrap emit ACTIVE with first_active=true.
+- Suspend emits SUSPENDED with first_active=false.
+- Restore emits ACTIVE with first_active=false.
+- Repeated suspend/restore requests that do not change status emit nothing.
+- CLOSED is reserved for future account closure; User Service does not currently emit it.
+- Existing users are not automatically backfilled.
+
+Publishing behavior
+- One active publisher across replicas, protected by a database advisory lock.
+- Read pending rows in outbox ID order.
+- Send up to 100 events per Kafka call; never wait for a batch to fill.
+- Use an idempotent producer with acks=all.
+- Mark rows published only after all selected messages are acknowledged.
+- Retry failures without changing operation_id.
+- Wake after commit, with a 200 ms fallback poll.
+- Kafka outages must not block HTTP startup or database readiness.
+
+Consumer requirements
+- Validate the payload before applying effects.
+- Deduplicate by operation_id durably, in the same database transaction as business effects.
+- A duplicate must not reapply an old status.
+- Roll back both the deduplication marker and effects on failure.
+- Commit the Kafka offset only after handling completes successfully.
+- Retain deduplication markers across the supported replay window; do not delete them with producer outbox cleanup.
+- Define handling for malformed messages and unsupported schema versions.
+
+Credit Service behavior
+- First activation creates the credit account and grants initial credits once per account.
+- Suspension blocks new reservations.
+- Restore allows new reservations again.
+- Existing reservations may still settle for suspended or closed accounts.
+- CLOSED is final and triggers the existing forfeiture rules.
+- Credit Service uses processed_account_status to prevent duplicate restores from undoing newer suspensions.
+
+Consistency limitation
+Kafka acknowledgment does not mean consumers have applied the event. Activation and credit.commands are separate topics, so an immediate order after registration may receive ACCOUNT_NOT_FOUND. Do not assume batching or wake-on-commit eliminates this race.
+
+Validation
+Test atomic rollback, duplicate delivery, per-account ordering, failed-send retries, concurrent publishers, outage recovery, and replaying an old restore after a newer suspension.
+
+Deploy consumer deduplication migrations and handlers before enabling the producer.
+```
+
+### Key response
+
+Claude read the User Service code (registration, first-admin bootstrap, suspend/restore under
+the admin-actions lock) and Credit Service's outbox, publisher and consumer, then wrote
+implementation notes: a transactional outbox in a new migration, the call sites that write
+outbox rows, a single-publisher loop ordered by `id`, why per-account order holds, the effect of
+the publish delay on Credit Service's activation/reserve race, an optional backfill of existing
+users, failure behaviour, tests and rollout order. Eight open items are listed for the author
+(table definition, poll interval, retention, admin credit accounts, PENDING_VERIFICATION,
+password hashing inside the transaction, backfill, test setup).
+
+## 2026-10-18 — Account-status publishing proposal review fixes
+
+- **Tool:** Codex (GPT-6)
+- **Allowed-use scope:** documentation changes requested after explaining outbox reliability and batching
+- **Repository files affected:** `user-service/docs/account-status-publishing.md`, `ai/usage-log.md`
+- **Author review:** PENDING
+
+### Prompt
+
+```text
+Update user-service/docs/account-status-publishing.md to address these points. Make documentation changes only.
+1. Batching and performance
+- Publish up to 100 pending events per batch without waiting for the batch to fill.
+- Use one Kafka producer.send() call per batch, preserving outbox order.
+- Mark events published only after the entire send is acknowledged.
+- Use a 200 ms fallback poll and wake the publisher after successful status-change commits.
+- Recommend metrics for pending event count, oldest unpublished event age, batch size, publish duration, and failures.
+
+2. Transactional consumer deduplication
+- Require durable deduplication by operation_id before rollout.
+- Store the deduplication marker and apply business effects in the same database transaction.
+- Skip duplicates without reapplying their status.
+- Roll back both marker and effects on failure.
+- Explain that replaying an old restore after a newer suspension can temporarily reactivate an account without this protection.
+- Define marker retention against the supported replay window, independently of outbox cleanup.
+
+3. Kafka-independent startup
+- Put Kafka connection attempts and retries inside the background publisher.
+- HTTP startup and readiness must not wait for Kafka connectivity or topic initialization.
+- Keep pending events in the outbox during outages.
+- Describe back-off and bounded shutdown behavior.
+
+4. Registration transaction
+- Validate input and hash the password before acquiring the registration database connection.
+- Insert the account and its initial activation notification in the same transaction.
+- Preserve database uniqueness constraints and existing conflict handling.
+```
+
+### Key response
+
+Updated the proposal to use batches of up to 100 without waiting to fill them, one Kafka send
+per batch, a 200 ms fallback poll with wake-on-commit, and backlog/latency metrics. Required
+transactional consumer deduplication before rollout to prevent replayed restores from undoing
+suspensions. Moved Kafka connection retries into the publisher so HTTP startup does not wait
+for Kafka or topic initialization. Specified password validation/hashing before acquiring the
+registration connection, while preserving atomic account and outbox inserts. Updated suggested
+tests, rollout prerequisites and open decisions, including the separate activation/order race.
+No service implementation changed or runtime tests run.
+
+
+## 2026-10-18 ? Implement account-status publishing
+
+- **Tool:** Codex (GPT-6)
+- **Allowed-use scope:** implementation requested by the author after review of the publishing proposal
+- **Repository files affected:** User Service account creation/bootstrap/status mutations, transaction helper, Kafka configuration/producer/outbox/publisher, migration runner and new migration, package manifests, database and end-to-end tests; Credit Service status handler, deduplication migration and regression tests; Compose, environment example and service documentation
+- **Author review:** PENDING
+
+### Prompt
+
+```text
+Implement account status publishing
+```
+
+### Key response
+
+Implemented an atomic User Service account-status outbox with stable operation IDs and account
+keys, a single active publisher across replicas, batches of up to 100, wake-on-commit with a
+200 ms fallback poll, acknowledgment-before-marking, outage retries, bounded retention cleanup,
+and periodic backlog/publish timing logs. HTTP startup and readiness remain independent of
+Kafka. Registration prepares bcrypt hashes before acquiring its transaction connection;
+bootstrap publishes administrator activation and suspend/restore publish only actual changes.
+Credit Service now records account-status operation IDs transactionally so replayed restores
+cannot undo newer suspensions. This is a documented narrow extension of the original no-inbox
+decision. Existing-user backfill is not automatic; the immediate-order activation race remains
+explicitly documented. Added disposable-database tests and a real HTTP/Kafka/Credit end-to-end
+case with restart recovery and stale replay protection. GitHub issue tracking could not run
+because gh is unavailable in this environment.
+
+Validation: User Service build and typecheck passed; 12 User Service tests and 36 Credit Service
+tests passed against an isolated PostgreSQL 17 container. The real Kafka end-to-end test passed
+against an isolated broker. User Service Docker build passed, and its runtime image successfully
+loaded the Kafka native binding. Test databases and temporary containers were cleaned up.

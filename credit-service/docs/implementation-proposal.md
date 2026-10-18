@@ -1,3 +1,4 @@
+<!-- Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing implementation and verification notes. Author review: PENDING. -->
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-15
@@ -9,7 +10,7 @@ fields and anything else marked "Author decision" are DRAFTS. The Credit Service
 decide them, per the AI usage policy (schemas and interfaces are not delegated to AI).
 Revised on 2026-10-16 to apply decision-record.md (D1 to D8): four tables, rejections produced
 directly to Kafka, no inbox table, settled Kafka settings and the rejection event.
-Author review: PENDING. Not yet reviewed.
+Author review: review 
 -->
 
 # Credit Service: Implementation Proposal
@@ -256,14 +257,17 @@ DELETE FROM outbox WHERE published_at < now() - interval '7 days';
 
 ### 4.5 Where idempotency lives
 
-There is no inbox table (decision D6). Every duplicate is caught by a constraint or a status
-check written in the **same** transaction as the effect, so a redelivered message changes
-nothing.
+Account-status publishing adds a narrow exception to the original no-inbox decision D6:
+`0003_account_status_dedup.sql` introduces `processed_account_status`. Its unique `operation_id`
+is inserted in the **same** transaction as the notification's effects. Replayed batches can
+otherwise briefly undo a suspension by reapplying an old restore. Order commands continue to
+deduplicate through the existing constraints and reservation state guards. Status markers are
+retained indefinitely; do not delete them with published outbox rows.
 
 | Message | Duplicate detected by |
 |---|---|
 | Account ACTIVE, `first_active=true` | `INSERT INTO credit_accounts ... ON CONFLICT (user_id) DO NOTHING`; the grant row is written only if the insert happened |
-| SUSPENDED / ACTIVE (restore) / CLOSED | Setting a status is idempotent, and notifications are keyed by `account_id`, so they arrive in order |
+| SUSPENDED / ACTIVE (restore) / CLOSED | `processed_account_status.operation_id`, atomically committed with effects; skip duplicates before applying status |
 | `ReserveRequested` | `credit_transactions.operation_id` (accepted), `credit_reservations.order_id` |
 | Terminal event | `credit_reservations.status <> 'HELD'`, backed by `UNIQUE (operation_id, user_id)` |
 
@@ -314,8 +318,9 @@ These are the statuses User Service implements (`users.status`):
 3. A crash between the acknowledgment and setting `published_at` only causes a duplicate. The
    consumer deduplicates by `operation_id`.
 
-This gives at-least-once delivery without a distributed transaction. User Service has no
-outbox yet, so this depends on the User Service author.
+This gives at-least-once delivery without a distributed transaction. User Service implements
+the outbox and batch publisher; see `user-service/docs/account-status-publishing.md`. Deploy
+the consumer deduplication migration and handler before enabling that producer.
 
 ### 5.4 Consumer handling
 
