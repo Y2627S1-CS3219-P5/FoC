@@ -310,6 +310,7 @@ services:
 
 volumes:
   user-db-data:
+  order-db-data:
   supplier-db-data:
   credit-db-data:
   kafka-data:
