@@ -6,6 +6,10 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Added the restart test for StubCreditBus.restore().
  * Author review: Reviewed and approved by @mattis.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: Tests for http adapter modes and settings, the HTTP session verifier and the HTTP
+ *        supplier directory, per the User and Supplier integration plan.
+ * Author review: PENDING
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -249,10 +253,18 @@ describe("stub supplier directory", () => {
   });
 });
 
+const CONFIG_KEYS = [
+  "AUTH_MODE", "SUPPLIER_MODE", "CREDIT_MODE", "STUB_CREDIT_LIMIT", "STUB_CREDIT_DELAY_MS", "STUB_CREDIT_SILENT_AMOUNT",
+  "USER_SERVICE_BASE_URL", "USER_SERVICE_VERIFY_TIMEOUT_MS", "SUPPLIER_SERVICE_BASE_URL", "SUPPLIER_SERVICE_LOOKUP_TIMEOUT_MS",
+];
+
 describe("adapter config", () => {
   const saved = { ...process.env };
+  beforeEach(() => {
+    for (const k of CONFIG_KEYS) delete process.env[k];
+  });
   afterEach(() => {
-    for (const k of ["AUTH_MODE", "SUPPLIER_MODE", "CREDIT_MODE", "STUB_CREDIT_LIMIT", "STUB_CREDIT_DELAY_MS", "STUB_CREDIT_SILENT_AMOUNT"]) {
+    for (const k of CONFIG_KEYS) {
       if (saved[k] === undefined) delete process.env[k];
       else process.env[k] = saved[k];
     }
@@ -264,10 +276,69 @@ describe("adapter config", () => {
   });
 
   it("config defaults to stubs with limit 100, delay 500 and silent amount 999", () => {
-    for (const k of ["AUTH_MODE", "SUPPLIER_MODE", "CREDIT_MODE", "STUB_CREDIT_LIMIT", "STUB_CREDIT_DELAY_MS", "STUB_CREDIT_SILENT_AMOUNT"]) delete process.env[k];
     assert.deepEqual(loadAdapterConfig(), {
       authMode: "stub", supplierMode: "stub", creditMode: "stub",
       stubCreditLimit: 100, stubCreditDelayMs: 500, stubCreditSilentAmount: 999,
     });
+  });
+
+  it("config accepts AUTH_MODE=http with base URL and default timeout 1000", () => {
+    process.env.AUTH_MODE = "http";
+    process.env.USER_SERVICE_BASE_URL = "http://user-service:3001";
+    const c = loadAdapterConfig();
+    assert.equal(c.authMode, "http");
+    assert.deepEqual(c.userService, { baseUrl: "http://user-service:3001", timeoutMs: 1000 });
+  });
+
+  it("config accepts SUPPLIER_MODE=http with default timeout 2000", () => {
+    process.env.SUPPLIER_MODE = "http";
+    process.env.SUPPLIER_SERVICE_BASE_URL = "http://supplier-service:3000";
+    const c = loadAdapterConfig();
+    assert.equal(c.supplierMode, "http");
+    assert.deepEqual(c.supplierService, { baseUrl: "http://supplier-service:3000", timeoutMs: 2000 });
+  });
+
+  it("config reads both timeouts", () => {
+    process.env.AUTH_MODE = "http";
+    process.env.USER_SERVICE_BASE_URL = "http://user-service:3001";
+    process.env.USER_SERVICE_VERIFY_TIMEOUT_MS = "1500";
+    process.env.SUPPLIER_MODE = "http";
+    process.env.SUPPLIER_SERVICE_BASE_URL = "http://supplier-service:3000";
+    process.env.SUPPLIER_SERVICE_LOOKUP_TIMEOUT_MS = "2500";
+    const c = loadAdapterConfig();
+    assert.equal(c.userService?.timeoutMs, 1500);
+    assert.equal(c.supplierService?.timeoutMs, 2500);
+  });
+
+  it("config refuses http mode without a base URL", () => {
+    process.env.AUTH_MODE = "http";
+    assert.throws(() => loadAdapterConfig(), /^Error: USER_SERVICE_BASE_URL is not set$/);
+    delete process.env.AUTH_MODE;
+    process.env.SUPPLIER_MODE = "http";
+    assert.throws(() => loadAdapterConfig(), /^Error: SUPPLIER_SERVICE_BASE_URL is not set$/);
+  });
+
+  it("config refuses a base URL that is not http(s)", () => {
+    process.env.AUTH_MODE = "http";
+    process.env.USER_SERVICE_BASE_URL = "ftp://x";
+    assert.throws(() => loadAdapterConfig(), /USER_SERVICE_BASE_URL must be an http or https URL/);
+  });
+
+  it("config refuses a timeout of 0", () => {
+    process.env.AUTH_MODE = "http";
+    process.env.USER_SERVICE_BASE_URL = "http://user-service:3001";
+    process.env.USER_SERVICE_VERIFY_TIMEOUT_MS = "0";
+    assert.throws(() => loadAdapterConfig(), /USER_SERVICE_VERIFY_TIMEOUT_MS must be a whole number >= 1/);
+  });
+
+  it("config leaves userService undefined in stub mode", () => {
+    const c = loadAdapterConfig();
+    assert.equal(c.userService, undefined);
+    assert.equal(c.supplierService, undefined);
+  });
+
+  it("config rejects CREDIT_MODE=http", () => {
+    process.env.CREDIT_MODE = "http";
+    assert.throws(() => loadAdapterConfig(), /^Error: CREDIT_MODE must be stub or kafka, not http$/);
   });
 });
