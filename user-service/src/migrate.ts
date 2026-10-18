@@ -1,4 +1,6 @@
 // Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
+// Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: consumed the
+// verified-TLS discrete database configuration added for issue #48. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -116,7 +118,7 @@ export async function migrate(client: Client): Promise<void> {
 
 async function connect(): Promise<Client> {
   // A Client cannot reconnect after a failed connect(), so each attempt uses a new one
-  const client = new Client({ connectionString: loadDatabaseConfig().databaseUrl });
+  const client = new Client(loadDatabaseConfig());
   try {
     await client.connect();
     return client;

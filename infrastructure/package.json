@@ -14,6 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "node --import tsx --test test/**/*.test.ts",
+    "test:data-integration": "bash database-bootstrap/integration/run.sh",
     "preflight": "node --import tsx scripts/preflight.ts",
     "estimate": "node --import tsx scripts/estimate.ts",
     "gate": "node --import tsx scripts/gate.ts",

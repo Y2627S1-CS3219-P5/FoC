@@ -12,6 +12,9 @@ coverage/
 .env.*.local
 *.pem
 *.key
+!infrastructure/database-bootstrap/certs/ap-southeast-1-bundle.pem
+!user-service/certs/ap-southeast-1-bundle.pem
+!supplier-service/certs/ap-southeast-1-bundle.pem
 
 # Locally installed agent skills
 .agents/
@@ -29,3 +32,4 @@ node_modules/
 infrastructure/cdk.out/
 infrastructure/artifacts/
 infrastructure/config/demo.json
+infrastructure/config/release.json

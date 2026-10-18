@@ -8,8 +8,13 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25; exposed the
  * repository/container Supplier image directory convention for issue #17.
  * Author review of issue #17 changes: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18; added the
+ * verified-TLS discrete RDS connection configuration seam for issue #48 while
+ * retaining local DATABASE_URL compatibility. Author review: PENDING.
  */
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { PoolConfig } from "pg";
 
 export interface SessionVerificationConfiguration {
   userServiceBaseUrl: string;
@@ -18,13 +23,80 @@ export interface SessionVerificationConfiguration {
 
 const MAX_ABORT_SIGNAL_TIMEOUT_MS = 2_147_483_647;
 
-export function getDatabaseUrl(): string {
+const DISCRETE_DATABASE_SETTINGS = [
+  "DATABASE_HOST",
+  "DATABASE_PORT",
+  "DATABASE_NAME",
+  "DATABASE_USER",
+  "DATABASE_PASSWORD",
+  "DATABASE_SSL_CA_PATH",
+] as const;
+
+function requiredDatabaseSetting(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} is required.`);
+  }
+  return value;
+}
+
+function readDatabaseCa(path: string): string {
+  let ca: string;
+  try {
+    ca = readFileSync(path, "utf8");
+  } catch {
+    throw new Error("DATABASE_SSL_CA_PATH cannot be read.");
+  }
+  if (ca.trim() === "") {
+    throw new Error("DATABASE_SSL_CA_PATH must contain a CA certificate.");
+  }
+  return ca;
+}
+
+/** Accepts either the local URL or the complete, verified-TLS cloud form. */
+export function getDatabaseConfig(): PoolConfig {
   const databaseUrl = process.env.DATABASE_URL?.trim();
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required.");
+  const presentDiscreteSettings = DISCRETE_DATABASE_SETTINGS.filter(
+    (name) => (process.env[name]?.trim() ?? "") !== "",
+  );
+  if (databaseUrl && presentDiscreteSettings.length > 0) {
+    throw new Error(
+      "DATABASE_URL cannot be combined with discrete DATABASE_* settings.",
+    );
+  }
+  if (databaseUrl) {
+    return { connectionString: databaseUrl };
+  }
+  if (presentDiscreteSettings.length !== DISCRETE_DATABASE_SETTINGS.length) {
+    throw new Error(
+      "Set DATABASE_URL or every discrete DATABASE_* setting.",
+    );
   }
 
-  return databaseUrl;
+  const host = requiredDatabaseSetting("DATABASE_HOST").trim();
+  const portText = requiredDatabaseSetting("DATABASE_PORT").trim();
+  if (!/^\d+$/.test(portText)) {
+    throw new Error("DATABASE_PORT must be an integer between 1 and 65535.");
+  }
+  const port = Number(portText);
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
+    throw new Error("DATABASE_PORT must be an integer between 1 and 65535.");
+  }
+
+  return {
+    host,
+    port,
+    database: requiredDatabaseSetting("DATABASE_NAME").trim(),
+    user: requiredDatabaseSetting("DATABASE_USER").trim(),
+    password: requiredDatabaseSetting("DATABASE_PASSWORD"),
+    ssl: {
+      ca: readDatabaseCa(
+        requiredDatabaseSetting("DATABASE_SSL_CA_PATH").trim(),
+      ),
+      rejectUnauthorized: true,
+      servername: host,
+    },
+  };
 }
 
 export function getRuntimeDatabaseRole(): string | undefined {

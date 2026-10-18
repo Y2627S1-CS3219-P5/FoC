@@ -1,0 +1,8 @@
+{
+  "sourceRevision": "REPLACE_WITH_FULL_40_CHARACTER_GIT_COMMIT_SHA",
+  "images": {
+    "frontend": "REPLACE_WITH_RESOLVED_SHA256_DIGEST",
+    "userService": "REPLACE_WITH_RESOLVED_SHA256_DIGEST",
+    "supplierService": "REPLACE_WITH_RESOLVED_SHA256_DIGEST"
+  }
+}

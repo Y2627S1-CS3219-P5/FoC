@@ -1787,3 +1787,28 @@ two-AZ no-NAT network, private Service Connect namespace, and exactly three disp
 immutable, scanned ECR repositories. It kept image retention as a reviewed deployment
 input, published dependent-stack outputs, and added CDK assertions for isolation, tags,
 lifecycle, encryption, and removal behavior.
+
+## 2026-10-18 — AWS PostgreSQL data stack and one-shot data jobs
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #48; private RDS,
+  generated secrets, database bootstrap, ECS migration/seed task definitions, immutable
+  release-manifest seam, service database configuration, tests, and documentation
+- **Repository files affected:** `infrastructure/{bin,config,database-bootstrap,docs,lib,test}`,
+  `infrastructure/{README.md,package.json}`, User and Supplier database configuration and
+  Dockerfiles, root `.gitignore`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the isolated data-layer ticket without provisioning or running cloud
+jobs. It added a private encrypted single-AZ PostgreSQL 17.11 instance, eight generated
+secrets, fixed cross-service database roles, an idempotent bootstrap image, verified RDS
+TLS configuration for both services, and four least-privilege one-shot ECS task
+definitions. It also added immutable release-manifest validation, CDK assertions, unit
+tests, and an opt-in disposable local Docker integration test that verifies repeatability,
+TLS, migrations, seeding, administrator-edit preservation, and role isolation.

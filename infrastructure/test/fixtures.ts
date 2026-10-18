@@ -1,4 +1,19 @@
 import type { DeploymentConfig } from "../lib/config.js";
+import type { ReleaseManifest } from "../lib/release-manifest.js";
+
+export function validReleaseManifest(): ReleaseManifest {
+  return {
+    sourceRevision: "0123456789abcdef0123456789abcdef01234567",
+    images: {
+      frontend:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      userService:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      supplierService:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    },
+  };
+}
 
 const alarm = {
   threshold: 1,

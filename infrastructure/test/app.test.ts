@@ -3,13 +3,13 @@ import { test } from "node:test";
 import { Stack } from "aws-cdk-lib";
 import { Match, Template } from "aws-cdk-lib/assertions";
 import { createFocDemoApp } from "../lib/app.js";
-import { validConfig } from "./fixtures.js";
+import { validConfig, validReleaseManifest } from "./fixtures.js";
 
 function synthesizedTemplate(): {
   readonly stack: Stack;
   readonly template: Template;
 } {
-  const app = createFocDemoApp(validConfig());
+  const app = createFocDemoApp(validConfig(), validReleaseManifest());
   const stack = app.node.findChild("FoCDemoFoundation");
   assert.ok(stack instanceof Stack);
   return { stack, template: Template.fromStack(stack) };

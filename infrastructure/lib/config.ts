@@ -145,8 +145,8 @@ export const deploymentConfigSchema = z
       .strict()
       .refine(
         ({ allocatedStorageGiB, maximumStorageGiB }) =>
-          maximumStorageGiB >= allocatedStorageGiB,
-        "maximumStorageGiB must be greater than or equal to allocatedStorageGiB",
+          maximumStorageGiB >= Math.ceil(allocatedStorageGiB * 1.1),
+        "maximumStorageGiB must be at least 110% of allocatedStorageGiB for RDS storage autoscaling",
       ),
     monthlyUsage: z
       .object({

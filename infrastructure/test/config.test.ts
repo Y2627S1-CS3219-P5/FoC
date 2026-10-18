@@ -43,10 +43,14 @@ test("requires authentication rate limiting to be stricter", () => {
   assert.throws(() => parseDeploymentConfig(invalid), /stricter/);
 });
 
-test("requires maximum database storage to cover initial storage", () => {
+test("requires maximum database storage to be at least 110% of initial storage", () => {
   const invalid = validConfig();
-  invalid.database.maximumStorageGiB = 10;
-  assert.throws(() => parseDeploymentConfig(invalid), /maximumStorageGiB/);
+  invalid.database.allocatedStorageGiB = 21;
+  invalid.database.maximumStorageGiB = 23;
+  assert.throws(() => parseDeploymentConfig(invalid), /110%/);
+
+  invalid.database.maximumStorageGiB = 24;
+  assert.doesNotThrow(() => parseDeploymentConfig(invalid));
 });
 
 test("requires a positive ECR image retention count", () => {

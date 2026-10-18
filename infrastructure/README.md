@@ -14,11 +14,21 @@ No AWS resources were created or changed.
 Author review: Pending pull-request review by @ron.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Drafted the issue #48 RDS data stack, database bootstrap, one-shot ECS data-job
+definitions, release-manifest validation, tests, and operating guidance. No AWS resources
+were created or changed, and no cloud job was run.
+Author review: Pending pull-request review by @ron.
+-->
+
 # FoC AWS infrastructure
 
 This TypeScript AWS CDK package implements the pre-provisioning guardrails from
-[`SPEC.md`](SPEC.md) and the regional Foundation stack. Provisioning remains blocked until
-the configuration, cost, capability, quota, and bootstrap gates pass.
+[`SPEC.md`](SPEC.md), the regional Foundation stack, and the PostgreSQL data stack.
+Provisioning remains blocked until the configuration, cost, capability, quota, and
+bootstrap gates pass.
 
 ## Foundation stack
 
@@ -41,6 +51,33 @@ Outputs publish the VPC and subnet IDs, cluster name/ARN, Service Connect namesp
 name/ID/ARN, and repository names/ARNs/URIs for later stacks. No Order or Credit resource
 is included.
 
+## Data stack and one-shot jobs
+
+`foc-demo-data` defines one encrypted, private, single-AZ PostgreSQL 17.11
+`db.t4g.micro` instance with gp3 storage, `rds.force_ssl=1`, a reviewed storage cap and
+backup retention, and disposable demo removal behavior. It also creates eight generated
+Secrets Manager secrets: the RDS master credential, four fixed service-role credentials,
+the shared JWT key, the audit HMAC key, and the bootstrap administrator password. Secret
+values are never committed or emitted as stack outputs.
+
+The stack defines four reusable, non-service Fargate task definitions with separate,
+least-privilege execution roles and empty task roles:
+
+1. `database-bootstrap` creates or repairs the fixed databases and roles.
+2. `user-migration` applies User Service migrations.
+3. `supplier-migration` applies Supplier Service migrations.
+4. `supplier-seed` imports the repeatable Supplier seed.
+
+A release runner must start these jobs sequentially in that exact order and wait for exit
+code zero after each task. A failure stops the release before any application service is
+updated. The stack only defines the jobs; it never starts them. Secret JSON-key injection
+requires Fargate platform version `1.4.0` or later when the tasks are run.
+
+Local development keeps using the single `DATABASE_URL`. AWS jobs instead inject the six
+discrete `DATABASE_*` settings, including `DATABASE_SSL_CA_PATH`; the services reject
+mixed or partial configuration and verify the Singapore RDS CA and hostname. See
+[`docs/RDS-CA.md`](docs/RDS-CA.md) for the pinned trust-bundle update procedure.
+
 ## Prerequisites
 
 - Node.js 20 or newer.
@@ -58,22 +95,35 @@ npm ci
 ## Supply deployment inputs
 
 Copy `config/demo.example.json` to the Git-ignored `config/demo.json`, replace every
-placeholder, and point the tools to it:
+placeholder, then copy the immutable release-manifest example and replace every digest:
+
+```sh
+cp config/demo.example.json config/demo.json
+cp config/release.example.json config/release.json
+```
+
+Point the tools to both reviewed files:
 
 ```sh
 export FOC_DEPLOYMENT_CONFIG="$PWD/config/demo.json"
+export FOC_RELEASE_MANIFEST="$PWD/config/release.json"
 ```
 
 The file contains no secret values. It does contain environment-specific owner, alert,
 administrator, sizing, threshold, usage, budget, and cost-approval data, so it is ignored
 until the team deliberately chooses how to preserve its reviewed copy. Passwords and keys
-will be generated in Secrets Manager in later increments.
+are generated in Secrets Manager by the Data stack and do not belong in either input file.
 
 The parser has no deployment defaults for unresolved decisions. It rejects missing fields,
 unknown fields, placeholder strings, invalid Fargate sizes, a non-NUS administrator email,
 an authentication rate rule that is not stricter than the global rule, and a database
-autoscaling cap below its initial storage. It also requires a positive, reviewed ECR
+autoscaling cap below 110% of initial storage. It also requires a positive, reviewed ECR
 retention count rather than choosing an unapproved lifecycle value.
+
+The release-manifest parser requires the exact source revision as a lowercase 40-character
+Git SHA and each image as a full lowercase `sha256:` digest. Tags such as `latest`, partial
+manifests, unknown keys, and mutable image references are rejected. This seam lets the
+later release runner use one reviewed set of immutable artifacts across jobs and services.
 
 Because the NUS SCP currently hides Service Quotas, the configuration also requires a
 named quota confirmation and evidence reference. That manual record does not turn a failed
@@ -121,10 +171,19 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm run test:data-integration
 ```
 
 The tests cover complete and incomplete configuration, deterministic cost arithmetic,
 budget failure, stale/tampered artifacts, wrong-account identity, denied service reads,
 quota denial, missing CDK bootstrap, VPC isolation and routing, the Service Connect
-namespace, ECR security/lifecycle/removal behavior, required tags, and Foundation outputs.
-They synthesize locally and do not contact or mutate AWS.
+namespace, ECR security/lifecycle/removal behavior, required tags, Foundation outputs,
+RDS encryption/TLS/removal settings, isolated database networking, generated secrets,
+least-privilege data-job roles, and immutable release manifests. The normal checks
+synthesize locally and do not contact or mutate AWS.
+
+`test:data-integration` is an opt-in local Docker check. It builds the bootstrap and
+service images, starts a disposable TLS-only PostgreSQL 17.11 container, runs the canonical
+job sequence, reruns bootstrap and seed, verifies administrator-edit preservation and
+database-role isolation, then removes its containers, volume, network, and local images.
+It does not use AWS or cloud credentials.
