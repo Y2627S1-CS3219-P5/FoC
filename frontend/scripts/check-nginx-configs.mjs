@@ -1,6 +1,8 @@
 // AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 // Scope: issue #49 static gateway route/target verification.
 // Author review: PENDING.
+// Contributor: @ron (AI-assisted); implementation review pending.
+// Additional scope: issue #52 server-context logging override regression.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
@@ -39,6 +41,18 @@ for (const [name, config] of Object.entries({ local, cloud })) {
     config,
     /log_format foc_safe/,
     `${name} gateway must use the redacted access-log format`,
+  );
+  const serverStart = config.indexOf('\nserver {');
+  assert.ok(serverStart >= 0, `${name} gateway must define its server`);
+  assert.doesNotMatch(
+    config.slice(0, serverStart),
+    /^\s*access_log\b/m,
+    `${name} must not append another logger beside the base image's HTTP main logger`,
+  );
+  assert.match(
+    config.slice(serverStart).split(/\blocation\b/)[0],
+    /^\s*access_log \/var\/log\/nginx\/access\.log foc_safe;/m,
+    `${name} server must override the inherited main logger`,
   );
   assert.doesNotMatch(
     config,

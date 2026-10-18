@@ -2,6 +2,9 @@
 AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
 Scope: recorded the AWS cloud-gateway verification addition to package.json.
 Additional scope: recorded the issue #52 compatible source-map-js lockfile security patch.
+Additional scope: recorded the issue #52 real-Nginx access-log inheritance diagnosis,
+server-context fix, runtime regression, and documentation.
+Contributor: @ron (AI-assisted); implementation review pending.
 Author review: PENDING.
 -->
 <!--
@@ -53,6 +56,13 @@ On 2026-10-18, OpenAI Codex (GPT-6) extended `package.json`'s test script with
 `scripts/check-nginx-configs.mjs` to verify the local and cloud gateway targets.
 This attribution also appears in `infrastructure/AI-DISCLOSURES.md`; implementation
 review remains pending.
+
+On 2026-10-18, OpenAI Codex (GPT-6) reproduced query-string exposure in the exact existing
+cloud image, moved only the safe access logger into each gateway's server context,
+and added a real-container regression to the disposable browser runner. The test uses
+dummy markers and never prints or saves raw container logs, pulls images, exposes a
+port, or contacts AWS. Routes, packages, UI behavior, and request-ID handling did not
+change. Implementation review remains pending.
 
 ## Vite template files
 

@@ -8,6 +8,10 @@
  * required by the current Compose stack, and retained failure diagnostics for
  * the issue #42 CI artifact.
  * Author review: Pending project-author review.
+ * Contributor: @ron (AI-assisted); implementation review pending.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18.
+ * Scope: issue #52 real-Nginx log-redaction regression against the built gateway.
+ * Author review: PENDING.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18.
  * Scope: Supplied the disposable Credit database credentials now required by
  * the Compose stack.
@@ -71,6 +75,12 @@ try {
     waitFor(`http://127.0.0.1:${supplierPort}/health`, 'Supplier Service'),
     waitFor(frontendBaseUrl, 'frontend gateway'),
   ])
+
+  const gatewayImage = compose(['images', '--quiet', 'frontend'], { capture: true }).trim()
+  if (!/^(?:sha256:)?[a-f0-9]{64}$/.test(gatewayImage)) {
+    throw new Error('Could not resolve the exact built frontend image for gateway log verification.')
+  }
+  run(process.execPath, [resolve(frontendDirectory, 'scripts', 'check-nginx-runtime.mjs'), '--image', gatewayImage])
 
   console.log(`\nRunning the real-browser Supplier UI journey at ${frontendBaseUrl}...`)
   run(localPlaywright(), ['test'], { cwd: frontendDirectory })

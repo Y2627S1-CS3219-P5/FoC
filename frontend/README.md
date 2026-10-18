@@ -20,6 +20,9 @@ the expanded live validation, concurrency, and mobile administrator checks for
 issue #34. Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: documented
 the issue #49 cloud-only nginx target and health contract. Author review: PENDING.
+Contributor: @ron (AI-assisted); implementation review pending.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: documented
+the issue #52 real-Nginx log-redaction regression. Author review: PENDING.
 -->
 
 # Frontend
@@ -96,6 +99,23 @@ npm run test:integration
 
 That command remains usable with the frontend stopped and covers direct MEMBER 403s,
 ETag races/preconditions, database state, repeatable seed behavior, and service outages.
+
+The disposable browser runner also tests both nginx gateway configurations in the exact
+image it just built. It sends only dummy query/header markers to isolated containers,
+then checks for one redacted completion and no health access logs. No extra image is
+pulled and the containers have no network or published port. To run only this check
+against an existing local gateway image:
+
+```bash
+node scripts/check-nginx-runtime.mjs --image <existing-gateway-image-id-or-tag>
+```
+
+By default this mounts the current local/cloud configs read-only. Add
+`--bundled-cloud-only` when testing an actual cloud-target release image's packaged
+configuration instead. nginx's safe `log_format` belongs at HTTP scope, but its
+`access_log` belongs inside the server so it replaces, rather than adds to, the base
+image's HTTP-level `main` logger. See the
+[runtime verification notes](../infrastructure/docs/GATEWAY-LOG-REDACTION-2026-10-18.md).
 
 For a presentation rehearsal, start the ordinary stack with `docker compose up --build`,
 open `http://localhost:8080`, and follow the MEMBER then ADMINISTRATOR flow in

@@ -2566,3 +2566,43 @@ lint, formatting, and all 141 tests, including actual pinned-CLI strict four-sta
 synthesis. Build passed; offline audit reported zero vulnerabilities; `git diff --check`
 passed. This implementer made no AWS calls, push, or primary-branch changes. New release
 evidence and approval must be generated for the new revision before deployment.
+
+## 2026-10-18 — Real-Nginx access-log inheritance correction
+
+Tool: OpenAI Codex (GPT-6). Contributor: @ron (AI-assisted).
+Issue: #52. Implementation and final wording review: PENDING.
+
+The deployment coordinator requested local diagnosis of the frontend dummy-query-marker
+acceptance failure without changing AWS resources, cloud configuration, packages, or
+routes. Using diagnosing-bugs and TDD, Codex added a real-Nginx regression first and
+ran it against the exact already-local `7a29b973` cloud image. The packaged config and
+unchanged mounted source both failed with only the sanitized signal
+`query marker leaked into stdout/stderr; default-main-format=true`.
+
+The ranked hypotheses were duplicate HTTP-level access loggers, error-log exposure,
+and source/image mismatch. Effective Nginx configuration showed the base `main` access
+logger beside our included `foc_safe` logger. Moving only the access directive into
+each gateway server made the same image with corrected mounted configs pass: exactly
+one safe completion, no dummy query/Authorization/Cookie markers, and health access
+logging still disabled. [Nginx's log-module documentation](https://nginx.org/en/docs/http/ngx_http_log_module.html#access_log)
+explains multiple loggers at the same configuration level. No request-ID scheme,
+error-log policy, UI behavior, business route, dependency, or image base changed.
+
+The runtime regression uses the exact resolved existing local image ID, networking
+disabled, no published port, dummy markers only, and exact uniquely named container
+cleanup. It captures logs in memory and never prints or saves their raw contents.
+The existing disposable browser runner now invokes it against its built gateway;
+the static config regression also failed before the fix and passes afterward.
+Frontend disclosures, README, and dedicated verification notes record the limitation:
+the old packaged image remains unfixed and requires a new reviewed cloud image/release.
+
+Verification: frontend 32 tests in 12 files plus static nginx checks passed; frontend
+lint and production TypeScript/Vite build passed. The real Nginx checks passed for
+both cloud and local configurations. Infrastructure check passed all 141 tests,
+typecheck/lint/formatting and strict four-stack offline CLI synthesis; build passed,
+and both frontend/infrastructure offline audits reported zero vulnerabilities.
+`node --check` passed for both runtime/orchestration scripts, and `git diff --check`
+passed. Full Compose/browser orchestration
+was not rerun locally; the coordinator had already passed live browser/API journeys
+and will run the new CI/release and live log acceptance. No AWS calls, image publication,
+push, or primary-branch edits were performed by this implementer.
