@@ -41,6 +41,8 @@ function operationRunner(options: {
       );
     }
     if (service === "cloudformation") {
+      if (operation === "list-stack-resources")
+        return success(JSON.stringify({ StackResourceSummaries: [] }));
       const stack = argumentAfter(request, "--stack-name") ?? "";
       return stackOutput(config, stack);
     }
@@ -284,6 +286,8 @@ test("destroy deletes only the four exact stacks in reverse dependency order", (
         ? failure("ValidationError: does not exist")
         : stackOutput(config, stack);
     }
+    if (service === "cloudformation" && operation === "list-stack-resources")
+      return success(JSON.stringify({ StackResourceSummaries: [] }));
     if (service === "ecs" && operation === "describe-clusters") {
       return success(JSON.stringify({ clusters: [{ status: "INACTIVE" }] }));
     }
@@ -362,6 +366,216 @@ test("destroy fails closed when a residual check is unauthorized", () => {
       ),
     /Residual inspection failed: AccessDenied/,
   );
+});
+
+function providerDestroyFixture(
+  options: {
+    retainEdgeGroup?: boolean;
+    extraTagged?: boolean;
+    denyBootstrap?: boolean;
+  } = {},
+) {
+  const config = validConfig();
+  const calls: CommandRequest[] = [];
+  const deleted = new Set<string>();
+  const groups = new Set(
+    ["foc-demo-foundation", "foc-demo-edge"].map(
+      (name) => `/aws/lambda/${name}-handler`,
+    ),
+  );
+  const runner: CommandRunner = (request) => {
+    calls.push(request);
+    const [service, operation] = request.args;
+    const stack = argumentAfter(request, "--stack-name") ?? "";
+    const region = argumentAfter(request, "--region") ?? "";
+    if (service === "sts")
+      return success(
+        JSON.stringify({ Account: config.accountId, Arn: "arn:caller" }),
+      );
+    if (service === "cloudformation" && operation === "delete-stack") {
+      deleted.add(stack);
+      return success();
+    }
+    if (service === "cloudformation" && operation === "wait") return success();
+    if (service === "cloudformation" && operation === "describe-stacks") {
+      if (stack === "CDKToolkit")
+        return options.denyBootstrap
+          ? failure("AccessDeniedException")
+          : success(
+              JSON.stringify({
+                Stacks: [
+                  {
+                    StackName: "CDKToolkit",
+                    StackId: `arn:aws:cloudformation:${region}:${config.accountId}:stack/CDKToolkit/exact-id`,
+                  },
+                ],
+              }),
+            );
+      return deleted.has(stack)
+        ? failure("ValidationError: does not exist")
+        : stackOutput(config, stack);
+    }
+    if (service === "cloudformation" && operation === "list-stack-resources") {
+      return success(
+        JSON.stringify({
+          StackResourceSummaries:
+            stack === "CDKToolkit"
+              ? [
+                  {
+                    ResourceType: "AWS::S3::Bucket",
+                    PhysicalResourceId: `exact-bootstrap-${region}`,
+                  },
+                ]
+              : ["foc-demo-foundation", "foc-demo-edge"].includes(stack)
+                ? [
+                    {
+                      ResourceType: "AWS::Lambda::Function",
+                      PhysicalResourceId: `${stack}-handler`,
+                    },
+                  ]
+                : [],
+        }),
+      );
+    }
+    if (service === "lambda") {
+      const name = argumentAfter(request, "--function-name") ?? "";
+      return deleted.has(name.replace(/-handler$/, ""))
+        ? failure("ResourceNotFoundException")
+        : success(
+            JSON.stringify({
+              FunctionName: name,
+              FunctionArn: `arn:aws:lambda:${region}:${config.accountId}:function:${name}`,
+              LoggingConfig: { LogGroup: `/aws/lambda/${name}` },
+            }),
+          );
+    }
+    if (service === "logs" && operation === "delete-log-group") {
+      const name = argumentAfter(request, "--log-group-name") ?? "";
+      if (options.retainEdgeGroup && region === config.edgeRegion)
+        return failure("AccessDeniedException");
+      groups.delete(name);
+      return success();
+    }
+    if (service === "logs") {
+      const prefix = argumentAfter(request, "--log-group-name-prefix") ?? "";
+      return success(
+        JSON.stringify({
+          logGroups: [...groups]
+            .filter((name) => name.startsWith(prefix))
+            .map((logGroupName) => ({ logGroupName })),
+        }),
+      );
+    }
+    if (service === "resourcegroupstaggingapi")
+      return success(
+        JSON.stringify({
+          ResourceTagMappingList: [
+            { ResourceARN: `arn:aws:s3:::exact-bootstrap-${region}` },
+            ...(options.extraTagged
+              ? [
+                  {
+                    ResourceARN: `arn:aws:s3:::exact-bootstrap-${region}-unproven`,
+                  },
+                ]
+              : []),
+          ],
+        }),
+      );
+    if (service === "ecs")
+      return success(JSON.stringify({ clusters: [{ status: "INACTIVE" }] }));
+    if (service === "ecr") return failure("RepositoryNotFoundException");
+    if (service === "rds") return failure("DBInstanceNotFoundFault");
+    if (service === "cloudfront") return failure("NoSuchDistribution");
+    if (service === "budgets") return failure("NotFoundException");
+    throw new Error(`Unexpected destroy command ${service}:${operation}`);
+  };
+  return { config, calls, runner };
+}
+
+test("destroy captures provider groups before stack deletion and checks/cleans Singapore and edge regions", () => {
+  const { config, runner, calls } = providerDestroyFixture();
+  let captured = false;
+  assert.deepEqual(
+    destroyEnvironment(
+      {
+        config,
+        runner,
+        recordProviderLogTargets: (targets) => {
+          assert.equal(targets.length, 2);
+          assert.equal(
+            calls.some(({ args }) => args[1] === "delete-stack"),
+            false,
+          );
+          captured = true;
+        },
+      },
+      true,
+      `foc-demo:DESTROY:${config.accountId}`,
+    ),
+    [],
+  );
+  assert.equal(captured, true);
+  const deletes = calls.filter(({ args }) => args[1] === "delete-log-group");
+  assert.deepEqual(
+    deletes.map((request) => [
+      argumentAfter(request, "--region"),
+      argumentAfter(request, "--log-group-name"),
+    ]),
+    [
+      [config.primaryRegion, "/aws/lambda/foc-demo-foundation-handler"],
+      [config.edgeRegion, "/aws/lambda/foc-demo-edge-handler"],
+    ],
+  );
+  const lastStackWait = calls
+    .filter(({ args }) => args[0] === "cloudformation" && args[1] === "wait")
+    .at(-1);
+  assert.ok(lastStackWait);
+  assert.ok(
+    calls.findIndex(({ args }) => args[1] === "delete-log-group") >
+      calls.indexOf(lastStackWait),
+  );
+  assert.equal(
+    calls.some(
+      (request) =>
+        request.args[1] === "delete-stack" &&
+        argumentAfter(request, "--stack-name") === "CDKToolkit",
+    ),
+    false,
+  );
+});
+
+test("destroy reports edge provider group residue and cleanup permission failures", () => {
+  const { config, runner } = providerDestroyFixture({ retainEdgeGroup: true });
+  const residuals = destroyEnvironment(
+    { config, runner },
+    true,
+    `foc-demo:DESTROY:${config.accountId}`,
+  );
+  assert.ok(
+    residuals.includes("logs:us-east-1:/aws/lambda/foc-demo-edge-handler"),
+  );
+  assert.ok(
+    residuals.includes(
+      "provider-log-cleanup-failed:us-east-1:/aws/lambda/foc-demo-edge-handler",
+    ),
+  );
+});
+
+test("tagged residue excludes only exact bootstrap inventory and fails closed on unreadable ownership", () => {
+  for (const options of [{ extraTagged: true }, { denyBootstrap: true }]) {
+    const { config, runner } = providerDestroyFixture(options);
+    const residuals = destroyEnvironment(
+      { config, runner },
+      true,
+      `foc-demo:DESTROY:${config.accountId}`,
+    );
+    assert.ok(residuals.includes("tagged-resources:ap-southeast-1"));
+    assert.ok(residuals.includes("tagged-resources:us-east-1"));
+    if ("denyBootstrap" in options)
+      assert.ok(
+        residuals.includes("bootstrap-inventory-check-failed:us-east-1"),
+      );
+  }
 });
 
 function stackOutput(config: ReturnType<typeof validConfig>, name: string) {

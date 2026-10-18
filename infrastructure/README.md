@@ -77,6 +77,12 @@ The vulnerability scan is mandatory and its findings are preserved in the owner-
 release manifest. The approved specification does not define a severity rejection policy,
 so tooling fails on scan failure but does not invent a finding-count threshold.
 
+The release controller also bounds CDK helper Lambda default-group retention to 14 days
+after successful stack deployment. It captures exact provider identities before teardown,
+confirms their functions are absent, and removes only those default groups in their owning
+regions. Shared/custom logging destinations require review. Shared CDK bootstrap resources
+remain; residue checks exclude only their proven exact stack inventory. See the runbook.
+
 ## Foundation stack
 
 `foc-demo-foundation` synthesizes only the shared resources approved in issue #47:

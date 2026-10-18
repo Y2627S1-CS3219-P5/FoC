@@ -357,22 +357,36 @@ function toReleaseImage(
     image.repositoryName,
     digest,
   );
-  runChecked(
-    runner,
-    {
-      executable: "aws",
-      args: awsArgs(config, config.primaryRegion, [
-        "ecr",
-        "wait",
-        "image-scan-complete",
-        "--repository-name",
-        image.repositoryName,
-        "--image-id",
-        `imageDigest=${scannedDigest}`,
-      ]),
-    },
-    `wait for ${image.spec.key} vulnerability scan`,
-  );
+  const waitRequest = {
+    executable: "aws",
+    args: awsArgs(config, config.primaryRegion, [
+      "ecr",
+      "wait",
+      "image-scan-complete",
+      "--repository-name",
+      image.repositoryName,
+      "--image-id",
+      `imageDigest=${scannedDigest}`,
+    ]),
+  };
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const waited = runner(waitRequest);
+    if (waited.status === 0) break;
+    const notRegistered =
+      /(?:An error occurred \(ScanNotFoundException\)|^ScanNotFoundException:)/.test(
+        waited.stderr || waited.stdout,
+      );
+    if (!notRegistered || attempt === 5) {
+      throw new Error(
+        `wait for ${image.spec.key} vulnerability scan failed: ${safeCommandFailure(waited)}`,
+      );
+    }
+    runChecked(
+      runner,
+      { executable: "sleep", args: ["10"] },
+      "wait for ECR scan registration",
+    );
+  }
   const scanResult = runChecked(
     runner,
     {

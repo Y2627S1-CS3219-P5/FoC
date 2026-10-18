@@ -23,7 +23,11 @@ import {
 } from "../lib/deployment-plan.js";
 import { applyApprovedDeployment } from "../lib/deploy.js";
 import { validConfig, validReleaseManifest } from "./fixtures.js";
-import { success } from "./release-tooling-fixtures.js";
+import {
+  argumentAfter,
+  stackResponse,
+  success,
+} from "./release-tooling-fixtures.js";
 
 function withPlanFiles(
   check: (options: PlanOptions, calls: CommandRequest[]) => void,
@@ -68,6 +72,22 @@ function withPlanFiles(
       }
       if (request.executable === "npx" && request.args[1] === "diff") {
         return success("Stack diff\n+ resource\n");
+      }
+      if (
+        request.args[0] === "cloudformation" &&
+        request.args[1] === "describe-stacks"
+      ) {
+        return stackResponse(
+          config,
+          argumentAfter(request, "--stack-name") ?? "",
+          {},
+        );
+      }
+      if (
+        request.args[0] === "cloudformation" &&
+        request.args[1] === "list-stack-resources"
+      ) {
+        return success(JSON.stringify({ StackResourceSummaries: [] }));
       }
       if (request.executable === "aws" && request.args[0] === "sts") {
         return success(

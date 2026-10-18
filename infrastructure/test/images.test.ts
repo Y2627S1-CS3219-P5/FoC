@@ -569,3 +569,63 @@ test("blocks an incomplete or failed vulnerability scan without inventing a seve
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("retries only bounded scan-registration lag then still requires complete findings for the exact digest", () => {
+  const base = imageRunner();
+  let waits = 0;
+  let delays = 0;
+  const result = prepareForTest((request) => {
+    if (request.executable === "sleep") {
+      delays += 1;
+      assert.deepEqual(request.args, ["10"]);
+      return success();
+    }
+    if (
+      request.args[0] === "ecr" &&
+      request.args[1] === "wait" &&
+      argumentAfter(request, "--repository-name") === "foc-demo-frontend" &&
+      ++waits === 1
+    ) {
+      return failure(
+        "Waiter ImageScanComplete failed: An error occurred (ScanNotFoundException): Scan not found",
+      );
+    }
+    return base(request);
+  });
+  assert.equal(delays, 1);
+  assert.equal(waits, 2);
+  assert.equal(result.manifest.images.frontend.scan.status, "COMPLETE");
+  assert.equal(
+    result.manifest.images.frontend.scan.scannedDigest,
+    DIGESTS.frontend,
+  );
+});
+
+test("exhausts scan-registration retries and never retries unrelated scan errors", () => {
+  for (const error of [
+    "ScanNotFoundException: Scan not found",
+    "AccessDeniedException",
+    "ScanFailedException",
+  ]) {
+    const base = imageRunner();
+    let waits = 0;
+    let delays = 0;
+    assert.throws(
+      () =>
+        prepareForTest((request) => {
+          if (request.executable === "sleep") {
+            delays += 1;
+            return success();
+          }
+          if (request.args[0] === "ecr" && request.args[1] === "wait") {
+            waits += 1;
+            return failure(error);
+          }
+          return base(request);
+        }),
+      /vulnerability scan failed/,
+    );
+    assert.equal(waits, error.startsWith("ScanNotFoundException") ? 6 : 1);
+    assert.equal(delays, error.startsWith("ScanNotFoundException") ? 5 : 0);
+  }
+});

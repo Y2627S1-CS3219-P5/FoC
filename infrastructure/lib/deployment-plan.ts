@@ -14,7 +14,8 @@ import {
   releaseManifestHash,
   type ReleaseManifest,
 } from "./release-manifest.js";
-import { assertAwsIdentity } from "./stack-outputs.js";
+import { assertAwsIdentity, loadValidatedStack } from "./stack-outputs.js";
+import { ensureProviderLogRetention } from "./provider-logs.js";
 
 export type DeploymentPhase = "foundation" | "release";
 
@@ -235,6 +236,11 @@ export function deployExactStack(options: PlanOptions, key: StackKey): void {
       env: cdkEnvironment(options),
     },
     `deploy exact stack ${STACKS[key].name}`,
+  );
+  ensureProviderLogRetention(
+    options.config,
+    options.runner,
+    loadValidatedStack(options.config, options.runner, key),
   );
 }
 

@@ -2,6 +2,12 @@
 // Scope: AWS demo deployment implementation and pre-deployment review fixes.
 // Author review: PENDING.
 import type { DeploymentConfig } from "./config.js";
+import { readBootstrapResourceArns } from "./bootstrap-resource-arns.js";
+import {
+  captureProviderLogTargets,
+  removeProviderLogGroups,
+  type ProviderLogTarget,
+} from "./provider-logs.js";
 import {
   BUDGET_NAME,
   readMonitoringBudget,
@@ -99,6 +105,9 @@ interface SubscriptionsResponse {
 export interface OperationContext {
   readonly config: DeploymentConfig;
   readonly runner: CommandRunner;
+  readonly recordProviderLogTargets?: (
+    targets: readonly ProviderLogTarget[],
+  ) => void;
 }
 
 export interface ServiceStatus {
@@ -383,7 +392,8 @@ export function destroyEnvironment(
   assertDestroyConfirmation(context.config, allowDataLoss, confirmation);
   assertAwsIdentity(context.config, context.runner);
   const inventory = loadInventory(context);
-  const residualTargets = captureResidualTargets(inventory);
+  const residualTargets = captureResidualTargets(context, inventory);
+  context.recordProviderLogTargets?.(residualTargets.providerLogs);
   for (const key of ["edge", "application", "data", "foundation"] as const) {
     const stack = STACKS[key];
     const region =
@@ -418,8 +428,14 @@ export function destroyEnvironment(
       `wait for exact stack ${stack.name} deletion`,
     );
   }
+  const providerCleanup = removeProviderLogGroups(
+    context.config,
+    context.runner,
+    residualTargets.providerLogs,
+  );
   const budget = removeMonitoringBudget(context.config, context.runner);
   return [
+    ...providerCleanup,
     ...inspectResiduals(context, residualTargets),
     ...(budget.state === "ABSENT"
       ? []
@@ -684,13 +700,24 @@ interface ResidualTargets {
   readonly clusterName: string;
   readonly databaseIdentifier: string;
   readonly distributionId: string;
-  readonly logGroups: readonly string[];
+  readonly logGroups: readonly {
+    readonly name: string;
+    readonly region: string;
+  }[];
+  readonly providerLogs: readonly ProviderLogTarget[];
 }
 
 function captureResidualTargets(
+  context: OperationContext,
   inventory: ReturnType<typeof loadInventory>,
 ): ResidualTargets {
+  const providerLogs = captureProviderLogTargets(
+    context.config,
+    context.runner,
+    Object.values(inventory),
+  );
   return {
+    providerLogs,
     clusterName: requireOutput(inventory.foundation, "ClusterName"),
     databaseIdentifier: requireOutput(
       inventory.data,
@@ -698,16 +725,22 @@ function captureResidualTargets(
     ),
     distributionId: requireOutput(inventory.edge, "DistributionId"),
     logGroups: [
-      ...Object.values(SERVICE_LOG_OUTPUTS).flatMap((key) => {
-        const value = inventory.application.outputs[key];
-        return value === undefined ? [] : [value];
-      }),
-      "/foc/demo/jobs/database-bootstrap",
-      "/foc/demo/jobs/user-migration",
-      "/foc/demo/jobs/supplier-migration",
-      "/foc/demo/jobs/supplier-seed",
-      "/aws/ecs/containerinsights/foc-demo-cluster/performance",
-      "/foc/demo/events/ecs-deployment-failures",
+      ...providerLogs.map(({ logGroupName, region }) => ({
+        name: logGroupName,
+        region,
+      })),
+      ...[
+        ...Object.values(SERVICE_LOG_OUTPUTS).flatMap((key) => {
+          const value = inventory.application.outputs[key];
+          return value === undefined ? [] : [value];
+        }),
+        "/foc/demo/jobs/database-bootstrap",
+        "/foc/demo/jobs/user-migration",
+        "/foc/demo/jobs/supplier-migration",
+        "/foc/demo/jobs/supplier-seed",
+        "/aws/ecs/containerinsights/foc-demo-cluster/performance",
+        "/foc/demo/events/ecs-deployment-failures",
+      ].map((name) => ({ name, region: context.config.primaryRegion })),
     ],
   };
 }
@@ -804,10 +837,10 @@ function inspectResiduals(
     )
   )
     residuals.push(`cloudfront:${targets.distributionId}`);
-  for (const logGroup of targets.logGroups) {
+  for (const { name: logGroup, region } of targets.logGroups) {
     const result = context.runner({
       executable: "aws",
-      args: awsArgs(context.config, context.config.primaryRegion, [
+      args: awsArgs(context.config, region, [
         "logs",
         "describe-log-groups",
         "--log-group-name-prefix",
@@ -815,7 +848,7 @@ function inspectResiduals(
       ]),
     });
     if (result.status !== 0) {
-      residuals.push(`logs-check-failed:${logGroup}`);
+      residuals.push(`logs-check-failed:${region}:${logGroup}`);
       continue;
     }
     const response = parseJson<{
@@ -826,7 +859,7 @@ function inspectResiduals(
         ({ logGroupName }) => logGroupName === logGroup,
       )
     ) {
-      residuals.push(`logs:${logGroup}`);
+      residuals.push(`logs:${region}:${logGroup}`);
     }
   }
   for (const region of [
@@ -845,10 +878,30 @@ function inspectResiduals(
     });
     if (tagged.status === 0) {
       const response = parseJson<{
-        readonly ResourceTagMappingList?: readonly unknown[];
+        readonly ResourceTagMappingList?: readonly {
+          readonly ResourceARN?: string;
+        }[];
       }>(tagged.stdout, `tagged residual check in ${region}`);
-      if ((response.ResourceTagMappingList?.length ?? 0) > 0)
-        residuals.push(`tagged-resources:${region}`);
+      if ((response.ResourceTagMappingList?.length ?? 0) > 0) {
+        try {
+          const bootstrap = readBootstrapResourceArns(
+            context.config,
+            context.runner,
+            region,
+          );
+          if (
+            response.ResourceTagMappingList?.some(
+              ({ ResourceARN }) =>
+                ResourceARN === undefined || !bootstrap.has(ResourceARN),
+            )
+          ) {
+            residuals.push(`tagged-resources:${region}`);
+          }
+        } catch {
+          residuals.push(`bootstrap-inventory-check-failed:${region}`);
+          residuals.push(`tagged-resources:${region}`);
+        }
+      }
     } else {
       residuals.push(`tagged-resource-check-failed:${region}`);
     }

@@ -2397,3 +2397,52 @@ Those require separate dependency maintenance: npm's offered fixes include incom
 toolchain downgrades, and this correction does not silently accept or force those changes.
 Combined CI and immutable-release ECR rescanning remain the deployment workflow's next
 checks; ECR Basic scanning does not cover npm dependencies.
+
+## 2026-10-18 — CDK provider log lifecycle and scan-startup lag
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Close issue #52's confirmed provider-log retention/teardown gap
+  and handle observed ECR scan-registration lag within the approved deployment workflow.
+- **Repository files affected:** Infrastructure provider-log and exact bootstrap-inventory
+  helpers, deploy/destroy/image controllers, CLI teardown receipt, tests, README/runbook,
+  and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+Four CDK-generated Lambda providers use automatically created default log groups across
+Singapore and us-east-1. Public CDK custom-resource configuration/aspects cannot reliably
+own both late-generated cross-region providers. Codex used the approved exact-inventory
+fallback: after successful exact-stack deployment, resolve physical Lambda identities from
+that validated stack, verify each account/region/default logging destination, and ensure
+14-day retention. Existing groups are reused; missing groups are created by exact name,
+including ResourceAlreadyExists races. Provider logical IDs, IAM roles, and custom-resource
+behavior are unchanged. AWS documents [default groups and custom destinations](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-loggroups.html)
+and [LoggingConfig updates](https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-lambda-function-loggingconfig.html).
+
+Teardown captures exact provider names and regions before deleting stacks and saves an
+owner-only inventory receipt. Every owning function must be confirmed absent before any
+captured default group is deleted. Residue checks inspect both regions and preserve
+failure evidence. Custom/shared destinations require manual review. Historical groups
+from an earlier rolled-back/deleted stack are explicitly outside current inventory and
+require separately recorded exact-name ownership evidence. Shared CDKToolkit resources
+are never deleted; tagged residue excludes only exact ARNs proven by the corresponding
+region's bootstrap stack inventory, failing closed on denied or incomplete ownership.
+
+The live release also showed an exact runnable image temporarily returning
+ScanNotFoundException immediately after push, then COMPLETE without a mutation. Only that
+registration error receives six waiter attempts with ten-second spacing (50 seconds of
+startup grace). Generic permission/scan failures and exhausted registration retries fail;
+COMPLETE findings for the selected repository and digest remain mandatory. No severity
+threshold, manual scan, registry change, AWS call, or live mutation was introduced by this
+source-only work.
+
+Verification passed: infrastructure typecheck, lint, formatting, all 125 tests, production
+TypeScript build, offline dependency audit (zero vulnerabilities), and `git diff --check`.
+Tests cover existing/missing groups and creation races, default/shared destination guards,
+function-absence proof, exact regional cleanup/residue, bootstrap ownership exclusions,
+capture receipts before deletion, and bounded scan-registration retries.

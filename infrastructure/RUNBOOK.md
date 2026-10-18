@@ -97,6 +97,10 @@ wrong-platform, malformed, or attestation-only candidates block the release. Sta
 OCI/Docker image manifests are scanned directly; their manifest does not include OS/CPU
 metadata, so the controlled `--platform linux/amd64` build supplies that guarantee.
 Older local release evidence without `scan.scannedDigest` must be regenerated.
+ECR scan registration can briefly lag a successful push. Only `ScanNotFoundException`
+receives up to six waiter attempts spaced ten seconds apart (50 seconds of startup grace).
+Other failures stop immediately; a completed report identifying the exact scanned digest
+is still required. The tool never starts a scan manually or changes registry configuration.
 
 Plan and apply the complete release, including Foundation reconciliation:
 
@@ -215,6 +219,26 @@ log group, stack, or tagged-resource residue for manual review. This includes th
 14-day Container Insights performance group. The matching account-wide monitoring budget
 is also removed and checked; missing permission is reported as budget residue requiring
 manual inspection. Local evidence is retained.
+
+CDK's four helper Lambda functions keep their existing IDs, roles, and default log
+destinations. Some core cross-region helpers are generated after CDK aspects run, so the
+release wrapper manages their log lifecycle explicitly. After each successful exact stack
+deployment, it resolves that stack's physical Lambda identities and region, verifies each
+default destination, and ensures 14-day retention. Existing default groups are reused;
+missing groups are created with an exact name, including safe handling of a concurrent
+Lambda creation. Any custom/shared destination stops for manual review.
+
+Before teardown deletes stacks, it saves the validated provider names, regions, and default
+groups in owner-only `artifacts/provider-log-teardown-inventory.json`. After all stack
+deletions complete, every captured function must be confirmed absent before any provider
+group is removed. Only those exact groups are deleted, then inspected in Singapore or
+`us-east-1` as appropriate. Permission failures and remaining functions/groups are residue,
+not a clean teardown. Historical groups from an earlier rolled-back/deleted stack are
+outside the current inventory and require separate exact-name evidence/manual review.
+
+Shared `CDKToolkit` resources are never deleted. Tagged residue excludes only exact ARNs
+proven by the corresponding region's `CDKToolkit` stack inventory; unreadable inventories,
+similar names, and unrecognized tagged resources still require review.
 
 Foundation apply records `artifacts/budget.json`: created, matching, or permission
 unavailable. The configured actual/forecast alert percentages are visible in this receipt

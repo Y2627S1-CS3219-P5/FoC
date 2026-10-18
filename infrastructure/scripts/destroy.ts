@@ -4,6 +4,9 @@
 import { loadDeploymentConfig } from "../lib/config.js";
 import { systemCommandRunner } from "../lib/commands.js";
 import { destroyEnvironment } from "../lib/operations.js";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { writeOwnerOnlyJson } from "../lib/private-json.js";
 
 try {
   const args = process.argv.slice(2);
@@ -15,7 +18,25 @@ try {
     "WARNING: Supplier/User data, secrets, images, and retained logs will be permanently removed.",
   );
   const residuals = destroyEnvironment(
-    { config, runner: systemCommandRunner },
+    {
+      config,
+      runner: systemCommandRunner,
+      recordProviderLogTargets: (targets) =>
+        writeOwnerOnlyJson(
+          resolve(
+            dirname(fileURLToPath(import.meta.url)),
+            "..",
+            "artifacts",
+            "provider-log-teardown-inventory.json",
+          ),
+          {
+            schemaVersion: 1,
+            accountId: config.accountId,
+            capturedAt: new Date().toISOString(),
+            targets,
+          },
+        ),
+    },
     args.includes("--allow-data-loss"),
     confirmation,
   );
