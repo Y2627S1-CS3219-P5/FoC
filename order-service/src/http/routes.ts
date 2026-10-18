@@ -4,6 +4,10 @@
  * Scope: Errand routes: parse and validate, call the domain and repository, map the result. Authorization
  *        is enforced by the repository (relationship to the errand) and requireRole (admin routes).
  * Author review: Reviewed and approved by @mattis.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: POST /errands handles the archived, unavailable and unauthenticated supplier outcomes,
+ *        per the User and Supplier integration plan.
+ * Author review: PENDING
  */
 import { Router, type Request, type Response } from "express";
 import type { Pool } from "pg";
@@ -111,9 +115,14 @@ export function errandRoutes(deps: { pool: Pool; verifier: SessionVerifier; supp
   r.post("/errands", async (req, res) => {
     const v = validateCreateErrand(req.body, new Date());
     if (!v.ok) return sendValidation(res, v.errors);
-    const supplier = await suppliers.getActiveSupplier(v.value.supplierId);
-    if (supplier === null) return sendError(res, 422, "SUPPLIER_UNAVAILABLE", "The supplier does not exist or is no longer active");
-    const errand = await createErrand(pool, user(res).id, v.value, supplier);
+    // authenticate() has already checked that the header is present
+    const lookup = await suppliers.findSupplier(v.value.supplierId, req.header("authorization")!);
+    if (lookup.kind === "unauthenticated") return sendError(res, 401, "UNAUTHENTICATED", "A valid session is required");
+    if (lookup.kind === "archived" && user(res).role === "ADMINISTRATOR") {
+      return sendError(res, 422, "SUPPLIER_ARCHIVED", "Supplier is archived; restore it to create an errand.");
+    }
+    if (lookup.kind !== "active") return sendError(res, 422, "SUPPLIER_UNAVAILABLE", "The supplier does not exist or is no longer active");
+    const errand = await createErrand(pool, user(res).id, v.value, lookup.supplier);
     res.status(202).json(serializeErrand(errand));
   });
 

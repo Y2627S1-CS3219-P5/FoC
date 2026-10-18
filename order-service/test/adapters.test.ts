@@ -17,7 +17,7 @@ import { after, afterEach, before, beforeEach, describe, it, mock } from "node:t
 import { Pool } from "pg";
 import { StubCreditBus } from "../src/adapters/creditBus";
 import { HttpSessionVerifier, StubSessionVerifier } from "../src/adapters/sessionVerifier";
-import { STUB_SUPPLIERS, StubSupplierDirectory } from "../src/adapters/supplierDirectory";
+import { HttpSupplierDirectory, STUB_SUPPLIERS, StubSupplierDirectory } from "../src/adapters/supplierDirectory";
 import { UpstreamContractError, UpstreamUnavailableError } from "../src/adapters/upstream";
 import { loadAdapterConfig } from "../src/config";
 import { sweepDeadlines } from "../src/deadlines/sweeper";
@@ -243,14 +243,15 @@ describe("stub session verifier", () => {
 });
 
 describe("stub supplier directory", () => {
-  it("returns the three fixed suppliers and null for unknown ids", async () => {
+  it("returns the three fixed suppliers as active and unknown ids as unavailable", async () => {
     const d = new StubSupplierDirectory();
     assert.equal(STUB_SUPPLIERS.length, 3);
     for (const n of [1, 2, 3]) {
       const id = `00000000-0000-4000-8000-00000000000${n}`;
-      assert.equal((await d.getActiveSupplier(id))?.id, id);
+      const r = await d.findSupplier(id, "Bearer x");
+      assert.equal(r.kind === "active" && r.supplier.id, id);
     }
-    assert.equal(await d.getActiveSupplier(randomUUID()), null);
+    assert.deepEqual(await d.findSupplier(randomUUID(), "Bearer x"), { kind: "unavailable" });
   });
 });
 
@@ -419,5 +420,46 @@ describe("http session verifier", () => {
     for (const body of [{ id: "x", role: "MEMBER" }, { id, role: "SUPPORT" }, { role: "MEMBER" }, "not json"]) {
       await assert.rejects(new HttpSessionVerifier(USER, fakeFetch(() => reply(200, body)).fetch).verify("Bearer x"), UpstreamContractError);
     }
+  });
+});
+
+describe("http supplier directory", () => {
+  const SUPPLIER = { baseUrl: "http://supplier-service:3000/", timeoutMs: 2000 };
+  const id = randomUUID();
+  const body = (over: Record<string, unknown> = {}) => ({
+    id, name: "Coffee Bean", buildingCode: "COM3", buildingLabel: "COM3", locationDescription: "Ground floor",
+    status: "ACTIVE", version: 3, archivedAt: null, ...over,
+  });
+  const lookup = (respond: Parameters<typeof fakeFetch>[0], cfg = SUPPLIER) =>
+    new HttpSupplierDirectory(cfg, fakeFetch(respond).fetch).findSupplier(id, "Bearer abc.def");
+
+  it("http directory forwards the header and maps an ACTIVE supplier", async () => {
+    const f = fakeFetch(() => reply(200, body()));
+    const r = await new HttpSupplierDirectory(SUPPLIER, f.fetch).findSupplier(id, "Bearer abc.def");
+    assert.equal(f.calls[0].url, `http://supplier-service:3000/api/v1/suppliers/${id}`);
+    assert.equal(new Headers(f.calls[0].init.headers).get("authorization"), "Bearer abc.def");
+    assert.deepEqual(r, { kind: "active", supplier: { id, name: "Coffee Bean", buildingCode: "COM3", locationDescription: "Ground floor" } });
+  });
+
+  it("http directory maps ARCHIVED to archived, 404 to unavailable and 401 to unauthenticated", async () => {
+    assert.deepEqual(await lookup(() => reply(200, body({ status: "ARCHIVED", archivedAt: "2026-10-01T00:00:00Z" }))), { kind: "archived" });
+    assert.deepEqual(await lookup(() => reply(404, { error: "NOT_FOUND" })), { kind: "unavailable" });
+    assert.deepEqual(await lookup(() => reply(401, { error: "UNAUTHENTICATED" })), { kind: "unauthenticated" });
+  });
+
+  it("http directory throws UpstreamContractError on 400, 403 and an unexpected 200 body", async () => {
+    for (const respond of [
+      () => reply(400), () => reply(403),
+      () => reply(200, body({ status: "DELETED" })), () => reply(200, body({ name: undefined })),
+      () => reply(200, body({ buildingCode: "" })), () => reply(200, "not json"),
+    ]) {
+      await assert.rejects(lookup(respond), UpstreamContractError);
+    }
+  });
+
+  it("http directory throws UpstreamUnavailableError on 502, a network error and a timeout", async () => {
+    await assert.rejects(lookup(() => reply(502)), UpstreamUnavailableError);
+    await assert.rejects(lookup(networkError), UpstreamUnavailableError);
+    await assert.rejects(lookup(hang, { ...SUPPLIER, timeoutMs: 50 }), UpstreamUnavailableError);
   });
 });

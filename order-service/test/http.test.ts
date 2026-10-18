@@ -19,7 +19,8 @@ import { Pool } from "pg";
 import { createTestDatabase, TestDatabase } from "./helpers";
 import { createApp } from "../src/http/app";
 import { HttpSessionVerifier, StubSessionVerifier } from "../src/adapters/sessionVerifier";
-import { STUB_SUPPLIERS, StubSupplierDirectory } from "../src/adapters/supplierDirectory";
+import { STUB_SUPPLIERS, StubSupplierDirectory, type SupplierDirectory, type SupplierLookup } from "../src/adapters/supplierDirectory";
+import { UpstreamContractError, UpstreamUnavailableError } from "../src/adapters/upstream";
 import { StubCreditBus } from "../src/adapters/creditBus";
 import { publishOutboxBatch } from "../src/outbox";
 
@@ -370,4 +371,59 @@ test("User Service down is 503 SERVICE_UNAVAILABLE", async () => {
   } finally {
     await new Promise<void>((r) => s.close(() => r()));
   }
+});
+
+// POST /errands against an app whose Supplier directory gives `outcome`
+async function createWith(outcome: SupplierLookup | Error, auth: string) {
+  const suppliers: SupplierDirectory = {
+    findSupplier: async () => {
+      if (outcome instanceof Error) throw outcome;
+      return outcome;
+    },
+  };
+  const app = createApp({ pool, verifier: new StubSessionVerifier(), suppliers });
+  const s = app.listen(0);
+  await new Promise<void>((r) => s.once("listening", r));
+  try {
+    const res = await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/errands`, {
+      method: "POST",
+      headers: { authorization: auth, "content-type": "application/json" },
+      body: JSON.stringify(createBody()),
+    });
+    return { status: res.status, body: await res.json() };
+  } finally {
+    await new Promise<void>((r) => s.close(() => r()));
+  }
+}
+
+test("archived supplier as administrator is 422 SUPPLIER_ARCHIVED", async () => {
+  const r = await createWith({ kind: "archived" }, admin(randomUUID()));
+  assert.equal(r.status, 422);
+  assert.deepEqual(r.body, { error: "SUPPLIER_ARCHIVED", message: "Supplier is archived; restore it to create an errand." });
+});
+
+test("archived supplier as member is 422 SUPPLIER_UNAVAILABLE", async () => {
+  const r = await createWith({ kind: "archived" }, member(randomUUID()));
+  assert.equal(r.status, 422);
+  assert.equal(r.body.error, "SUPPLIER_UNAVAILABLE");
+});
+
+test("supplier 401 is 401 UNAUTHENTICATED", async () => {
+  const r = await createWith({ kind: "unauthenticated" }, member(randomUUID()));
+  assert.equal(r.status, 401);
+  assert.deepEqual(r.body, { error: "UNAUTHENTICATED", message: "A valid session is required" });
+});
+
+test("Supplier Service down is 503 and writes no errand", async () => {
+  const before = (await pool.query("SELECT count(*)::int AS n FROM errands")).rows[0].n;
+  const r = await createWith(new UpstreamUnavailableError("supplier", "status 502"), member(randomUUID()));
+  assert.equal(r.status, 503);
+  assert.deepEqual(r.body, { error: "SERVICE_UNAVAILABLE", message: "Service temporarily unavailable" });
+  assert.equal((await pool.query("SELECT count(*)::int AS n FROM errands")).rows[0].n, before);
+});
+
+test("unexpected Supplier reply is 500", async () => {
+  const r = await createWith(new UpstreamContractError("supplier", "status 403"), member(randomUUID()));
+  assert.equal(r.status, 500);
+  assert.equal(r.body.error, "INTERNAL_ERROR");
 });
