@@ -59,6 +59,21 @@ test("requires a positive ECR image retention count", () => {
   assert.throws(() => parseDeploymentConfig(invalid), /retainedImageCount/);
 });
 
+test("rejects sub-minute periods for standard-resolution metrics", () => {
+  const invalid = validConfig();
+  invalid.alarms.ecsRunningTaskShortfall.periodSeconds = 45;
+  assert.throws(() => parseDeploymentConfig(invalid), /multiple of 60/);
+});
+
+test("requires a positive running-task shortfall threshold", () => {
+  const invalid = validConfig();
+  invalid.alarms.ecsRunningTaskShortfall.threshold = 0;
+  assert.throws(
+    () => parseDeploymentConfig(invalid),
+    /at least one missing task/,
+  );
+});
+
 test("configuration fingerprint is independent of JSON key order", () => {
   const config = validConfig();
   const reversed = Object.fromEntries(Object.entries(config).reverse());

@@ -1,1 +1,7 @@
-{}
+{
+  "cc-api-provider:account=656253649128:expectedMatchCount=exactly-one:propertiesToReturn.0=PrefixListId:propertyMatch.PrefixListName=com.amazonaws.global.cloudfront.origin-facing:region=ap-southeast-1:typeName=AWS$:$:EC2$:$:PrefixList": [
+    {
+      "PrefixListId": "pl-31a34658"
+    }
+  ]
+}

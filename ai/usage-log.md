@@ -1812,3 +1812,29 @@ TLS configuration for both services, and four least-privilege one-shot ECS task
 definitions. It also added immutable release-manifest validation, CDK assertions, unit
 tests, and an opt-in disposable local Docker integration test that verifies repeatability,
 TLS, migrations, seeding, administrator-edit preservation, and role isolation.
+
+## 2026-10-18 — AWS ECS application stack
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #49; ECS services,
+  internal application load balancer, Service Connect, network policy, autoscaling,
+  operational alarms, cloud gateway target, User publisher gate, request logging, tests,
+  and documentation
+- **Repository files affected:** `infrastructure/{config,lib,test,README.md}`, frontend
+  Docker/nginx/test/docs files, User Service configuration/startup/test/docs files, root
+  environment/Compose files, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the isolated application-layer ticket without provisioning or changing
+AWS. It added three digest-pinned x86-64 Fargate services, private Service Connect aliases,
+an internal ALB, explicit security-group flows, empty application roles, rolling rollback,
+scale-to-zero-aware alarms, and the migration-before-service release seam. It also added
+a cloud-only frontend route allowlist and health endpoint, redacted request completion
+logs, and a cloud User publisher flag that avoids starting Kafka while preserving durable
+outbox records and the existing local behavior.

@@ -58,7 +58,8 @@ export class FoundationStack extends Stack {
 
     const cluster = new ecs.Cluster(this, "Cluster", {
       clusterName: "foc-demo-cluster",
-      containerInsightsV2: ecs.ContainerInsights.DISABLED,
+      // Required for the stop-safe DesiredTaskCount - RunningTaskCount alarms.
+      containerInsightsV2: ecs.ContainerInsights.ENABLED,
       vpc: this.vpc,
     });
     this.cluster = cluster as ecs.ICluster;

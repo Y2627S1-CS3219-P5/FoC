@@ -241,8 +241,9 @@ test("publishes the canonical fail-closed job boundary without secret outputs", 
   ]) {
     template.hasOutput(output, {});
   }
+  // Cross-stack references export secret ARNs/IDs, never their values.
   assert.doesNotMatch(
     JSON.stringify(template.toJSON().Outputs),
-    /Secret|Password/,
+    /SecretString|resolve:secretsmanager|postgres(?:ql)?:\/\//,
   );
 });

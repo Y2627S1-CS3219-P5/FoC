@@ -81,7 +81,7 @@ test("configures the private Service Connect namespace on the ECS cluster", () =
   });
   template.hasResourceProperties("AWS::ECS::Cluster", {
     ClusterName: "foc-demo-cluster",
-    ClusterSettings: [{ Name: "containerInsights", Value: "disabled" }],
+    ClusterSettings: [{ Name: "containerInsights", Value: "enabled" }],
     ServiceConnectDefaults: {
       Namespace: Match.anyValue(),
     },

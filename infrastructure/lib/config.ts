@@ -19,9 +19,21 @@ const alarmSchema = z
   .object({
     threshold: z.number().nonnegative(),
     evaluationPeriods: z.number().int().positive(),
-    periodSeconds: z.number().int().positive(),
+    periodSeconds: z
+      .number()
+      .int()
+      .positive()
+      .refine(
+        (period) => period % 60 === 0,
+        "must be a multiple of 60 seconds for standard-resolution metrics",
+      ),
   })
   .strict();
+
+const runningTaskShortfallAlarmSchema = alarmSchema.refine(
+  ({ threshold }) => threshold >= 1,
+  "threshold must be at least one missing task",
+);
 
 const rateRuleSchema = z
   .object({
@@ -128,6 +140,7 @@ export const deploymentConfigSchema = z
       .object({
         unhealthyFrontendTargets: alarmSchema,
         applicationServerErrors: alarmSchema,
+        ecsRunningTaskShortfall: runningTaskShortfallAlarmSchema,
         ecsCpuPercent: alarmSchema,
         ecsMemoryPercent: alarmSchema,
         rdsFreeStorageBytes: alarmSchema,

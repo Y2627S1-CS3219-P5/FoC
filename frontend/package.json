@@ -9,7 +9,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run && node scripts/check-nginx-configs.mjs",
     "test:watch": "vitest",
     "test:e2e": "node scripts/compose-ui-smoke.mjs",
     "test:e2e:browser": "playwright test"

@@ -68,14 +68,15 @@ export function validConfig(): DeploymentConfig {
       },
     },
     alarms: {
-      unhealthyFrontendTargets: alarm,
-      applicationServerErrors: alarm,
+      unhealthyFrontendTargets: { ...alarm },
+      applicationServerErrors: { ...alarm },
+      ecsRunningTaskShortfall: { ...alarm },
       ecsCpuPercent: { ...alarm, threshold: 80 },
       ecsMemoryPercent: { ...alarm, threshold: 80 },
       rdsFreeStorageBytes: { ...alarm, threshold: 2_000_000_000 },
       rdsCpuPercent: { ...alarm, threshold: 80 },
       rdsConnections: { ...alarm, threshold: 50 },
-      ecsDeploymentFailures: alarm,
+      ecsDeploymentFailures: { ...alarm },
     },
     database: {
       allocatedStorageGiB: 20,

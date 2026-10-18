@@ -2,6 +2,8 @@
 // Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: added the
 // verified-TLS discrete RDS connection configuration seam for issue #48 while
 // retaining local DATABASE_URL compatibility. Author review: PENDING.
+// Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: added an
+// explicit cloud-only publisher switch for issue #49. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -28,6 +30,14 @@ function required(name: string): string {
     throw new Error(`${name} is not set`);
   }
   return value;
+}
+
+function optionalBoolean(name: string, defaultValue: boolean): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (value === undefined || value === "") return defaultValue;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${name} must be true or false`);
 }
 
 export function loadKafkaConfig() {
@@ -127,6 +137,13 @@ export function loadAppConfig() {
       .split(",")
       .map((o) => o.trim())
       .filter(Boolean),
+    // Local/full deployments retain publishing by default. The approved AWS
+    // User+Supplier slice sets this explicitly to false because it has no Kafka
+    // or account-status consumers; durable outbox writes remain enabled.
+    accountStatusPublishingEnabled: optionalBoolean(
+      "ACCOUNT_STATUS_PUBLISHING_ENABLED",
+      true,
+    ),
     bootstrapAdmin: {
       username: process.env.BOOTSTRAP_ADMIN_USERNAME,
       email: process.env.BOOTSTRAP_ADMIN_EMAIL,

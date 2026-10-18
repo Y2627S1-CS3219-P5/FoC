@@ -54,6 +54,11 @@
       "evaluationPeriods": "REPLACE",
       "periodSeconds": "REPLACE"
     },
+    "ecsRunningTaskShortfall": {
+      "threshold": "REPLACE_WITH_AT_LEAST_ONE_MISSING_TASK",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
     "ecsCpuPercent": {
       "threshold": "REPLACE",
       "evaluationPeriods": "REPLACE",

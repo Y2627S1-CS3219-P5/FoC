@@ -1,10 +1,11 @@
 import { App, Tags } from "aws-cdk-lib";
+import { ApplicationStack } from "./application-stack.js";
 import type { DeploymentConfig } from "./config.js";
 import { DataStack } from "./data-stack.js";
 import { FoundationStack } from "./foundation-stack.js";
 import type { ReleaseManifest } from "./release-manifest.js";
 
-/** Creates the gated Foundation and Data stacks without running database jobs. */
+/** Creates gated stack definitions without running or deploying any resource. */
 export function createFocDemoApp(
   config: DeploymentConfig,
   releaseManifest: ReleaseManifest,
@@ -27,6 +28,32 @@ export function createFocDemoApp(
     userServiceRepository: foundation.userServiceRepository,
     supplierServiceRepository: foundation.supplierServiceRepository,
   });
+  const application = new ApplicationStack(app, "FoCDemoApplication", {
+    stackName: "foc-demo-application",
+    description:
+      "FoC demo frontend, User, and Supplier ECS application resources",
+    env: { account: config.accountId, region: config.primaryRegion },
+    config,
+    releaseManifest,
+    vpc: foundation.vpc,
+    cluster: foundation.cluster,
+    serviceConnectNamespace: foundation.serviceConnectNamespace,
+    frontendRepository: foundation.frontendRepository,
+    userServiceRepository: foundation.userServiceRepository,
+    supplierServiceRepository: foundation.supplierServiceRepository,
+    database: data.database,
+    databaseSecurityGroup: data.databaseSecurityGroup,
+    userRuntimeSecret: data.userRuntimeSecret,
+    supplierRuntimeSecret: data.supplierRuntimeSecret,
+    jwtSecret: data.jwtSecret,
+    auditHmacSecret: data.auditHmacSecret,
+    bootstrapAdministratorPasswordSecret:
+      data.bootstrapAdministratorPasswordSecret,
+  });
+  // This is a resource boundary only: it guarantees job definitions exist but
+  // intentionally cannot execute them. The release controller in issue #51
+  // must run and verify the canonical jobs before deploying Application.
+  application.addStackDependency(data);
 
   for (const [key, value] of Object.entries({
     Project: "FoC",
@@ -37,6 +64,7 @@ export function createFocDemoApp(
   })) {
     Tags.of(foundation).add(key, value);
     Tags.of(data).add(key, value);
+    Tags.of(application).add(key, value);
   }
   return app;
 }
