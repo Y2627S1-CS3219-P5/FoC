@@ -256,6 +256,7 @@ function cdkEnvironment(
   options: PlanOptions,
 ): Readonly<Record<string, string | undefined>> {
   return {
+    AWS_PROFILE: options.config.awsProfile,
     FOC_CDK_PHASE: options.phase,
     FOC_DEPLOYMENT_CONFIG: process.env.FOC_DEPLOYMENT_CONFIG,
     FOC_RELEASE_MANIFEST:

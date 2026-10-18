@@ -2071,3 +2071,48 @@ correction.
 
 Verification passed: infrastructure typecheck, lint, formatting, all 97 tests, production
 TypeScript build, and `git diff --check`; the pinned CLI's local help confirmed the flag.
+
+## 2026-10-18 — CDK CLI assembly and profile compatibility
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Correct the issue #52 CLI/construct-library schema mismatch and
+  profile propagation discovered while preparing the authorized AWS deployment.
+- **Repository files affected:** Infrastructure package/lockfile and `cdk.json`, deployment
+  planner, planner tests, CLI compatibility test, and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+Codex pinned the official npm `aws-cdk` CLI package to 2.1144.0, the minimum compatible
+version reported by the real CLI for the locked construct library's schema 54 assembly.
+The registry's version, Node engine, and integrity metadata were verified; only the CLI
+dependency and its removed optional file-watcher dependency changed in the lockfile.
+[AWS troubleshooting documentation](https://docs.aws.amazon.com/cdk/v2/guide/troubleshooting.html)
+recommends a compatible local toolkit when library and CLI versions differ. The updated
+CLI still accepts `--no-change-set`. The planner now sets `AWS_PROFILE` from the reviewed
+configuration for every CDK synth, diff, and deploy subprocess instead of depending on an
+operator's ambient profile.
+
+The regression generates the complete four-stack fixture assembly using the installed
+construct library, then invokes the actual pinned CLI for strict synthesis of all four
+exact stack IDs and a local-template diff with credentials disabled and lookups prohibited.
+Separate command-runner assertions cover profile propagation.
+
+The real strict synthesis also exposed previously unobserved construct warnings. Explicit
+`strong` cross-stack references preserve the library's existing behavior; disabling latest
+SDK installation uses the custom-resource Lambda runtime's included SDK rather than
+downloading a mutable package at deployment time. The synthesized provider uses Node.js
+24 and only the existing CloudWatch Logs `putResourcePolicy`/`deleteResourcePolicy` calls,
+with `InstallLatestAwsSdk: false`. AWS documents the [runtime-included SDK v3](https://docs.aws.amazon.com/lambda/latest/dg/lambda-nodejs.html#nodejs-sdk-included)
+and the existing [PutResourcePolicy API](https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutResourcePolicy.html).
+No newer API parameter is required. This check does not claim live Lambda execution.
+
+Verification passed: infrastructure typecheck, lint, formatting, all 99 tests including
+the actual four-stack strict CLI synthesis/local diff, TypeScript build, and
+`git diff --check`. Dependency installation skipped lifecycle scripts and reported zero
+audit vulnerabilities. No AWS calls, resource mutations, or push were performed by this
+compatibility correction.

@@ -37,7 +37,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.10.0",
-    "aws-cdk": "2.1031.0",
+    "aws-cdk": "2.1144.0",
     "eslint": "^10.13.0",
     "eslint-plugin-awscdk": "^4.4.4",
     "prettier": "^3.9.10",

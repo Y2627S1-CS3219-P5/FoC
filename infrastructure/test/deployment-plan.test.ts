@@ -118,6 +118,23 @@ test("diff disables change sets using the pinned CDK CLI's supported flag", () =
   });
 });
 
+test("synth, diff, and deploy use the configured AWS profile", () => {
+  withPlanFiles((options, calls) => {
+    calculateDeploymentPlan(options);
+    deployExactStack(options, "data");
+    const cdkCalls = calls.filter(
+      ({ executable, args }) => executable === "npx" && args[0] === "cdk",
+    );
+    assert.deepEqual(
+      cdkCalls.map(({ args }) => args[1]),
+      ["synth", "diff", "deploy"],
+    );
+    for (const request of cdkCalls) {
+      assert.equal(request.env?.AWS_PROFILE, options.config.awsProfile);
+    }
+  });
+});
+
 test("rejects an approval token when the recalculated diff changed", () => {
   withPlanFiles((options) => {
     const first = calculateDeploymentPlan(options);
