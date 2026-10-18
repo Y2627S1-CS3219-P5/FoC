@@ -3,8 +3,11 @@
 # the Order Service lifecycle for the D3 demo (stub tokens, stub Credit). Author review: Reviewed and approved by @mattis.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: step 11 now checks
 # that all five credit event types were sent and the stub logged no contract violation. Author review: Reviewed and approved by @mattis.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18. Scope: real User Service logins and a
+# real supplier instead of stub tokens and a fixed supplier id. Author review: PENDING.
 #
-# Usage:  docker compose up -d --build order-service frontend && bash order-service/scripts/demo.sh
+# Usage:  docker compose up -d --build && bash order-service/scripts/demo.sh
+# Reads ALLOWED_EMAIL_DOMAIN and BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD from the shell or $ROOT/.env.
 # Needs curl and jq. BASE is the gateway; RESERVATION_TIMEOUT_SECONDS must match the service's value.
 # Exits non-zero at the first step whose HTTP status or state differs from what is expected.
 set -euo pipefail
@@ -17,19 +20,46 @@ for tool in curl jq; do
   command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 2; }
 done
 
-# Stub identities: A requests, B and C are couriers, D is an administrator
-A=11111111-1111-4111-8111-111111111111
-B=22222222-2222-4222-8222-222222222222
-C=33333333-3333-4333-8333-333333333333
-D=44444444-4444-4444-8444-444444444444
-TOKEN_A="stub.$A.MEMBER"
-TOKEN_B="stub.$B.MEMBER"
-TOKEN_C="stub.$C.MEMBER"
-TOKEN_D="stub.$D.ADMINISTRATOR"
-SUPPLIER=00000000-0000-4000-8000-000000000001
-
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
+
+# A setting from the shell, else from $ROOT/.env (read, never sourced)
+setting() {
+  local value=${!1-}
+  [[ -n "$value" ]] || value=$(grep -E "^$1=" "$ROOT/.env" 2>/dev/null | tail -n 1 | cut -d= -f2-)
+  [[ -n "$value" ]] || { echo "$1 is not set in the shell or $ROOT/.env" >&2; exit 2; }
+  printf '%s' "$value"
+}
+
+# login IDENTIFIER PASSWORD  ->  prints an access token
+login() {
+  local status
+  status=$(curl -sS -o "$WORK/login" -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+    -d "$(jq -nc --arg i "$1" --arg p "$2" '{identifier: $i, password: $p}')" "$BASE/auth/login")
+  [[ "$status" == 200 ]] || { echo "FAIL: login as $1 gave HTTP $status: $(cat "$WORK/login")" >&2; exit 1; }
+  jq -er .accessToken "$WORK/login"
+}
+
+# Real accounts: A requests, B and C are couriers (registered fresh each run), D is the bootstrap administrator
+DOMAIN=$(setting ALLOWED_EMAIL_DOMAIN)
+RUN=$(date +%s)
+PASSWORD=DemoPassword1
+for who in a b c; do
+  user="demo_${who}_$RUN"
+  status=$(curl -sS -o "$WORK/register" -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+    -d "$(jq -nc --arg u "$user" --arg e "$user@$DOMAIN" --arg p "$PASSWORD" '{username: $u, email: $e, password: $p}')" \
+    "$BASE/auth/register")
+  [[ "$status" == 201 ]] || { echo "FAIL: registering $user gave HTTP $status: $(cat "$WORK/register")" >&2; exit 1; }
+done
+TOKEN_A=$(login "demo_a_$RUN" "$PASSWORD")
+TOKEN_B=$(login "demo_b_$RUN" "$PASSWORD")
+TOKEN_C=$(login "demo_c_$RUN" "$PASSWORD")
+TOKEN_D=$(login "$(setting BOOTSTRAP_ADMIN_USERNAME)" "$(setting BOOTSTRAP_ADMIN_PASSWORD)")
+
+# The first active supplier in the Supplier Service
+SUPPLIER=$(curl -sS -H "Authorization: Bearer $TOKEN_A" "$BASE/suppliers?size=1" | jq -r '.items[0].id // empty')
+[[ -n "$SUPPLIER" ]] || { echo "FAIL: the Supplier Service has no active supplier" >&2; exit 1; }
+echo "Logged in demo_{a,b,c}_$RUN and the administrator; supplier $SUPPLIER"
 
 # UTC timestamp N hours from now (GNU date, then BSD date)
 in_hours() {

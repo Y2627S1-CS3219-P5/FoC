@@ -8,17 +8,21 @@
  * Scope: Rebuild the stub Credit holds from published outbox rows before the publisher starts.
  * Author review: Reviewed and approved by @mattis.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
- * Scope: CREDIT_MODE=kafka: the Kafka publisher and credit.results consumer, connecting in the
+* Scope: CREDIT_MODE=kafka: the Kafka publisher and credit.results consumer, connecting in the
  *        background, the metrics reporter, and an ordered, time-limited shutdown.
  * Author review of additional changes: Reviewed and approved by @phuc
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: AUTH_MODE=user-service builds UserServiceSessionVerifier.
  * Author review of additional changes: Reviewed and approved by @phuc
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: picks the HTTP or stub User and Supplier adapters by mode, per the User and Supplier
+ *        integration plan.
+ * Author review: PENDING
  */
 import { StubCreditBus } from "./adapters/creditBus";
-import { StubSessionVerifier, UserServiceSessionVerifier, type SessionVerifier } from "./adapters/sessionVerifier";
-import { StubSupplierDirectory } from "./adapters/supplierDirectory";
-import { loadAdapterConfig, loadDatabaseConfig, loadKafkaConfig, loadOrderConfig, loadServerConfig, loadUserServiceConfig, TOPICS } from "./config";
+import { HttpSessionVerifier, StubSessionVerifier, type SessionVerifier } from "./adapters/sessionVerifier";
+import { HttpSupplierDirectory, StubSupplierDirectory } from "./adapters/supplierDirectory";
+import { loadAdapterConfig, loadDatabaseConfig, loadKafkaConfig, loadOrderConfig, loadServerConfig, TOPICS } from "./config";
 import { createPool } from "./db";
 import { retryWhileDatabaseUnavailable } from "./dbAvailability";
 import { startDeadlineSweeper } from "./deadlines/sweeper";
@@ -41,15 +45,14 @@ async function main(): Promise<void> {
   const order = loadOrderConfig();
   const adapters = loadAdapterConfig();
   const kafkaConfig = adapters.creditMode === "kafka" ? loadKafkaConfig() : undefined;
-  const userServiceConfig = adapters.authMode === "user-service" ? loadUserServiceConfig() : undefined;
   const { port } = loadServerConfig();
 
   const pool = createPool();
   await retryWhileDatabaseUnavailable("Startup", () => pool.query("SELECT 1"));
 
-  // Supplier only has a stub so far (loadAdapterConfig rejects any other mode)
-  const verifier: SessionVerifier = userServiceConfig ? new UserServiceSessionVerifier(userServiceConfig) : new StubSessionVerifier();
-  const suppliers = new StubSupplierDirectory();
+  // loadAdapterConfig only returns userService / supplierService in http mode
+  const verifier: SessionVerifier = adapters.userService ? new HttpSessionVerifier(adapters.userService) : new StubSessionVerifier();
+  const suppliers = adapters.supplierService ? new HttpSupplierDirectory(adapters.supplierService) : new StubSupplierDirectory();
 
   // Stopped in this order after the HTTP server: nothing new is read, then nothing new is sent
   const background: Stoppable[] = [];
