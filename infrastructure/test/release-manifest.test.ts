@@ -45,3 +45,23 @@ test("rejects tags, latest, short SHAs, malformed digests, and unknown fields", 
     assert.throws(() => parseReleaseManifest(input), ConfigurationError);
   }
 });
+
+test("requires an exact immutable scanned digest in release evidence", () => {
+  for (const scan of [
+    { status: "COMPLETE", findings: {} },
+    { scannedDigest: "latest", status: "COMPLETE", findings: {} },
+  ]) {
+    const manifest = validReleaseManifest();
+    assert.throws(
+      () =>
+        parseReleaseManifest({
+          ...manifest,
+          images: {
+            ...manifest.images,
+            frontend: { ...manifest.images.frontend, scan },
+          },
+        }),
+      ConfigurationError,
+    );
+  }
+});

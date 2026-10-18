@@ -27,7 +27,7 @@ sidecar convention; the separate course-owner exception remains pending before s
 | `infrastructure/cdk.context.json`                     | Explicit AWS lookup context                                       |
 | `infrastructure/tsconfig.json`                        | Strict TypeScript build configuration                             |
 | `infrastructure/config/demo.example.json`             | Deployment-input template and proposed budget-alert percentages   |
-| `infrastructure/config/release.example.json`          | Immutable-image release manifest template                         |
+| `infrastructure/config/release.example.json`          | Immutable-image release and scanned-digest manifest template      |
 | `infrastructure/cost/pricing-snapshot.json`           | Official public-rate snapshot used by the deterministic estimator |
 | `infrastructure/database-bootstrap/package.json`      | PostgreSQL bootstrap runtime and test scripts                     |
 | `infrastructure/database-bootstrap/package-lock.json` | npm-generated bootstrap runtime dependency resolutions            |

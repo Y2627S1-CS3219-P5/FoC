@@ -11,7 +11,11 @@
       "immutableTag": "REPLACE_WITH_FULL_40_CHARACTER_GIT_COMMIT_SHA",
       "digest": "REPLACE_WITH_RESOLVED_SHA256_DIGEST",
       "digestUri": "REPLACE_WITH_DIGEST_QUALIFIED_URI",
-      "scan": { "status": "COMPLETE", "findings": {} }
+      "scan": {
+        "scannedDigest": "REPLACE_WITH_RUNNABLE_SHA256_DIGEST",
+        "status": "COMPLETE",
+        "findings": {}
+      }
     },
     "userService": {
       "repositoryName": "foc-demo-user-service",
@@ -19,7 +23,11 @@
       "immutableTag": "REPLACE_WITH_FULL_40_CHARACTER_GIT_COMMIT_SHA",
       "digest": "REPLACE_WITH_RESOLVED_SHA256_DIGEST",
       "digestUri": "REPLACE_WITH_DIGEST_QUALIFIED_URI",
-      "scan": { "status": "COMPLETE", "findings": {} }
+      "scan": {
+        "scannedDigest": "REPLACE_WITH_RUNNABLE_SHA256_DIGEST",
+        "status": "COMPLETE",
+        "findings": {}
+      }
     },
     "supplierService": {
       "repositoryName": "foc-demo-supplier-service",
@@ -27,7 +35,11 @@
       "immutableTag": "REPLACE_WITH_FULL_40_CHARACTER_GIT_COMMIT_SHA",
       "digest": "REPLACE_WITH_RESOLVED_SHA256_DIGEST",
       "digestUri": "REPLACE_WITH_DIGEST_QUALIFIED_URI",
-      "scan": { "status": "COMPLETE", "findings": {} }
+      "scan": {
+        "scannedDigest": "REPLACE_WITH_RUNNABLE_SHA256_DIGEST",
+        "status": "COMPLETE",
+        "findings": {}
+      }
     }
   }
 }

@@ -11,6 +11,7 @@ import {
   type CommandRunner,
 } from "./commands.js";
 import { REPOSITORY_NAMES } from "./deployment-names.js";
+import { resolveImageScanDigest } from "./image-scan-target.js";
 import {
   parseReleaseManifest,
   type ReleaseImage,
@@ -65,6 +66,9 @@ interface DescribeImagesResponse {
 }
 
 interface ScanResponse {
+  readonly registryId?: string;
+  readonly repositoryName?: string;
+  readonly imageId?: { readonly imageDigest?: string };
   readonly imageScanStatus?: {
     readonly status?: string;
     readonly description?: string;
@@ -167,6 +171,14 @@ export function prepareReleaseImages(
       if (existing.images[key].digest !== images[key].digest) {
         throw new Error(
           `Existing release manifest digest for ${key} does not match ECR; refusing to continue`,
+        );
+      }
+      if (
+        existing.images[key].scan.scannedDigest !==
+        images[key].scan.scannedDigest
+      ) {
+        throw new Error(
+          `Existing release manifest scanned digest for ${key} does not match ECR; refusing to continue`,
         );
       }
     }
@@ -308,6 +320,7 @@ function buildAndPush(
   const tag = `${image.repositoryUri}:${revision}`;
   const args = [
     "build",
+    "--pull",
     "--platform",
     "linux/amd64",
     "--file",
@@ -338,6 +351,12 @@ function toReleaseImage(
   const digest = image.digest;
   if (digest === undefined)
     throw new Error(`Missing digest for ${image.spec.key}`);
+  const scannedDigest = resolveImageScanDigest(
+    config,
+    runner,
+    image.repositoryName,
+    digest,
+  );
   runChecked(
     runner,
     {
@@ -349,7 +368,7 @@ function toReleaseImage(
         "--repository-name",
         image.repositoryName,
         "--image-id",
-        `imageDigest=${digest}`,
+        `imageDigest=${scannedDigest}`,
       ]),
     },
     `wait for ${image.spec.key} vulnerability scan`,
@@ -364,12 +383,21 @@ function toReleaseImage(
         "--repository-name",
         image.repositoryName,
         "--image-id",
-        `imageDigest=${digest}`,
+        `imageDigest=${scannedDigest}`,
       ]),
     },
     `read ${image.spec.key} vulnerability scan`,
   );
   const scan = parseJson<ScanResponse>(scanResult.stdout, "ECR scan");
+  if (
+    scan.registryId !== config.accountId ||
+    scan.repositoryName !== image.repositoryName ||
+    scan.imageId?.imageDigest !== scannedDigest
+  ) {
+    throw new Error(
+      `${image.spec.key} vulnerability scan identity does not match the resolved scanned digest`,
+    );
+  }
   if (scan.imageScanStatus?.status !== "COMPLETE") {
     throw new Error(
       `${image.spec.key} vulnerability scan did not complete: ${scan.imageScanStatus?.description ?? scan.imageScanStatus?.status ?? "missing status"}`,
@@ -382,6 +410,7 @@ function toReleaseImage(
     digest,
     digestUri: `${image.repositoryUri}@${digest}`,
     scan: {
+      scannedDigest,
       status: "COMPLETE",
       findings: { ...(scan.imageScanFindings?.findingSeverityCounts ?? {}) },
     },

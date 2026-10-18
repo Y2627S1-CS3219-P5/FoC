@@ -262,6 +262,10 @@ The release-manifest parser requires the exact source revision as a lowercase 40
 Git SHA and each image as a full lowercase `sha256:` digest. Tags such as `latest`, partial
 manifests, unknown keys, and mutable image references are rejected. This seam lets the
 later release runner use one reviewed set of immutable artifacts across jobs and services.
+Each scan also requires `scannedDigest`: the runnable `linux/amd64` child for an OCI/Docker
+index, or the root digest for a standalone image manifest. The root deployment digest
+preserves provenance attestations. Image preparation validates index membership and binds
+ECR findings to the selected repository/digest before writing the release evidence.
 
 Because the NUS SCP currently hides Service Quotas, the configuration records the exact
 `NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY` restriction, names

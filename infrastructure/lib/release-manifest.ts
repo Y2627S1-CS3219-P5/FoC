@@ -14,6 +14,7 @@ const digestSchema = z
 
 const imageScanSchema = z
   .object({
+    scannedDigest: digestSchema,
     status: z.literal("COMPLETE"),
     findings: z.record(z.string(), z.number().int().nonnegative()),
   })

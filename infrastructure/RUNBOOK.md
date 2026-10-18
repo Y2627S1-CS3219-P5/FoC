@@ -82,11 +82,21 @@ npm run release:images
 export FOC_RELEASE_MANIFEST="$PWD/artifacts/releases/$(git rev-parse HEAD)/release-manifest.json"
 ```
 
-The command builds Linux/x86-64 images, uses the frontend `cloud` target, pushes only a
-missing immutable SHA tag, waits for ECR scanning, resolves immutable digests, and records
-scan counts. Existing SHA tags are reused and never overwritten. A scan failure blocks the
+The command builds Linux/x86-64 images with `--pull` to refresh official base tags, uses
+the frontend `cloud` target, pushes only a missing immutable SHA tag, waits for ECR scanning,
+resolves immutable digests, and records scan counts. Existing SHA tags are reused and never
+overwritten; base-image updates require a new committed revision. A scan failure blocks the
 release. The approved specification does not define a severity rejection threshold, so
 the tool records findings without inventing one; a human must review the evidence.
+
+Docker provenance/SBOM attestations can make even a single-platform build an OCI index.
+The deployment `digest`/`digestUri` retain that root index and its attestations. ECR scanning
+uses the sole runnable `linux/amd64` child; `scan.scannedDigest` records its exact digest and
+the findings response must identify that same repository and digest. Missing, duplicate,
+wrong-platform, malformed, or attestation-only candidates block the release. Standalone
+OCI/Docker image manifests are scanned directly; their manifest does not include OS/CPU
+metadata, so the controlled `--platform linux/amd64` build supplies that guarantee.
+Older local release evidence without `scan.scannedDigest` must be regenerated.
 
 Plan and apply the complete release, including Foundation reconciliation:
 

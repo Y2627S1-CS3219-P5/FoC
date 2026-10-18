@@ -2245,3 +2245,44 @@ Verification passed: clean `npm ci --ignore-scripts`, Supplier typecheck, all 25
 and 217 tests, production build, formatting for changed JSON/TypeScript files, and
 `git diff --check`. `npm audit --omit=dev` reports zero vulnerabilities, and `npm ls`
 confirms Swagger 11.4.7 resolves only its scoped YAML dependency to 5.4.1.
+
+## 2026-10-18 — ECR runnable-manifest scan binding
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Correct issue #52's live OCI-index scan failure and refresh
+  official base tags during the already-authorized AWS release workflow.
+- **Repository files affected:** Infrastructure image preparation and new scan-target
+  resolver, release-manifest schema/example/fixtures/tests, README/runbook/disclosures,
+  and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+Codex reproduced `ScanNotFoundException` using the observed frontend root and runnable-child
+digests in an OCI-index fixture with Docker's unknown/unknown provenance descriptor.
+[Docker's attestation storage documentation](https://docs.docker.com/build/metadata/attestations/attestation-storage/)
+explains that the root index retains both the runnable image and its attestations.
+Image preparation now reads immutable manifests through ECR, validates their repository,
+registry, digest, format, and successful retrieval, and selects exactly one runnable
+linux/amd64 child. It validates that child's image manifest before waiting for its scan.
+Malformed, missing, duplicate, wrong-platform, and attestation-only candidates fail closed.
+Standalone OCI/Docker image manifests retain direct-root scanning; architecture is supplied
+by the controlled build because a standalone manifest alone lacks OS/CPU metadata.
+
+Deployment still uses the root digest, preserving provenance. Required `scan.scannedDigest`
+records the exact scanned child/root; the findings response must identify that digest and
+repository, and an existing local manifest cannot silently change its scan binding. Missing
+scan evidence is rejected. The release plan hash already covers the complete manifest.
+Builds now pass `--pull` alongside the existing linux/amd64 platform and immutable Git-SHA
+tag, refreshing official base tags only when building a new committed revision. No
+provenance/SBOM disabling, registry configuration change, or severity acceptance threshold
+was introduced. Findings remain available for the separate security review.
+
+The observed-index regression failed before the fix and passed afterward. Infrastructure
+typecheck, lint, formatting, all 114 tests, production build, offline audit (zero
+vulnerabilities), and `git diff --check` passed. No AWS calls, resource mutations, image
+pushes, or registry changes were performed by this source-only correction.

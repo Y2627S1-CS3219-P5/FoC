@@ -17,7 +17,7 @@ export function validReleaseManifest(): ReleaseManifest {
       immutableTag: revision,
       digest,
       digestUri: `${repositoryUri}@${digest}`,
-      scan: { status: "COMPLETE", findings: {} },
+      scan: { scannedDigest: digest, status: "COMPLETE", findings: {} },
     };
   };
   return {
