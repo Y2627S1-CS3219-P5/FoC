@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
@@ -46,6 +47,40 @@ async function reserved(requesterId: string, amount: number) {
 }
 
 describe("account status", () => {
+  it("rolls back both status and dedup marker when updating status throws", async () => {
+    const id = await activeAccount(pool);
+    const msg = { operationId: randomUUID(), accountId: id, newStatus: "SUSPENDED" as const, firstActive: false };
+    await pool.query(`CREATE FUNCTION fail_status_update() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'status update failed'; END $$;
+      CREATE TRIGGER fail_status_update BEFORE UPDATE ON credit_accounts FOR EACH ROW EXECUTE FUNCTION fail_status_update()`);
+    try {
+      await assert.rejects(handleAccountStatus(pool, msg), /status update failed/);
+      assert.equal((await pool.query("SELECT status FROM credit_accounts WHERE user_id = $1", [id])).rows[0].status, "ACTIVE");
+      assert.equal((await pool.query("SELECT * FROM processed_account_status WHERE operation_id = $1", [msg.operationId])).rowCount, 0);
+    } finally { await pool.query("DROP TRIGGER fail_status_update ON credit_accounts; DROP FUNCTION fail_status_update()"); }
+    assert.equal((await handleAccountStatus(pool, msg)).kind, "applied");
+  });
+  it("does not reapply an old restore after a newer suspension", async () => {
+    const id = await activeAccount(pool);
+    const restore = { operationId: randomUUID(), accountId: id, newStatus: "ACTIVE" as const, firstActive: false };
+    const suspend = { operationId: randomUUID(), accountId: id, newStatus: "SUSPENDED" as const, firstActive: false };
+    await handleAccountStatus(pool, restore);
+    await handleAccountStatus(pool, suspend);
+    assert.equal((await handleAccountStatus(pool, restore)).kind, "duplicate");
+    const outcome = await handleReserveRequested(pool, reserveMsg(id, 1));
+    assert.equal(outcome.kind, "rejected");
+    if (outcome.kind === "rejected") assert.equal(outcome.reason, "ACCOUNT_NOT_ACTIVE");
+    assert.equal((await handleAccountStatus(pool, suspend)).kind, "duplicate");
+  });
+
+  it("rolls back the processed marker when account-status effects cannot be applied", async () => {
+    const id = randomUUID();
+    const restore = { operationId: randomUUID(), accountId: id, newStatus: "ACTIVE" as const, firstActive: false };
+    assert.equal((await handleAccountStatus(pool, restore)).kind, "invalid");
+    assert.equal((await pool.query("SELECT * FROM processed_account_status WHERE operation_id = $1", [restore.operationId])).rowCount, 0);
+    await handleAccountStatus(pool, { operationId: randomUUID(), accountId: id, newStatus: "ACTIVE", firstActive: true });
+    assert.equal((await handleAccountStatus(pool, restore)).kind, "applied");
+  });
   it("grants 100 credits once when the same first-ACTIVE notification arrives 20 times", async () => {
     const accountId = randomUUID();
     const msg = { operationId: randomUUID(), accountId, newStatus: "ACTIVE" as const, firstActive: true };
