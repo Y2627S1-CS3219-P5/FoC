@@ -8,7 +8,7 @@
  * Author review: Reviewed and approved by @mattis.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: HTTP tests for the User and Supplier HTTP adapters (503, 401, 422 and 500 outcomes), per the User and Supplier integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

@@ -1898,7 +1898,7 @@ Claude summarised the two stubs (`StubSessionVerifier`, `StubSupplierDirectory`)
 - **Mode:** generate
 - **Allowed-use scope:** implementation code and tests once the author had finalised the requirements and design (spec and plan, both reviewed by the author); boilerplate configuration; documentation.
 - **Repository files affected:** `order-service/src/config.ts`, `order-service/src/adapters/upstream.ts`, `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/adapters/supplierDirectory.ts`, `order-service/src/http/errors.ts`, `order-service/src/http/routes.ts`, `order-service/src/index.ts`, `order-service/test/adapters.test.ts`, `order-service/test/http.test.ts`, `order-service/scripts/demo.sh`, `order-service/README.md`, `compose.yaml`, `.env.example`
-- **Author review:** PENDING
+- **Author review:** Reviewed and approved by @mattis.
 
 ### Prompts
 

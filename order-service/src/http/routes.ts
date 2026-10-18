@@ -7,7 +7,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: POST /errands handles the archived, unavailable and unauthenticated supplier outcomes,
  *        per the User and Supplier integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { Router, type Request, type Response } from "express";
 import type { Pool } from "pg";

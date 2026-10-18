@@ -19,7 +19,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: http mode for AUTH_MODE and SUPPLIER_MODE, with the User and Supplier base URLs and
  *        timeouts, per the User and Supplier integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 
 // The only file that reads process.env. Each part loads only what it needs, so the

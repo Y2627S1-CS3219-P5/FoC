@@ -9,7 +9,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: Tests for http adapter modes and settings, the HTTP session verifier and the HTTP
  *        supplier directory, per the User and Supplier integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

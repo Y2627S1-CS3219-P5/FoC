@@ -6,7 +6,7 @@
  * Author review: Reviewed and approved by @mattis.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: 503 SERVICE_UNAVAILABLE for an unreachable User or Supplier service, per the User and Supplier integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { ErrorRequestHandler, Response } from "express";
 import { UpstreamUnavailableError } from "../adapters/upstream";

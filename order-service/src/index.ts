@@ -17,7 +17,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: picks the HTTP or stub User and Supplier adapters by mode, per the User and Supplier
  *        integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import { StubCreditBus } from "./adapters/creditBus";
 import { HttpSessionVerifier, StubSessionVerifier, type SessionVerifier } from "./adapters/sessionVerifier";

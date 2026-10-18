@@ -8,7 +8,7 @@
  * Scope: findSupplier with four outcomes and HttpSupplierDirectory, which asks the Supplier
  *        Service's GET /api/v1/suppliers/:id with the caller's token, per the User and Supplier
  *        integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { UpstreamConfig } from "../config";
 import type { SupplierSnapshot } from "../errands/errand";

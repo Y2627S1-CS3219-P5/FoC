@@ -12,7 +12,7 @@ Scope: Documented the Kafka integration with Credit Service (CREDIT_MODE=kafka),
 Author review of additional changes: Reviewed and approved by @phuc
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
 Scope: Documented the HTTP User and Supplier adapters, their settings and response codes.
-Author review: PENDING
+Author review: Reviewed and approved by @mattis.
 -->
 
 # Order Service

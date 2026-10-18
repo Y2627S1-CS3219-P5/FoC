@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: Shared helpers for calling the User and Supplier services over HTTP (timeout, error
  *        types), per the User and Supplier integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 export type UpstreamService = "user" | "supplier";
 

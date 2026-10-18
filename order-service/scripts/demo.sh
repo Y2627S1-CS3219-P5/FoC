@@ -4,7 +4,7 @@
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: step 11 now checks
 # that all five credit event types were sent and the stub logged no contract violation. Author review: Reviewed and approved by @mattis.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18. Scope: real User Service logins and a
-# real supplier instead of stub tokens and a fixed supplier id. Author review: PENDING.
+# real supplier instead of stub tokens and a fixed supplier id. Author review: Reviewed and approved by @mattis.
 #
 # Usage:  docker compose up -d --build && bash order-service/scripts/demo.sh
 # Reads ALLOWED_EMAIL_DOMAIN and BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD from the shell or $ROOT/.env.

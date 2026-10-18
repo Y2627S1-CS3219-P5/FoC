@@ -12,7 +12,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: HttpSessionVerifier, which asks the User Service's GET /auth/verify, per the User and
  *        Supplier integration plan.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { UpstreamConfig } from "../config";
 import { fetchWithTimeout, readJson, UpstreamContractError, UpstreamUnavailableError } from "./upstream";
