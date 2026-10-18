@@ -2116,3 +2116,29 @@ the actual four-stack strict CLI synthesis/local diff, TypeScript build, and
 `git diff --check`. Dependency installation skipped lifecycle scripts and reported zero
 audit vulnerabilities. No AWS calls, resource mutations, or push were performed by this
 compatibility correction.
+
+## 2026-10-18 — Singapore availability-zone lookup context
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Record the non-secret CDK lookup generated while preparing
+  the authorized issue #52 deployment.
+- **Repository files affected:** `infrastructure/cdk.context.json` and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> continue
+
+### Key response
+
+Codex inspected and committed the CDK-generated availability-zone lookup for account
+`656253649128` in `ap-southeast-1`: zones `ap-southeast-1a`, `ap-southeast-1b`, and
+`ap-southeast-1c`. This non-secret context makes subsequent synthesis use the reviewed
+lookup instead of requiring another account discovery. The existing CloudFront managed
+prefix-list context is unchanged. The parent deployment process reported successful real
+Foundation strict synthesis; this narrow recording step performs no additional AWS call.
+
+Verification passed: JSON parsing, context formatting, and `git diff --check`.
+The existing usage log has unrelated historical formatting differences, which this
+narrow change preserves. Ignored configuration, deployment plans, artifacts, and
+assemblies were left untouched.
