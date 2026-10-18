@@ -1,4 +1,4 @@
-// AI assistance: Codex (GPT-6), 2026-10-18. Scope: background publisher lifecycle. Author review: PENDING.
+// AI assistance: Codex (GPT-6), 2026-10-18. Scope: background publisher lifecycle. Author review: Reviewed and approved by @phuc.
 import { Pool } from "pg";
 import { OUTBOX } from "./config";
 import { deletePublishedOutboxEvents, outboxBacklog, OutboxMessage, publishOutboxBatch } from "./outbox";

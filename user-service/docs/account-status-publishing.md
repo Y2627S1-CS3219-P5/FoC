@@ -5,10 +5,10 @@ Scope: Implementation notes for publishing account-status notifications from Use
        Kafka, following the contract already set in credit-service/docs/implementation-proposal.md
        §5 (topic, key, fields, outbox on the producer side). Items not yet decided are marked
        "Author decision" and left open.
-Author review: PENDING
+Author review: Reviewed and approved by @phuc
 Additional AI assistance: Codex (GPT-6), date: 2026-10-18
 Scope: Revised batching, consumer duplicate protection, startup, and password hashing after review.
-Author review of additional changes: PENDING
+Author review of additional changes: Reviewed and approved by @phuc
 -->
 
 # User Service: publishing `user.account-status` to Kafka

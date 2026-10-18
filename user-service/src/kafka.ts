@@ -1,4 +1,4 @@
-// AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status producer. Author review: PENDING.
+// AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status producer. Author review: Reviewed and approved by @phuc.
 import { KafkaJS } from "@confluentinc/kafka-javascript";
 import { loadKafkaConfig } from "./config";
 

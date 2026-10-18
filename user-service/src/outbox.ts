@@ -1,4 +1,4 @@
-// AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status outbox. Author review: PENDING.
+// AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status outbox. Author review: Reviewed and approved by @phuc.
 import { randomUUID } from "node:crypto";
 import { Pool, PoolClient } from "pg";
 import { OUTBOX } from "./config";
