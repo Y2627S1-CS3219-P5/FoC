@@ -59,6 +59,18 @@ test("requires a positive ECR image retention count", () => {
   assert.throws(() => parseDeploymentConfig(invalid), /retainedImageCount/);
 });
 
+test("requires repository pricing-snapshot cost evidence", () => {
+  const invalid = structuredClone(validConfig()) as Record<string, unknown>;
+  invalid.costApproval = {
+    ...validConfig().costApproval,
+    evidenceKind: "EXTERNAL_SHARED_LINK",
+  };
+  assert.throws(
+    () => parseDeploymentConfig(invalid),
+    /REPOSITORY_PRICING_SNAPSHOT/,
+  );
+});
+
 test("requires the exact NUS quota restriction and reviewed Fargate quota", () => {
   const wrongRestriction = structuredClone(validConfig()) as Record<
     string,

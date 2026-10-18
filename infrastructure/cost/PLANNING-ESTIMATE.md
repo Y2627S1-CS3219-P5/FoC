@@ -2,7 +2,8 @@
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-18
 Scope: Converted read-only AWS public-offer research into a concise, reproducible planning
-estimate for issue #46. No AWS resources were created or changed.
+estimate for issue #46, then recorded the author's decision to use its fingerprinted
+artifact as authoritative cost evidence. No AWS resources were created or changed.
 Author review: Pending pull-request review by @ron.
 -->
 
@@ -46,6 +47,7 @@ configuration fingerprint, total, budget comparison, and approval identity. Chan
 configuration or pricing snapshot invalidates the deployment gate until the estimate is
 regenerated and reviewed.
 
-The team leader must also compare the estimate with the NUS tracking portal and save a
-shared AWS Pricing Calculator URL. AWS Budget alerts are monitoring only, not a real-time
-hard cap.
+The repository artifact is the authoritative reviewed estimate; no separate AWS Pricing
+Calculator link is required. The team leader must still compare its total with the NUS
+tracking portal and record their name and approval timestamp in the configuration. AWS
+Budget alerts are monitoring only, not a real-time hard cap.

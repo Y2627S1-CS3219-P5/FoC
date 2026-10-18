@@ -26,7 +26,7 @@ export interface CostLineItem {
 }
 
 export interface CostEstimate {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly configFingerprint: string;
   readonly pricingSnapshotSha256: string;
   readonly pricingCapturedAt: string;
@@ -334,7 +334,7 @@ export function estimateMonthlyCost(
 
   const budgetNanos = numberToQuantity(config.monthlyBudgetUsd) * 1000n;
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     configFingerprint: configFingerprint(config),
     pricingSnapshotSha256: snapshotHash(snapshot),
     pricingCapturedAt: snapshot.capturedAt,

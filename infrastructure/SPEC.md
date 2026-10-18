@@ -4,7 +4,8 @@ Tool: OpenAI Codex (GPT-5), date: 2026-10-18
 Scope: Structured and drafted the AWS deployment specification from the architecture,
 security, cost, lifecycle, and verification decisions explicitly reviewed and approved by
 @ron during the issue #44 grilling session, then recorded the approved issue #52 quota
-evidence rule and cloud-only service boundaries. No AWS resources were created.
+evidence rule, cloud-only service boundaries, and repository-generated cost-evidence
+decision. No AWS resources were created.
 Author review: The recorded design decisions were reviewed and approved by @ron on
 2026-10-18. Final document wording remains subject to pull-request review.
 -->
@@ -609,9 +610,15 @@ Deployment is blocked until all required inputs exist:
 - Bootstrap administrator username and NUS email
 - Approved storage, backup, compute, WAF, and alarm settings
 
-Before provisioning, the implementer produces an AWS Pricing Calculator estimate covering
-Fargate active hours, ALB, CloudFront, WAF, RDS, storage, Secrets Manager, CloudWatch, ECR,
-and data transfer. The team leader confirms the threshold against the NUS tracking portal.
+Before provisioning, the implementer runs the repository's deterministic estimator against
+the committed AWS public-pricing snapshot. The estimate covers Fargate active hours, ALB,
+CloudFront, WAF, RDS, storage, Secrets Manager, CloudWatch, ECR, and data transfer. Its
+owner-only artifact records every line item, the exact configuration fingerprint, the
+pricing-snapshot SHA-256, the budget comparison, and the named approval with timestamp.
+The deployment gate recalculates the estimate and rejects stale, changed, over-budget, or
+unapproved evidence. A separate shared AWS Pricing Calculator link is not required because
+it would duplicate this reproducible evidence. The team leader still confirms the threshold
+against the NUS tracking portal.
 
 If account permissions allow, create an AWS Budget alert at approved actual and forecasted
 percentages. The alert is not a real-time hard spending cap and does not replace the NUS
@@ -762,6 +769,7 @@ Their arrival triggers a review of:
 | One active task per service | Lower idle cost | No task-level redundancy until scaling occurs |
 | No initial tracing | Lower complexity and telemetry cost | Cross-service diagnosis relies on request IDs and logs |
 | Disposable data | Reliable final teardown | Demo accounts and edits are not retained after destruction |
+| Repository pricing evidence | Reproducible, reviewable estimate bound to exact config and rates | Public prices can change, so the committed snapshot and approval must be refreshed deliberately |
 
 ## 25. Unresolved deployment inputs
 

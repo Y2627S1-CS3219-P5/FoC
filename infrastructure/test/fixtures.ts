@@ -132,8 +132,7 @@ export function validConfig(): DeploymentConfig {
     costApproval: {
       approvedBy: "course-team-leader",
       approvedAt: "2026-10-18T08:00:00.000Z",
-      pricingCalculatorEstimateUrl:
-        "https://calculator.aws/#/estimate?id=reviewed",
+      evidenceKind: "REPOSITORY_PRICING_SNAPSHOT",
     },
     quotaApproval: {
       serviceQuotasApiRestriction: "NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY",

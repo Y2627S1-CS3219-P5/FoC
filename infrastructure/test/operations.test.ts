@@ -217,6 +217,8 @@ test("status is read-only and reports that stopped is not zero-cost", () => {
     configFingerprint(config),
   );
   assert.equal(status.database.state, "stopped");
+  assert.equal(status.costApproval.approvedBy, "course-team-leader");
+  assert.equal(status.costApproval.evidenceKind, "REPOSITORY_PRICING_SNAPSHOT");
   assert.match(status.trackingPortalReminder, /not zero-cost/);
   const mutating = new Set([
     "start-db-instance",

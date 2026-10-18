@@ -15,6 +15,10 @@ test("reproduces the reviewed always-on planning estimate deterministically", ()
   const estimate = estimateMonthlyCost(validConfig(), pricing);
   assert.equal(estimate.totalMonthlyUsd, "105.547300000");
   assert.equal(estimate.withinApprovedBudget, true);
+  assert.equal(estimate.schemaVersion, 2);
+  assert.match(estimate.configFingerprint, /^[0-9a-f]{64}$/);
+  assert.match(estimate.pricingSnapshotSha256, /^[0-9a-f]{64}$/);
+  assert.equal(estimate.approval.evidenceKind, "REPOSITORY_PRICING_SNAPSHOT");
   assert.equal(estimate.lineItems.length, 27);
   assert.equal(
     estimateMonthlyCost(validConfig(), pricing).totalMonthlyUsd,

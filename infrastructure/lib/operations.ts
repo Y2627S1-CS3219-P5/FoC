@@ -127,7 +127,7 @@ export interface EnvironmentStatus {
   }[];
   readonly pendingSnsConfirmation: boolean;
   readonly monthlyBudgetUsd: number;
-  readonly pricingCalculatorEstimateUrl: string;
+  readonly costApproval: DeploymentConfig["costApproval"];
   readonly trackingPortalReminder: string;
 }
 
@@ -346,8 +346,7 @@ export function readEnvironmentStatus(
       ({ SubscriptionArn }) => SubscriptionArn === "PendingConfirmation",
     ),
     monthlyBudgetUsd: context.config.monthlyBudgetUsd,
-    pricingCalculatorEstimateUrl:
-      context.config.costApproval.pricingCalculatorEstimateUrl,
+    costApproval: context.config.costApproval,
     trackingPortalReminder:
       "Use the NUS tracking portal for authoritative remaining project credit; stopped services are not zero-cost.",
   };

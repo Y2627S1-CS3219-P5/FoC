@@ -1913,3 +1913,26 @@ Kafka publisher and omit Order routes until those services are deployed. It narr
 quota fallback to the exact NUS Organizations SCP denial, a named manual review of the
 Fargate On-Demand vCPU quota, and independently passing service/capability checks. It did
 not provision or mutate AWS resources.
+
+## 2026-10-18 — AWS reproducible cost-evidence approval
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** issue #52 cost-evidence specification, configuration, deployment
+  gate, release-plan, status, tests, and operating-document updates
+- **Repository files affected:** `infrastructure/{SPEC.md,README.md,RUNBOOK.md,config,cost,lib,scripts,test}`
+  and this disclosure
+- **Author review:** @ron explicitly approved the repository-generated estimate as the
+  authoritative cost evidence; final code and wording remain pending pull-request review.
+
+### Prompt
+
+> sure go with the second one
+
+### Key response
+
+Codex removed the redundant shared AWS Pricing Calculator URL requirement and retained a
+fail-closed approval contract: the deterministic estimate is bound to the exact deployment
+configuration and committed pricing-snapshot SHA-256, recalculated at the deployment gate,
+compared with the approved budget, and attributed to a named approver and timestamp. The
+same evidence is included in the release-plan hash and status output. No AWS resource was
+created, updated, or deleted.

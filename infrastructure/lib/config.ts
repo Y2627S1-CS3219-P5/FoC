@@ -184,16 +184,9 @@ export const deploymentConfigSchema = z
       .object({
         approvedBy: z.string().trim().min(1),
         approvedAt: z.string().datetime({ offset: true }),
-        pricingCalculatorEstimateUrl: z.string().url(),
+        evidenceKind: z.literal("REPOSITORY_PRICING_SNAPSHOT"),
       })
-      .strict()
-      .refine(({ pricingCalculatorEstimateUrl }) => {
-        const hostname = new URL(pricingCalculatorEstimateUrl).hostname;
-        return (
-          hostname === "calculator.aws" ||
-          hostname === "calculator.aws.amazon.com"
-        );
-      }, "pricingCalculatorEstimateUrl must be an AWS Pricing Calculator URL"),
+      .strict(),
     quotaApproval: z
       .object({
         serviceQuotasApiRestriction: z.literal(

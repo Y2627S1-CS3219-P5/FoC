@@ -9,6 +9,15 @@ Author review: Pending pull-request review by @ron.
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Updated deployment cost-evidence guidance after @ron approved the repository's
+fingerprinted deterministic estimate in place of a redundant shared Calculator link.
+No AWS resources were created or changed.
+Author review: Decision approved by @ron; wording pending pull-request review.
+-->
+
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-10-18
 Scope: Drafted the issue #51 immutable release-controller, operations, smoke-test,
 and teardown documentation. No AWS resources were created, updated, or deleted.
 Author review: Pending pull-request review by @ron.
@@ -239,6 +248,12 @@ an authentication rate rule that is not stricter than the global rule, and a dat
 autoscaling cap below 110% of initial storage. It also requires a positive, reviewed ECR
 retention count rather than choosing an unapproved lifecycle value.
 
+`costApproval.evidenceKind` is fixed to `REPOSITORY_PRICING_SNAPSHOT`. The generated
+owner-only estimate is the authoritative cost evidence, so no AWS Pricing Calculator URL
+is required. It binds the approver and timestamp to the exact configuration fingerprint,
+pricing-snapshot SHA-256, deterministic line items, total, and budget result. Any change
+requires regeneration and review before the deployment gate passes.
+
 The release-manifest parser requires the exact source revision as a lowercase 40-character
 Git SHA and each image as a full lowercase `sha256:` digest. Tags such as `latest`, partial
 manifests, unknown keys, and mutable image references are rejected. This seam lets the
@@ -266,8 +281,9 @@ npm run synth
   checks identity, account and region, service read access, PostgreSQL/Fargate/CloudFront/WAF
   capabilities, live Service Quotas or the narrow recorded NUS fallback, representative
   provisioning permissions, and modern CDK bootstrap state in Singapore and `us-east-1`.
-- `gate` requires matching configuration fingerprints, a matching recalculated estimate,
-  named cost approval, a passing preflight, and preflight evidence less than 24 hours old.
+- `gate` requires matching configuration and pricing fingerprints, a matching recalculated
+  estimate, named and timestamped cost approval, a passing preflight, and preflight
+  evidence less than 24 hours old.
 - `synth` runs `gate` first and then `cdk synth --strict`. Direct CDK invocation is also
   protected because the CDK entry point calls the same gate.
 

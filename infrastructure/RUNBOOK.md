@@ -7,6 +7,15 @@ updated, or deleted while authoring or testing this document.
 Author review: Pending pull-request review by @ron.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Updated cost-evidence and status instructions after @ron approved the repository's
+fingerprinted deterministic estimate in place of a redundant shared Calculator link.
+No AWS resource was created, updated, or deleted.
+Author review: Decision approved by @ron; wording pending pull-request review.
+-->
+
 # FoC demo release and operations runbook
 
 This runbook controls only the four exact FoC demo stacks in the approved AWS account:
@@ -24,8 +33,8 @@ written with owner-only permissions below the Git-ignored `infrastructure/artifa
 
 ## Before any deployment
 
-1. Ensure issue #46's approved deployment configuration, cost estimate, preflight, quota
-   evidence, and both-region CDK bootstrap are current.
+1. Ensure issue #46's approved deployment configuration, repository-generated cost
+   estimate, preflight, quota evidence, and both-region CDK bootstrap are current.
 2. Authenticate with the approved NUS SSO profile.
 3. Work from a clean, fully committed revision. Never label a dirty tree with a Git SHA.
 4. Install the exact infrastructure dependency graph.
@@ -123,8 +132,9 @@ User and Supplier before frontend, verifies ECS rollout state and counts, and ru
 CloudFront readiness check. It does not rerun migrations.
 
 `status` is read-only. It reports exact stack/RDS/ECS/CloudFront state, digest-qualified
-task images, target health, non-OK alarms, pending SNS confirmation, approved estimate
-links, and reminds the operator that the NUS tracking portal is authoritative for credit.
+task images, target health, non-OK alarms, pending SNS confirmation, the reproducible
+estimate total, approver/timestamp, and exact configuration and pricing fingerprints. It
+also reminds the operator that the NUS tracking portal is authoritative for credit.
 
 ## Smoke tests
 

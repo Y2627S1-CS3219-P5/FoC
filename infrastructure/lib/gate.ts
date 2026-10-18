@@ -108,7 +108,7 @@ export function assertDeploymentGate(
     );
   }
 
-  if (estimate.schemaVersion !== 1) {
+  if (estimate.schemaVersion !== 2) {
     failures.push("cost estimate schema is unsupported");
   }
   if (estimate.configFingerprint !== expectedFingerprint) {
@@ -136,8 +136,7 @@ export function assertDeploymentGate(
   if (
     estimate.approval.approvedBy !== config.costApproval.approvedBy ||
     estimate.approval.approvedAt !== config.costApproval.approvedAt ||
-    estimate.approval.pricingCalculatorEstimateUrl !==
-      config.costApproval.pricingCalculatorEstimateUrl
+    estimate.approval.evidenceKind !== config.costApproval.evidenceKind
   ) {
     failures.push(
       "cost approval does not match the reviewed deployment configuration",

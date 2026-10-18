@@ -192,3 +192,39 @@ test("blocks a failed cost comparison", () => {
       ),
   );
 });
+
+test("blocks cost evidence with a changed pricing fingerprint", () => {
+  withArtifacts(
+    ({ estimate }) => {
+      Object.assign(estimate, { pricingSnapshotSha256: "0".repeat(64) });
+    },
+    (paths) =>
+      assert.throws(
+        () =>
+          assertDeploymentGate(
+            validConfig(),
+            paths,
+            new Date("2026-10-18T09:00:00Z"),
+          ),
+        /committed pricing snapshot/,
+      ),
+  );
+});
+
+test("blocks cost evidence with a changed named approval", () => {
+  withArtifacts(
+    ({ estimate }) => {
+      Object.assign(estimate.approval, { approvedBy: "someone-else" });
+    },
+    (paths) =>
+      assert.throws(
+        () =>
+          assertDeploymentGate(
+            validConfig(),
+            paths,
+            new Date("2026-10-18T09:00:00Z"),
+          ),
+        /cost approval does not match/,
+      ),
+  );
+});

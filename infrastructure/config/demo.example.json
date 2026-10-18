@@ -119,7 +119,7 @@
   "costApproval": {
     "approvedBy": "REPLACE_WITH_TEAM_LEADER",
     "approvedAt": "REPLACE_WITH_ISO_8601_TIMESTAMP",
-    "pricingCalculatorEstimateUrl": "REPLACE_WITH_SHARED_AWS_PRICING_CALCULATOR_URL"
+    "evidenceKind": "REPOSITORY_PRICING_SNAPSHOT"
   },
   "quotaApproval": {
     "serviceQuotasApiRestriction": "NUS_ORGANIZATIONS_SCP_EXPLICIT_DENY",

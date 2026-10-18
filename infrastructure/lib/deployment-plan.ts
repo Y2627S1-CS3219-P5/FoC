@@ -10,6 +10,7 @@ import { dirname, resolve } from "node:path";
 import type { DeploymentConfig } from "./config.js";
 import { configFingerprint } from "./config.js";
 import { runChecked, type CommandRunner } from "./commands.js";
+import type { CostEstimate } from "./cost.js";
 import { STACKS, type StackKey } from "./deployment-names.js";
 import {
   releaseManifestHash,
@@ -40,6 +41,15 @@ export interface DeploymentPlan {
   readonly edgeRegion: string;
   readonly sourceRevision: string;
   readonly configFingerprint: string;
+  readonly costEvidence: {
+    readonly pricingSnapshotSha256: string;
+    readonly pricingCapturedAt: string;
+    readonly totalMonthlyUsd: string;
+    readonly approvedMonthlyBudgetUsd: string;
+    readonly approvedBy: string;
+    readonly approvedAt: string;
+    readonly evidenceKind: "REPOSITORY_PRICING_SNAPSHOT";
+  };
   readonly releaseManifestSha256: string | null;
   readonly stacks: readonly PlannedStack[];
   readonly diff: string;
@@ -59,6 +69,7 @@ export interface PlanOptions {
   readonly infrastructureRoot: string;
   readonly releaseManifest?: ReleaseManifest;
   readonly releaseManifestPath?: string;
+  readonly costEstimatePath?: string;
   readonly planPath?: string;
 }
 
@@ -104,6 +115,11 @@ export function calculateDeploymentPlan(
   ) {
     throw new Error("Release manifest revision does not match current HEAD");
   }
+  const costEstimate = readApprovedCostEstimate(
+    options.costEstimatePath ??
+      resolve(infrastructureRoot, "artifacts/cost-estimate.json"),
+    config,
+  );
   const stackKeys = PHASE_STACKS[options.phase];
   const cdkIds = stackKeys.map((key) => STACKS[key].cdkId);
   const env = cdkEnvironment(options);
@@ -162,6 +178,15 @@ export function calculateDeploymentPlan(
     edgeRegion: config.edgeRegion,
     sourceRevision: revision,
     configFingerprint: configFingerprint(config),
+    costEvidence: {
+      pricingSnapshotSha256: costEstimate.pricingSnapshotSha256,
+      pricingCapturedAt: costEstimate.pricingCapturedAt,
+      totalMonthlyUsd: costEstimate.totalMonthlyUsd,
+      approvedMonthlyBudgetUsd: costEstimate.approvedMonthlyBudgetUsd,
+      approvedBy: costEstimate.approval.approvedBy,
+      approvedAt: costEstimate.approval.approvedAt,
+      evidenceKind: costEstimate.approval.evidenceKind,
+    },
     releaseManifestSha256:
       options.releaseManifest === undefined
         ? null
@@ -254,6 +279,38 @@ function canonicalize(value: unknown): unknown {
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function readApprovedCostEstimate(
+  path: string,
+  config: DeploymentConfig,
+): CostEstimate {
+  let estimate: CostEstimate;
+  try {
+    estimate = JSON.parse(readFileSync(path, "utf8")) as CostEstimate;
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Cannot read approved cost estimate at ${path}: ${reason}`,
+      {
+        cause: error,
+      },
+    );
+  }
+  if (
+    estimate.schemaVersion !== 2 ||
+    estimate.configFingerprint !== configFingerprint(config) ||
+    !estimate.withinApprovedBudget ||
+    !/^[0-9a-f]{64}$/.test(estimate.pricingSnapshotSha256) ||
+    estimate.approval.approvedBy !== config.costApproval.approvedBy ||
+    estimate.approval.approvedAt !== config.costApproval.approvedAt ||
+    estimate.approval.evidenceKind !== config.costApproval.evidenceKind
+  ) {
+    throw new Error(
+      "Approved cost estimate does not match the current deployment configuration",
+    );
+  }
+  return estimate;
 }
 
 function writeOwnerOnlyJson(path: string, value: unknown): void {
