@@ -81,6 +81,7 @@ function terminal(orderId: string, over: Record<string, unknown> = {}): OutboxMe
     eventId: randomUUID(),
     topic: "credit.commands",
     key: orderId,
+    createdAt: new Date(),
     payload: {
       type: "OrderCancelled", schema_version: 1, operation_id: randomUUID(), order_id: orderId,
       requester_id: REQUESTER, courier_id: null, amount: 10, occurred_at: new Date().toISOString(), ...over,

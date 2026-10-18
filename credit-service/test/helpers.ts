@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Test helpers: a throwaway database with the real migrations applied, message
  *        builders, and the reconciliation check from implementation-proposal.md §12.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
