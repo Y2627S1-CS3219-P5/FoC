@@ -1,4 +1,6 @@
 // Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
+// Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: consumed the
+// verified-TLS discrete database configuration added for issue #48. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -16,7 +18,7 @@ import { markDatabaseDown, markDatabaseUp } from "./dbAvailability";
 
 // we use a pool to keep a few connections open and reuse them across req
 export const pool = new Pool({
-  connectionString: loadDatabaseConfig().databaseUrl,
+  ...loadDatabaseConfig(),
   // Give up quickly when no connection can be made, so callers get a 503 (see DB_RESILIENCE)
   connectionTimeoutMillis: DB_RESILIENCE.poolConnectionTimeoutMs,
 });

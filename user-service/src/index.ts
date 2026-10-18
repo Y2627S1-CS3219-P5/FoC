@@ -1,4 +1,6 @@
 // Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
+// Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: issue #49
+// publisher gating and request-correlation logging. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
@@ -27,8 +29,8 @@ import express, { Request, Response, NextFunction } from "express";
 import { loadAppConfig, loadAuditKey, DB_RESILIENCE } from "./config";
 import { adminAuditRouter } from "./adminAudit";
 import { pool } from "./db";
-import { createProducer } from "./kafka";
-import { startOutboxPublisher } from "./publisher";
+import { startAccountStatusPublishing } from "./accountStatusPublishing";
+import { createRequestCompletionMiddleware } from "./httpLogging";
 import {
   isDatabaseUnavailable,
   markDatabaseDown,
@@ -41,9 +43,8 @@ const config = loadAppConfig();
 
 // Browsers may only call this service from these origins. Server-to-server calls
 // (e.g. Supplier -> /auth/verify) are unaffected: CORS is enforced by browsers only.
+app.use(createRequestCompletionMiddleware());
 app.use(cors({ origin: config.corsOrigins }));
-
-
 app.use(express.json());
 
 // Readiness, matching Supplier: 200 only if the database answers within 1 s, else 503.
@@ -97,7 +98,10 @@ async function main(): Promise<void> {
   await retryWhileDatabaseUnavailable("Startup", () => pool.query("SELECT 1"));
   await retryWhileDatabaseUnavailable("First-admin bootstrap", bootstrapFirstAdmin);
   // Connect/retry in the background; Kafka outages must not block HTTP readiness.
-  const publisher = startOutboxPublisher(pool, createProducer());
+  const publisher = startAccountStatusPublishing(
+    config.accountStatusPublishingEnabled,
+    pool,
+  );
   const server = app.listen(PORT, () => console.log(`user-service listening on ${PORT}`));
 
   // Graceful shutdown (docker compose stop sends SIGTERM, then force-kills after 10 s):

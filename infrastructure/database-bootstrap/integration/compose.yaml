@@ -1,0 +1,85 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: postgres.Dockerfile
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: integration-master-password
+      POSTGRES_USER: focmaster
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U focmaster -d postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  bootstrap:
+    build:
+      context: ..
+    read_only: true
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_SSL_CA_PATH: /test-ca.pem
+      MASTER_PASSWORD: integration-master-password
+      USER_MIGRATOR_PASSWORD: integration-user-migrator
+      USER_RUNTIME_PASSWORD: integration-user-runtime
+      SUPPLIER_MIGRATOR_PASSWORD: integration-supplier-migrator
+      SUPPLIER_RUNTIME_PASSWORD: integration-supplier-runtime
+    volumes:
+      - ${FOC_DATA_INTEGRATION_CA:?run through run.sh}:/test-ca.pem:ro
+
+  user-migrate:
+    build:
+      context: ../../../user-service
+    command: ["node", "dist/migrate.js"]
+    read_only: true
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: users
+      DATABASE_USER: user_migrator
+      DATABASE_PASSWORD: integration-user-migrator
+      DATABASE_SSL_CA_PATH: /test-ca.pem
+    volumes:
+      - ${FOC_DATA_INTEGRATION_CA:?run through run.sh}:/test-ca.pem:ro
+
+  supplier-migrate:
+    build:
+      context: ../../..
+      dockerfile: supplier-service/Dockerfile
+    command: ["node", "dist/database/migrate.js"]
+    read_only: true
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: supplier
+      DATABASE_USER: supplier_migrator
+      DATABASE_PASSWORD: integration-supplier-migrator
+      DATABASE_SSL_CA_PATH: /test-ca.pem
+      DATABASE_RUNTIME_ROLE: supplier_app
+      MIGRATIONS_PATH: /app/drizzle
+    volumes:
+      - ${FOC_DATA_INTEGRATION_CA:?run through run.sh}:/test-ca.pem:ro
+
+  supplier-seed:
+    build:
+      context: ../../..
+      dockerfile: supplier-service/Dockerfile
+    command: ["node", "dist/database/seed/run.js"]
+    read_only: true
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: supplier
+      DATABASE_USER: supplier_app
+      DATABASE_PASSWORD: integration-supplier-runtime
+      DATABASE_SSL_CA_PATH: /test-ca.pem
+      SUPPLIER_SEED_CSV_PATH: /data/csv/supplier-seed-data.csv
+    volumes:
+      - ${FOC_DATA_INTEGRATION_CA:?run through run.sh}:/test-ca.pem:ro
+
+volumes:
+  postgres-data:

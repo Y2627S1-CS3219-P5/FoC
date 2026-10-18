@@ -1744,3 +1744,122 @@ Claude mapped oversized bodies to 413 and unsupported charset or encoding to 415
 ### Key response
 
 Claude documented the pickup-timeout re-listing deviation as an open question for the author, added `StubCreditBus.restore()` so a restart causes no false violations, added demo self-checks, hid the current state and history actor ids from non-parties, strengthened the accept-vs-expiry race test, type-checked the tests, and recorded the disclosures.
+
+## 2026-10-18 — AWS deployment preflight and cost guardrails
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #46; configuration validation, read-only AWS preflight, deterministic cost estimation, tests, and documentation
+- **Repository files affected:** `infrastructure/` package/config/preflight/cost/gate/test/docs files, root `.gitignore`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done merged PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the first unblocked infrastructure ticket without provisioning. It added
+a locked TypeScript CDK scaffold, rejected unresolved deployment inputs instead of choosing
+defaults, performed only read-only AWS capability checks, reproduced the public-price cost
+estimate with deterministic integer arithmetic, and made synth/deploy entry depend on
+matching current preflight and budget evidence. It recorded the existing school SCP quota
+denial and absent CDK bootstrap as blockers rather than weakening the approved design.
+
+## 2026-10-18 — AWS CDK foundation stack
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #47; regional
+  network, ECS/Service Connect foundation, ECR repositories, outputs, tests, and
+  documentation
+- **Repository files affected:** `infrastructure/lib/{app,config,foundation-stack}.ts`,
+  `infrastructure/test/{app,config,fixtures}.ts`, `infrastructure/config/demo.example.json`,
+  `infrastructure/README.md`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented only the unblocked Foundation ticket without provisioning. It added the
+two-AZ no-NAT network, private Service Connect namespace, and exactly three disposable,
+immutable, scanned ECR repositories. It kept image retention as a reviewed deployment
+input, published dependent-stack outputs, and added CDK assertions for isolation, tags,
+lifecycle, encryption, and removal behavior.
+
+## 2026-10-18 — AWS PostgreSQL data stack and one-shot data jobs
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #48; private RDS,
+  generated secrets, database bootstrap, ECS migration/seed task definitions, immutable
+  release-manifest seam, service database configuration, tests, and documentation
+- **Repository files affected:** `infrastructure/{bin,config,database-bootstrap,docs,lib,test}`,
+  `infrastructure/{README.md,package.json}`, User and Supplier database configuration and
+  Dockerfiles, root `.gitignore`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the isolated data-layer ticket without provisioning or running cloud
+jobs. It added a private encrypted single-AZ PostgreSQL 17.11 instance, eight generated
+secrets, fixed cross-service database roles, an idempotent bootstrap image, verified RDS
+TLS configuration for both services, and four least-privilege one-shot ECS task
+definitions. It also added immutable release-manifest validation, CDK assertions, unit
+tests, and an opt-in disposable local Docker integration test that verifies repeatability,
+TLS, migrations, seeding, administrator-edit preservation, and role isolation.
+
+## 2026-10-18 — AWS ECS application stack
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #49; ECS services,
+  internal application load balancer, Service Connect, network policy, autoscaling,
+  operational alarms, cloud gateway target, User publisher gate, request logging, tests,
+  and documentation
+- **Repository files affected:** `infrastructure/{config,lib,test,README.md}`, frontend
+  Docker/nginx/test/docs files, User Service configuration/startup/test/docs files, root
+  environment/Compose files, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the isolated application-layer ticket without provisioning or changing
+AWS. It added three digest-pinned x86-64 Fargate services, private Service Connect aliases,
+an internal ALB, explicit security-group flows, empty application roles, rolling rollback,
+scale-to-zero-aware alarms, and the migration-before-service release seam. It also added
+a cloud-only frontend route allowlist and health endpoint, redacted request completion
+logs, and a cloud User publisher flag that avoids starting Kafka while preserving durable
+outbox records and the existing local behavior.
+
+## 2026-10-18 — AWS CloudFront and WAF edge stack
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #50; CloudFront
+  VPC origin, cache and forwarding behaviors, CloudFront-scope WAF, cross-region CDK
+  references, tests, and documentation
+- **Repository files affected:** `infrastructure/lib/{app,edge-stack}.ts`,
+  `infrastructure/test/edge-stack.test.ts`, `infrastructure/README.md`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the isolated edge ticket without provisioning or changing AWS. It added
+the generated CloudFront HTTPS endpoint, private Singapore ALB VPC origin, uncached and
+uncompressed API behavior that preserves strong Supplier ETags, cached static assets,
+and exact header/query forwarding. It added controlled WAF denial of internal and excluded
+routes, reviewed authentication/global rate rules, and count-only AWS managed common
+protections. Tests verify the cross-region export custom resources and their generated IAM
+scope, cache/WAF invariants, tags, outputs, and absence of plaintext secrets or public
+application ingress.

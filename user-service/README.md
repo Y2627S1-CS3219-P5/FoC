@@ -1,4 +1,6 @@
 <!-- Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing implementation and verification notes. Author review: PENDING. -->
+<!-- Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: issue #49
+cloud publisher flag and request logging guidance. Author review: PENDING. -->
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
@@ -35,13 +37,23 @@ across replicas, a 200 ms fallback poll, wake-on-commit, outage back-off, and ho
 rows published more than seven days ago. Logs include publish count/duration, failures/recovery,
 and backlog count/oldest age once per minute. HTTP startup and `/health` do not wait for Kafka.
 
-`KAFKA_BROKERS` is required for the service (comma-separated); `KAFKA_CLIENT_ID` defaults to
-`user-service`. Compose supplies both. Provision topics separately with `kafka-init`; for a fresh
-local stack run `docker compose up -d kafka-init` as well as the usual service startup.
+When account-status publishing is enabled, `KAFKA_BROKERS` is required (comma-separated) and
+`KAFKA_CLIENT_ID` defaults to `user-service`. Compose supplies both. Provision topics separately
+with `kafka-init`; for a fresh local stack run `docker compose up -d kafka-init` as well as the
+usual service startup.
 Deploy Credit Service migration `0003_account_status_dedup.sql` and its handler before enabling
 this producer. Existing users are not automatically backfilled. Activation is asynchronous, so
 an immediate order may still encounter `ACCOUNT_NOT_FOUND` until Credit processes the activation.
 See [the implementation notes](docs/account-status-publishing.md) for the contract and rollout limits.
+
+`ACCOUNT_STATUS_PUBLISHING_ENABLED` defaults to `true`, preserving the full/local behavior.
+The approved AWS User+Supplier-only slice sets it explicitly to `false`; in that mode no Kafka
+configuration is loaded and no producer is created, while account-status changes continue to be
+written transactionally to the outbox for a later explicitly enabled deployment.
+
+Every HTTP response receives a server-generated `X-Request-Id`. Completion logs contain only the
+request ID, method, path without its query string, status, result, and duration; request bodies,
+authorization headers, tokens, and database URLs are never included.
 
 From `user-service/`, run `npm run build` and `npm run typecheck`. Run database tests with
 `TEST_DATABASE_URL` set to a **disposable PostgreSQL superuser URL** and `npm test`; integration

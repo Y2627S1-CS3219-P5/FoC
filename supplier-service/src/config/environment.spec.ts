@@ -5,6 +5,10 @@
  * Author review: Reviewed and approved by @ron.
  */
 import { getSessionVerificationConfiguration } from "./environment";
+import { getDatabaseConfig } from "./environment";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const ORIGINAL_BASE_URL = process.env.USER_SERVICE_BASE_URL;
 const ORIGINAL_TIMEOUT = process.env.USER_SERVICE_VERIFY_TIMEOUT_MS;
@@ -62,4 +66,89 @@ describe("getSessionVerificationConfiguration", () => {
       );
     },
   );
+});
+
+describe("getDatabaseConfig", () => {
+  const names = [
+    "DATABASE_URL",
+    "DATABASE_HOST",
+    "DATABASE_PORT",
+    "DATABASE_NAME",
+    "DATABASE_USER",
+    "DATABASE_PASSWORD",
+    "DATABASE_SSL_CA_PATH",
+  ] as const;
+  const original = Object.fromEntries(
+    names.map((name) => [name, process.env[name]]),
+  );
+  let directory: string;
+
+  beforeEach(() => {
+    names.forEach((name) => delete process.env[name]);
+    directory = mkdtempSync(join(tmpdir(), "foc-supplier-db-config-"));
+  });
+
+  afterEach(() => {
+    rmSync(directory, { recursive: true, force: true });
+    for (const name of names) {
+      const value = original[name];
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+
+  it("retains the local DATABASE_URL path", () => {
+    process.env.DATABASE_URL = "postgres://local@localhost/supplier";
+    expect(getDatabaseConfig()).toEqual({
+      connectionString: "postgres://local@localhost/supplier",
+    });
+  });
+
+  it("builds verified TLS configuration from complete cloud settings", () => {
+    const caPath = join(directory, "rds.pem");
+    writeFileSync(caPath, "TEST CA\n");
+    Object.assign(process.env, {
+      DATABASE_HOST: "foc.example.ap-southeast-1.rds.amazonaws.com",
+      DATABASE_PORT: "5432",
+      DATABASE_NAME: "supplier",
+      DATABASE_USER: "supplier_app",
+      DATABASE_PASSWORD: "never-render-me",
+      DATABASE_SSL_CA_PATH: caPath,
+    });
+
+    expect(getDatabaseConfig()).toEqual({
+      host: "foc.example.ap-southeast-1.rds.amazonaws.com",
+      port: 5432,
+      database: "supplier",
+      user: "supplier_app",
+      password: "never-render-me",
+      ssl: {
+        ca: "TEST CA\n",
+        rejectUnauthorized: true,
+        servername: "foc.example.ap-southeast-1.rds.amazonaws.com",
+      },
+    });
+  });
+
+  it("fails closed without exposing a password", () => {
+    Object.assign(process.env, {
+      DATABASE_HOST: "db.example.test",
+      DATABASE_PORT: "bad",
+      DATABASE_NAME: "supplier",
+      DATABASE_USER: "supplier_app",
+      DATABASE_PASSWORD: "never-render-me",
+      DATABASE_SSL_CA_PATH: join(directory, "missing.pem"),
+    });
+    expect(() => getDatabaseConfig()).toThrow(/DATABASE_PORT/);
+    try {
+      getDatabaseConfig();
+    } catch (error) {
+      expect(String(error)).not.toContain("never-render-me");
+    }
+
+    process.env.DATABASE_PORT = "5432";
+    expect(() => getDatabaseConfig()).toThrow(/cannot be read/);
+    process.env.DATABASE_URL = "postgres://secret@localhost/supplier";
+    expect(() => getDatabaseConfig()).toThrow(/cannot be combined/);
+  });
 });

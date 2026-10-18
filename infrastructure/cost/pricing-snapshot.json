@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "currency": "USD",
+  "capturedAt": "2026-10-18",
+  "primaryRegion": "ap-southeast-1",
+  "rates": {
+    "fargateVcpuHour": "0.05056",
+    "fargateMemoryGbHour": "0.00553",
+    "publicIpv4Hour": "0.005",
+    "rdsPostgresT4gMicroHour": "0.025",
+    "rdsGp3GbMonth": "0.138",
+    "rdsBackupGbMonth": "0.095",
+    "albHour": "0.0252",
+    "albLcuHour": "0.008",
+    "cloudFrontAsiaPacificDataOutGb": "0.120",
+    "cloudFrontHttpsRequestsPer10000": "0.012",
+    "wafWebAclMonth": "5.00",
+    "wafRuleMonth": "1.00",
+    "wafRequestsPerMillion": "0.60",
+    "secretsManagerSecretMonth": "0.40",
+    "secretsManagerCallsPer10000": "0.05",
+    "cloudWatchLogIngestionGb": "0.70",
+    "cloudWatchLogStorageGbMonth": "0.03",
+    "cloudWatchAlarmMetricMonth": "0.10",
+    "ecrStorageGbMonth": "0.10",
+    "monitoringBudgetMonth": "0.00",
+    "ecsServiceConnectControlPlaneMonth": "0.00"
+  },
+  "sources": [
+    {
+      "service": "Amazon ECS",
+      "publicationDate": "2026-09-11",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECS/current/ap-southeast-1/index.json"
+    },
+    {
+      "service": "Amazon RDS",
+      "publicationDate": "2026-10-06",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/ap-southeast-1/index.json"
+    },
+    {
+      "service": "Elastic Load Balancing",
+      "publicationDate": "2026-09-11",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSELB/current/ap-southeast-1/index.json"
+    },
+    {
+      "service": "Amazon VPC",
+      "publicationDate": "2026-10-16",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonVPC/current/ap-southeast-1/index.json"
+    },
+    {
+      "service": "Amazon CloudFront",
+      "publicationDate": "2026-10-03",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudFront/current/index.json"
+    },
+    {
+      "service": "AWS WAF",
+      "publicationDate": "2026-09-14",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/awswaf/current/index.json"
+    },
+    {
+      "service": "AWS Secrets Manager",
+      "publicationDate": "2026-09-11",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSSecretsManager/current/ap-southeast-1/index.json"
+    },
+    {
+      "service": "Amazon CloudWatch",
+      "publicationDate": "2026-10-07",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCloudWatch/current/ap-southeast-1/index.json"
+    },
+    {
+      "service": "Amazon ECR",
+      "publicationDate": "2026-09-11",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonECR/current/ap-southeast-1/index.json"
+    },
+    {
+      "service": "AWS Budgets",
+      "publicationDate": "2026-09-11",
+      "url": "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSBudgets/current/index.json"
+    }
+  ]
+}

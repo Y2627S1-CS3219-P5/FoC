@@ -18,6 +18,8 @@ Author review: Reviewed and approved by @ron.
 Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27. Scope: documented
 the expanded live validation, concurrency, and mobile administrator checks for
 issue #34. Author review: Reviewed and approved by @ron.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: documented
+the issue #49 cloud-only nginx target and health contract. Author review: PENDING.
 -->
 
 # Frontend
@@ -34,6 +36,11 @@ detail screens for authenticated members, plus administrator Supplier management
 docker compose up --build
 # open http://localhost:8080   (FRONTEND_PORT in .env)
 ```
+
+The ordinary/default Docker target retains the full local route set, including Order.
+The approved AWS User+Supplier-only release must build `--target cloud`; that target uses
+`nginx.cloud.conf`, contains no Order/Credit upstream, and exposes the internal `GET /healthz`
+probe used by ECS and the internal load balancer.
 
 **Frontend with live reload** (backends running, e.g. via Docker Compose):
 

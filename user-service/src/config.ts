@@ -1,4 +1,9 @@
 // Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
+// Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: added the
+// verified-TLS discrete RDS connection configuration seam for issue #48 while
+// retaining local DATABASE_URL compatibility. Author review: PENDING.
+// Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: added an
+// explicit cloud-only publisher switch for issue #49. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -13,8 +18,11 @@
  * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 
+import { readFileSync } from "node:fs";
+import type { PoolConfig } from "pg";
+
 // The only file that reads process.env. Each part loads only what it needs, so the
-// migration runner (which needs just DATABASE_URL) does not require JWT_SECRET etc.
+// migration runner (which needs just database settings) does not require JWT_SECRET etc.
 
 function required(name: string): string {
   const value = process.env[name];
@@ -22,6 +30,14 @@ function required(name: string): string {
     throw new Error(`${name} is not set`);
   }
   return value;
+}
+
+function optionalBoolean(name: string, defaultValue: boolean): boolean {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (value === undefined || value === "") return defaultValue;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${name} must be true or false`);
 }
 
 export function loadKafkaConfig() {
@@ -39,8 +55,75 @@ export const OUTBOX = {
   cleanupIntervalMs: 60 * 60 * 1000,
 } as const;
 
-export function loadDatabaseConfig() {
-  return { databaseUrl: required("DATABASE_URL") };
+const DISCRETE_DATABASE_SETTINGS = [
+  "DATABASE_HOST",
+  "DATABASE_PORT",
+  "DATABASE_NAME",
+  "DATABASE_USER",
+  "DATABASE_PASSWORD",
+  "DATABASE_SSL_CA_PATH",
+] as const;
+
+function readDatabaseCa(path: string): string {
+  let ca: string;
+  try {
+    ca = readFileSync(path, "utf8");
+  } catch {
+    throw new Error("DATABASE_SSL_CA_PATH cannot be read");
+  }
+  if (ca.trim() === "") {
+    throw new Error("DATABASE_SSL_CA_PATH must contain a CA certificate");
+  }
+  return ca;
+}
+
+/**
+ * Local Compose supplies DATABASE_URL. Cloud tasks supply discrete fields so the
+ * password is never embedded in a URL and RDS certificate/hostname verification
+ * cannot be weakened accidentally.
+ */
+export function loadDatabaseConfig(): PoolConfig {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  const presentDiscreteSettings = DISCRETE_DATABASE_SETTINGS.filter(
+    (name) => (process.env[name]?.trim() ?? "") !== "",
+  );
+
+  if (databaseUrl && presentDiscreteSettings.length > 0) {
+    throw new Error(
+      "DATABASE_URL cannot be combined with discrete DATABASE_* settings",
+    );
+  }
+  if (databaseUrl) {
+    return { connectionString: databaseUrl };
+  }
+  if (presentDiscreteSettings.length !== DISCRETE_DATABASE_SETTINGS.length) {
+    throw new Error(
+      "Set DATABASE_URL or every discrete DATABASE_* setting",
+    );
+  }
+
+  const host = required("DATABASE_HOST").trim();
+  const portText = required("DATABASE_PORT").trim();
+  if (!/^\d+$/.test(portText)) {
+    throw new Error("DATABASE_PORT must be an integer between 1 and 65535");
+  }
+  const port = Number(portText);
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
+    throw new Error("DATABASE_PORT must be an integer between 1 and 65535");
+  }
+
+  return {
+    host,
+    port,
+    database: required("DATABASE_NAME").trim(),
+    user: required("DATABASE_USER").trim(),
+    password: required("DATABASE_PASSWORD"),
+    ssl: {
+      ca: readDatabaseCa(required("DATABASE_SSL_CA_PATH").trim()),
+      rejectUnauthorized: true,
+      servername: host,
+    },
+  };
 }
 
 export function loadAppConfig() {
@@ -54,6 +137,13 @@ export function loadAppConfig() {
       .split(",")
       .map((o) => o.trim())
       .filter(Boolean),
+    // Local/full deployments retain publishing by default. The approved AWS
+    // User+Supplier slice sets this explicitly to false because it has no Kafka
+    // or account-status consumers; durable outbox writes remain enabled.
+    accountStatusPublishingEnabled: optionalBoolean(
+      "ACCOUNT_STATUS_PUBLISHING_ENABLED",
+      true,
+    ),
     bootstrapAdmin: {
       username: process.env.BOOTSTRAP_ADMIN_USERNAME,
       email: process.env.BOOTSTRAP_ADMIN_EMAIL,
