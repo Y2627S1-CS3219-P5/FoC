@@ -3,15 +3,22 @@
  * Scope: Added disposable Compose orchestration for the real-browser Supplier
  * UI verification in issue #31.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18.
+ * Scope: Supplied the disposable User database credentials and audit key now
+ * required by the current Compose stack, and retained failure diagnostics for
+ * the issue #42 CI artifact.
+ * Author review: Pending project-author review.
  */
 import { spawnSync } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const frontendDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = resolve(frontendDirectory, '..')
+const diagnosticsDirectory = resolve(frontendDirectory, 'test-results', 'compose-diagnostics')
 const projectName = `foc-supplier-ui-${process.pid}-${randomUUID().slice(0, 8)}`
 const [frontendPort, userPort, supplierPort] = await reserveAvailablePorts(3)
 const frontendBaseUrl = `http://127.0.0.1:${frontendPort}`
@@ -22,10 +29,14 @@ const memberPassword = 'SupplierUiMember1'
 
 const environment = {
   ...process.env,
+  AUDIT_HMAC_KEY: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
   JWT_SECRET: 'supplier-ui-smoke-only-jwt-secret-32-characters',
   SUPPLIER_DB_ADMIN_PASSWORD: 'supplier-ui-smoke-admin-password',
   SUPPLIER_DB_MIGRATION_PASSWORD: 'supplier-ui-smoke-migration-password',
   SUPPLIER_DB_PASSWORD: 'supplier-ui-smoke-runtime-password',
+  USER_DB_ADMIN_PASSWORD: 'supplier-ui-user-admin-password',
+  USER_DB_APP_PASSWORD: 'supplier-ui-user-runtime-password',
+  USER_DB_MIGRATION_PASSWORD: 'supplier-ui-user-migration-password',
   ALLOWED_EMAIL_DOMAIN: 'u.nus.edu',
   BOOTSTRAP_ADMIN_USERNAME: adminUsername,
   BOOTSTRAP_ADMIN_EMAIL: 'supplier-ui-admin@u.nus.edu',
@@ -41,12 +52,9 @@ const environment = {
   SUPPLIER_UI_MEMBER_PASSWORD: memberPassword,
 }
 
-let stackStarted = false
-
 try {
   run('docker', ['info'], { capture: true })
   compose(['up', '--build', '--detach'])
-  stackStarted = true
 
   await Promise.all([
     waitFor(`http://127.0.0.1:${userPort}/health`, 'User Service'),
@@ -58,12 +66,7 @@ try {
   run(localPlaywright(), ['test'], { cwd: frontendDirectory })
   console.log('\nPASS: live member/admin Supplier UI journeys and responsive overflow checks completed.')
 } catch (error) {
-  if (stackStarted) {
-    console.error('\nDisposable stack status:')
-    try { compose(['ps']) } catch { /* retain the original failure */ }
-    console.error('\nRelevant service logs:')
-    try { compose(['logs', '--no-color', '--tail', '120', 'frontend', 'user-service', 'supplier-service']) } catch { /* retain the original failure */ }
-  }
+  retainFailureDiagnostics(error)
   throw error
 } finally {
   console.log(`\nRemoving disposable Compose project ${projectName} and its volumes...`)
@@ -79,6 +82,35 @@ function compose(args, options = {}) {
     ...options,
     cwd: repositoryRoot,
   })
+}
+
+function retainFailureDiagnostics(originalError) {
+  mkdirSync(diagnosticsDirectory, { recursive: true })
+  writeFileSync(
+    resolve(diagnosticsDirectory, 'failure.txt'),
+    `${formatError(originalError)}\n`,
+  )
+  retainComposeOutput('Disposable stack status', ['ps'], 'compose-status.txt')
+  retainComposeOutput(
+    'Relevant service logs',
+    ['logs', '--no-color', '--tail', '120', 'frontend', 'user-service', 'supplier-service'],
+    'compose-logs.txt',
+  )
+}
+
+function retainComposeOutput(label, args, filename) {
+  let output
+  try {
+    output = compose(args, { capture: true }) || `${label}: no output was available.\n`
+  } catch (diagnosticError) {
+    output = `Could not collect ${label.toLowerCase()}.\n${formatError(diagnosticError)}\n`
+  }
+  console.error(`\n${label}:\n${output}`)
+  writeFileSync(resolve(diagnosticsDirectory, filename), output)
+}
+
+function formatError(error) {
+  return error instanceof Error ? (error.stack || error.message) : String(error)
 }
 
 function run(command, args, { capture = false, cwd = repositoryRoot } = {}) {

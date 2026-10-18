@@ -156,3 +156,20 @@ text no longer pushes one input below its neighbour. Focused component regressio
 both CSS contracts, while the real-browser journey checks the header after scrolling and
 compares the rendered opening/closing input positions. No backend or other service was
 changed.
+
+## 2026-10-18 — Pull-request CI browser hardening
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implement the browser-test portion of the project-author-approved
+  GitHub issue #42 CI foundation.
+- **Repository files affected:** `frontend/playwright.config.ts`, the repository CI workflow
+  and documentation, and AI usage records.
+- **Author review:** Pending project-author review.
+
+Codex made CI reject committed focused Playwright tests, explicitly kept retries disabled,
+and bounded the complete browser run. The disposable runner supplies the current User
+Service's required database-role credentials and audit key as isolated test fixtures. The
+repository workflow installs Chromium, runs that live-stack journey, and retains its HTML
+report, traces, screenshots, videos, Compose status, and relevant service logs for seven days
+after failure. No frontend product behavior, production credential, or test scenario was
+changed.
