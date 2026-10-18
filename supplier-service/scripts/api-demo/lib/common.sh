@@ -2,6 +2,9 @@
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added shared configuration, HTTP capture, redaction, and assertions for
 # the local Bash API demonstrations. Author review: Reviewed and approved by @ron.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18.
+# Scope: added an additive CloudFront gateway mode for issue #51 while preserving
+# the local Compose defaults. Author review: PENDING.
 
 api_demo_fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -38,8 +41,16 @@ api_demo_configure() {
 
   supplier_port="${SUPPLIER_PORT:-$(api_dotenv_value SUPPLIER_PORT || printf '3000')}"
   user_port="${USER_PORT:-$(api_dotenv_value USER_PORT || printf '3001')}"
-  API_SUPPLIER_BASE_URL="${API_SUPPLIER_BASE_URL:-http://127.0.0.1:${supplier_port}}"
-  API_USER_BASE_URL="${API_USER_BASE_URL:-http://127.0.0.1:${user_port}}"
+  if [[ -n "${API_GATEWAY_BASE_URL:-}" ]]; then
+    API_GATEWAY_BASE_URL="${API_GATEWAY_BASE_URL%/}"
+    API_SUPPLIER_BASE_URL="${API_SUPPLIER_BASE_URL:-${API_GATEWAY_BASE_URL}}"
+    API_USER_BASE_URL="${API_USER_BASE_URL:-${API_GATEWAY_BASE_URL}/api/v1}"
+    API_DEMO_GATEWAY_MODE=1
+  else
+    API_SUPPLIER_BASE_URL="${API_SUPPLIER_BASE_URL:-http://127.0.0.1:${supplier_port}}"
+    API_USER_BASE_URL="${API_USER_BASE_URL:-http://127.0.0.1:${user_port}}"
+    API_DEMO_GATEWAY_MODE=0
+  fi
   API_ALLOWED_EMAIL_DOMAIN="${API_ALLOWED_EMAIL_DOMAIN:-${ALLOWED_EMAIL_DOMAIN:-$(api_dotenv_value ALLOWED_EMAIL_DOMAIN || printf 'u.nus.edu')}}"
   API_TIMEOUT_SECONDS="${API_TIMEOUT_SECONDS:-15}"
 }
@@ -97,7 +108,7 @@ api_request() {
   API_RESPONSE_STATUS="$(curl "${curl_args[@]}")"
   curl_exit=$?
   set -e
-  [[ ${curl_exit} -eq 0 ]] || api_demo_fail "Could not call ${method} ${url}. Is Docker Compose running?"
+  [[ ${curl_exit} -eq 0 ]] || api_demo_fail "Could not call ${method} ${url}. Check the configured API URL and that its stack is running."
   API_RESPONSE_BODY="$(<"${API_RESPONSE_BODY_FILE}")"
 }
 
@@ -210,8 +221,15 @@ api_print_cli_response() {
 }
 
 api_require_running_stack() {
-  api_request GET "${API_USER_BASE_URL}/health"
-  [[ "${API_RESPONSE_STATUS}" == "200" ]] || api_demo_fail "User Service is not healthy at ${API_USER_BASE_URL}. Run 'docker compose up --build -d' first."
-  api_request GET "${API_SUPPLIER_BASE_URL}/health"
-  [[ "${API_RESPONSE_STATUS}" == "200" ]] || api_demo_fail "Supplier Service is not healthy at ${API_SUPPLIER_BASE_URL}. Run 'docker compose up --build -d' first."
+  if [[ "${API_DEMO_GATEWAY_MODE}" == "1" ]]; then
+    api_request GET "${API_GATEWAY_BASE_URL}/"
+    [[ "${API_RESPONSE_STATUS}" == "200" ]] || api_demo_fail "Frontend gateway is not ready at ${API_GATEWAY_BASE_URL}."
+    api_request GET "${API_USER_BASE_URL}/whoami"
+    [[ "${API_RESPONSE_STATUS}" == "401" ]] || api_demo_fail "Public API probe at ${API_USER_BASE_URL}/whoami did not return the expected unauthenticated HTTP 401."
+  else
+    api_request GET "${API_USER_BASE_URL}/health"
+    [[ "${API_RESPONSE_STATUS}" == "200" ]] || api_demo_fail "User Service is not healthy at ${API_USER_BASE_URL}. Run 'docker compose up --build -d' first."
+    api_request GET "${API_SUPPLIER_BASE_URL}/health"
+    [[ "${API_RESPONSE_STATUS}" == "200" ]] || api_demo_fail "Supplier Service is not healthy at ${API_SUPPLIER_BASE_URL}. Run 'docker compose up --build -d' first."
+  fi
 }

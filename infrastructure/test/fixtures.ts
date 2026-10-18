@@ -2,15 +2,40 @@ import type { DeploymentConfig } from "../lib/config.js";
 import type { ReleaseManifest } from "../lib/release-manifest.js";
 
 export function validReleaseManifest(): ReleaseManifest {
+  const revision = "0123456789abcdef0123456789abcdef01234567";
+  const image = (
+    repositoryName: string,
+    digest: string,
+  ): ReleaseManifest["images"]["frontend"] => {
+    const repositoryUri = `656253649128.dkr.ecr.ap-southeast-1.amazonaws.com/${repositoryName}`;
+    return {
+      repositoryName,
+      repositoryUri,
+      immutableTag: revision,
+      digest,
+      digestUri: `${repositoryUri}@${digest}`,
+      scan: { status: "COMPLETE", findings: {} },
+    };
+  };
   return {
-    sourceRevision: "0123456789abcdef0123456789abcdef01234567",
+    schemaVersion: 1,
+    accountId: "656253649128",
+    region: "ap-southeast-1",
+    sourceRevision: revision,
+    builtAt: "2026-10-18T08:00:00.000Z",
     images: {
-      frontend:
+      frontend: image(
+        "foc-demo-frontend",
         "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      userService:
+      ),
+      userService: image(
+        "foc-demo-user-service",
         "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      supplierService:
+      ),
+      supplierService: image(
+        "foc-demo-supplier-service",
         "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      ),
     },
   };
 }

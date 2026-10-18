@@ -2,14 +2,15 @@
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-27.
 # Scope: added a one-command runner for every isolated endpoint check and API
 # user journey. Author review: Reviewed and approved by @ron.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18.
+# Scope: omitted private health endpoints in CloudFront gateway mode for issue
+# #51 while retaining the complete local run. Author review: PENDING.
 
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
 endpoints=(
-  user-health
-  supplier-health
   register
   login
   whoami
@@ -22,6 +23,10 @@ endpoints=(
   archive
   restore
 )
+
+if [[ -z "${API_GATEWAY_BASE_URL:-}" ]]; then
+  endpoints=(user-health supplier-health "${endpoints[@]}")
+fi
 
 journeys=(
   member-read.sh

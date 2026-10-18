@@ -225,7 +225,7 @@ export class DataStack extends Stack {
       memoryMiB: props.config.services.userService.memoryMiB,
       image: ecs.ContainerImage.fromEcrRepository(
         props.userServiceRepository,
-        props.releaseManifest.images.userService,
+        props.releaseManifest.images.userService.digest,
       ),
       command: ["node", "dist/migrate.js"],
       environment: databaseEnvironment("users", "user_migrator"),
@@ -242,7 +242,7 @@ export class DataStack extends Stack {
       memoryMiB: props.config.services.supplierService.memoryMiB,
       image: ecs.ContainerImage.fromEcrRepository(
         props.supplierServiceRepository,
-        props.releaseManifest.images.supplierService,
+        props.releaseManifest.images.supplierService.digest,
       ),
       command: ["node", "dist/database/migrate.js"],
       environment: {
@@ -263,7 +263,7 @@ export class DataStack extends Stack {
       memoryMiB: props.config.services.supplierService.memoryMiB,
       image: ecs.ContainerImage.fromEcrRepository(
         props.supplierServiceRepository,
-        props.releaseManifest.images.supplierService,
+        props.releaseManifest.images.supplierService.digest,
       ),
       command: ["node", "dist/database/seed/run.js"],
       environment: {
@@ -379,6 +379,9 @@ export class DataStack extends Stack {
   }
 
   private addOutputs(): void {
+    new CfnOutput(this, "DatabaseInstanceIdentifier", {
+      value: this.database.instanceIdentifier,
+    });
     new CfnOutput(this, "DatabaseEndpoint", {
       description: "Private RDS endpoint used by FoC tasks",
       value: this.database.dbInstanceEndpointAddress,
@@ -389,6 +392,12 @@ export class DataStack extends Stack {
     new CfnOutput(this, "DatabaseJobsSecurityGroupId", {
       value: this.databaseJobsSecurityGroup.securityGroupId,
     });
+    new CfnOutput(this, "DeploymentJobSecurityGroupId", {
+      value: this.databaseJobsSecurityGroup.securityGroupId,
+    });
+    new CfnOutput(this, "BootstrapAdministratorSecretArn", {
+      value: this.bootstrapAdministratorPasswordSecret.secretArn,
+    });
     new CfnOutput(this, "DatabaseJobOrder", {
       description:
         "Run sequentially; every task must exit zero before service rollout",
@@ -397,6 +406,12 @@ export class DataStack extends Stack {
     for (const name of DATABASE_JOB_ORDER) {
       new CfnOutput(this, `${this.pascal(name)}TaskDefinitionArn`, {
         value: this.databaseJobs[name].taskDefinitionArn,
+      });
+      new CfnOutput(this, `${this.pascal(name)}ContainerName`, {
+        value: `${this.pascal(name)}Container`,
+      });
+      new CfnOutput(this, `${this.pascal(name)}LogGroupName`, {
+        value: `/foc/demo/jobs/${name}`,
       });
     }
   }

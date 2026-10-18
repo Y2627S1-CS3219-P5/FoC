@@ -9,7 +9,8 @@ import type { ReleaseManifest } from "./release-manifest.js";
 /** Creates gated stack definitions without running or deploying any resource. */
 export function createFocDemoApp(
   config: DeploymentConfig,
-  releaseManifest: ReleaseManifest,
+  releaseManifest?: ReleaseManifest,
+  phase: "foundation" | "release" = "release",
 ): App {
   const app = new App();
   const foundation = new FoundationStack(app, "FoCDemoFoundation", {
@@ -18,6 +19,22 @@ export function createFocDemoApp(
     env: { account: config.accountId, region: config.primaryRegion },
     retainedImageCount: config.registry.retainedImageCount,
   });
+  const tags = {
+    Project: "FoC",
+    Environment: "demo",
+    ManagedBy: "CDK",
+    Owner: config.owner,
+    Issue: "44",
+  } as const;
+  for (const [key, value] of Object.entries(tags)) {
+    Tags.of(foundation).add(key, value);
+  }
+  if (phase === "foundation") return app;
+  if (releaseManifest === undefined) {
+    throw new Error(
+      "A release manifest is required for Data, Application, and Edge",
+    );
+  }
   const data = new DataStack(app, "FoCDemoData", {
     stackName: "foc-demo-data",
     description:
@@ -70,14 +87,7 @@ export function createFocDemoApp(
     "CloudFront VPC origin requires the fully deployed Singapore internal ALB",
   );
 
-  for (const [key, value] of Object.entries({
-    Project: "FoC",
-    Environment: "demo",
-    ManagedBy: "CDK",
-    Owner: config.owner,
-    Issue: "44",
-  })) {
-    Tags.of(foundation).add(key, value);
+  for (const [key, value] of Object.entries(tags)) {
     Tags.of(data).add(key, value);
     Tags.of(application).add(key, value);
     Tags.of(edge).add(key, value);

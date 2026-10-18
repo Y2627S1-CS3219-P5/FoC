@@ -233,11 +233,18 @@ test("publishes the canonical fail-closed job boundary without secret outputs", 
   for (const output of [
     "DatabaseEndpoint",
     "DatabasePort",
+    "DatabaseInstanceIdentifier",
     "DatabaseJobsSecurityGroupId",
+    "DeploymentJobSecurityGroupId",
+    "BootstrapAdministratorSecretArn",
     "DatabaseBootstrapTaskDefinitionArn",
+    "DatabaseBootstrapContainerName",
     "UserMigrationTaskDefinitionArn",
+    "UserMigrationContainerName",
     "SupplierMigrationTaskDefinitionArn",
+    "SupplierMigrationContainerName",
     "SupplierSeedTaskDefinitionArn",
+    "SupplierSeedContainerName",
   ]) {
     template.hasOutput(output, {});
   }

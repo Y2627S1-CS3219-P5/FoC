@@ -120,7 +120,7 @@ export class ApplicationStack extends Stack {
       portName: "user-http",
       port: USER_PORT,
       repository: props.userServiceRepository,
-      imageDigest: props.releaseManifest.images.userService,
+      imageDigest: props.releaseManifest.images.userService.digest,
       securityGroup: securityGroups.user,
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
@@ -164,7 +164,7 @@ export class ApplicationStack extends Stack {
       portName: "supplier-http",
       port: SUPPLIER_PORT,
       repository: props.supplierServiceRepository,
-      imageDigest: props.releaseManifest.images.supplierService,
+      imageDigest: props.releaseManifest.images.supplierService.digest,
       securityGroup: securityGroups.supplier,
       logRetention: logs.RetentionDays.TWO_WEEKS,
       command: ["node", "dist/main.js"],
@@ -200,7 +200,7 @@ export class ApplicationStack extends Stack {
       portName: "frontend-http",
       port: FRONTEND_PORT,
       repository: props.frontendRepository,
-      imageDigest: props.releaseManifest.images.frontend,
+      imageDigest: props.releaseManifest.images.frontend.digest,
       securityGroup: securityGroups.frontend,
       logRetention: logs.RetentionDays.TWO_WEEKS,
       healthCommand:
@@ -228,7 +228,7 @@ export class ApplicationStack extends Stack {
       loadBalancer: loadBalancing.loadBalancer,
     });
 
-    this.addOutputs();
+    this.addOutputs({ frontend, supplier, user });
   }
 
   private createSecurityGroups(props: ApplicationStackProps): {
@@ -760,7 +760,11 @@ export class ApplicationStack extends Stack {
     });
   }
 
-  private addOutputs(): void {
+  private addOutputs(services: {
+    readonly frontend: CreatedService;
+    readonly user: CreatedService;
+    readonly supplier: CreatedService;
+  }): void {
     new CfnOutput(this, "InternalAlbArn", {
       value: this.internalLoadBalancer.loadBalancerArn,
     });
@@ -786,6 +790,15 @@ export class ApplicationStack extends Stack {
     ] as const) {
       new CfnOutput(this, `${id}ServiceName`, { value: service.serviceName });
       new CfnOutput(this, `${id}ServiceArn`, { value: service.serviceArn });
+    }
+    for (const [id, service] of [
+      ["Frontend", services.frontend],
+      ["UserService", services.user],
+      ["SupplierService", services.supplier],
+    ] as const) {
+      new CfnOutput(this, `${id}LogGroupName`, {
+        value: service.logGroup.logGroupName,
+      });
     }
   }
 }

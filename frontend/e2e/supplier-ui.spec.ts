@@ -11,6 +11,10 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-09-27.
  * Scope: Added browser regressions for sticky navigation and aligned time fields.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18.
+ * Scope: Made persistent cloud smoke runs repeatable by checking the durable seed
+ * subset, generating a unique Supplier fixture, and archiving it after the suite.
+ * Author review: PENDING.
  */
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
 
@@ -19,6 +23,32 @@ const memberEmail = requiredEnvironment('SUPPLIER_UI_MEMBER_EMAIL')
 const memberPassword = requiredEnvironment('SUPPLIER_UI_MEMBER_PASSWORD')
 const adminUsername = requiredEnvironment('SUPPLIER_UI_ADMIN_USERNAME')
 const adminPassword = requiredEnvironment('SUPPLIER_UI_ADMIN_PASSWORD')
+const fixtureSuffix = `${Date.now()}-${process.pid}`
+let createdSupplierId: string | undefined
+
+const expectedSeedSupplierNames = [
+  "Anna's x Soup Union",
+  'NUS Co-op',
+  'Printer @ Com 2',
+  'Cool Spot',
+  'InstaChef',
+  'Cafe+ Robot Cafe',
+  'A Hot Hideout',
+  'Arise and Shine',
+  'Bakehaus / Aurea',
+  'Central Square @ YIH',
+  'Pasta Express',
+  'TOMORO COFFEE',
+  'Octobox',
+  'Smooy',
+  'Goh Bros E-Print Pte Ltd',
+  'Cheers Unmanned Convenience Store',
+  'Nami',
+  'Supersnacks',
+  'Good Day Cafe',
+  'The Coffee Roaster',
+  'he by He Brews',
+] as const
 
 test.describe.configure({ mode: 'serial' })
 
@@ -26,12 +56,17 @@ test.beforeAll(async ({ request }) => {
   await createMember(request)
 })
 
+test.afterAll(async ({ request }) => {
+  if (createdSupplierId) await archiveSupplierFixture(request, createdSupplierId)
+})
+
 test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers responsively', async ({ page }, testInfo) => {
   await login(page, memberUsername, memberPassword)
 
   await expect(page).toHaveURL(/\/suppliers$/)
   await expect(page.getByRole('heading', { name: 'Suppliers', exact: true })).toBeVisible()
-  await expect(page.getByText('21 results')).toBeVisible()
+  await expect(page.getByText(/\d+ results?/)).toBeVisible()
+  await assertKnownSeedSuppliersPresent(page)
   await expect(page.getByRole('link', { name: /Manage Suppliers|Manage/ })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Add Supplier' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
@@ -57,14 +92,15 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
   await clearFilters(page)
   await page.getByLabel('Sort by').selectOption('name,desc')
   await expect(page).toHaveURL(/sort=name%2Cdesc/)
-  await expect(page.getByText('21 results')).toBeVisible()
-  await expect(page.locator('article h2').first()).toHaveText('he by He Brews')
+  await expect(page.getByText(/\d+ results?/)).toBeVisible()
+  const sortedNames = await page.locator('article h2').allInnerTexts()
+  expect(sortedNames).toEqual([...sortedNames].sort((left, right) => right.localeCompare(left)))
 
   await clearFilters(page)
-  await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText('Page 1 of 2')
+  await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText(/Page 1 of [2-9]\d*/)
   await page.getByRole('button', { name: 'Next' }).click()
   await expect(page).toHaveURL(/page=1/)
-  await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText('Page 2 of 2')
+  await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText(/Page 2 of [2-9]\d*/)
 
   const firstPageResponse = page.waitForResponse((response) => {
     const url = new URL(response.url())
@@ -74,7 +110,7 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
   })
   await page.getByRole('button', { name: 'Previous' }).click()
   await firstPageResponse
-  await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText('Page 1 of 2')
+  await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText(/Page 1 of [2-9]\d*/)
   const firstSupplierCard = page.locator('article').first()
   await expect(firstSupplierCard).toBeVisible()
   const firstSupplierName = await firstSupplierCard.locator('h2').innerText()
@@ -97,8 +133,8 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
 })
 
 test('ADMINISTRATOR handles responsive forms, validation, concurrency and lifecycle actions', async ({ page, request }, testInfo) => {
-  const createdName = 'Browser Verification Cafe'
-  const firstEditorName = 'Browser Verification Hub A'
+  const createdName = `Browser Verification Cafe ${fixtureSuffix}`
+  const firstEditorName = `Browser Verification Hub A ${fixtureSuffix}`
   const secondEditorDraft = 'Browser Verification Hub B draft'
 
   await login(page, adminUsername, adminPassword)
@@ -153,6 +189,7 @@ test('ADMINISTRATOR handles responsive forms, validation, concurrency and lifecy
   const supplierHref = await createdCard.getByRole('link', { name: 'View' }).getAttribute('href')
   expect(supplierHref).toMatch(/^\/suppliers\/[0-9a-f-]+$/)
   const supplierId = supplierHref!.split('/').at(-1)!
+  createdSupplierId = supplierId
   const detailApiPath = `/api/v1/suppliers/${supplierId}`
   const editPath = `${supplierHref}/edit`
 
@@ -279,7 +316,39 @@ async function login(page: Page, username: string, password: string) {
 async function clearFilters(page: Page) {
   await page.getByRole('button', { name: 'Clear filters' }).click()
   await expect(page).toHaveURL(/\/suppliers$/)
-  await expect(page.getByText('21 results')).toBeVisible()
+  await expect(page.getByText(/\d+ results?/)).toBeVisible()
+}
+
+async function assertKnownSeedSuppliersPresent(page: Page) {
+  const token = await page.evaluate(() => window.sessionStorage.getItem('foc.accessToken'))
+  expect(token).toBeTruthy()
+  const response = await page.request.get('/api/v1/suppliers?page=0&size=50&sort=name,asc', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  expect(response.status(), await response.text()).toBe(200)
+  const body = await response.json() as { items: Array<{ name: string }> }
+  const names = new Set(body.items.map(({ name }) => name))
+  for (const seedName of expectedSeedSupplierNames) expect(names.has(seedName), seedName).toBe(true)
+}
+
+async function archiveSupplierFixture(request: APIRequestContext, supplierId: string) {
+  const loginResponse = await request.post('/api/v1/auth/login', {
+    data: { identifier: adminUsername, password: adminPassword },
+  })
+  expect(loginResponse.status()).toBe(200)
+  const { accessToken } = await loginResponse.json() as { accessToken: string }
+  const detail = await request.get(`/api/v1/suppliers/${supplierId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  expect(detail.status()).toBe(200)
+  const supplier = await detail.json() as { status: string }
+  if (supplier.status !== 'ACTIVE') return
+  const etag = detail.headers().etag
+  if (!etag) throw new Error(`Cleanup could not read ETag for Supplier ${supplierId}`)
+  const archived = await request.delete(`/api/v1/suppliers/${supplierId}`, {
+    headers: { Authorization: `Bearer ${accessToken}`, 'If-Match': etag },
+  })
+  expect(archived.status(), await archived.text()).toBe(204)
 }
 
 async function assertNoHorizontalOverflow(page: Page, context: string) {

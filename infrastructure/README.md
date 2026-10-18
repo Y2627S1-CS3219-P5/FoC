@@ -9,6 +9,14 @@ Author review: Pending pull-request review by @ron.
 <!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Drafted the issue #51 immutable release-controller, operations, smoke-test,
+and teardown documentation. No AWS resources were created, updated, or deleted.
+Author review: Pending pull-request review by @ron.
+-->
+
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-10-18
 Scope: Drafted the issue #47 CDK foundation implementation and verification guidance.
 No AWS resources were created or changed.
 Author review: Pending pull-request review by @ron.
@@ -47,6 +55,18 @@ This TypeScript AWS CDK package implements the pre-provisioning guardrails from
 Application stack, plus the global CloudFront/WAF Edge stack.
 Provisioning remains blocked until the configuration, cost, capability, quota, and
 bootstrap gates pass.
+
+## Release and operations tooling
+
+Issue #51 adds typed, fake-runner-tested controllers for immutable image preparation,
+reviewed plan/apply, ordered one-off data jobs, CloudFront smoke testing, and exact
+start/stop/status/destroy operations. The short commands are documented in
+[`RUNBOOK.md`](RUNBOOK.md). Unit tests do not contact AWS or Docker, and none of these
+commands runs automatically during CDK synthesis.
+
+The vulnerability scan is mandatory and its findings are preserved in the owner-only
+release manifest. The approved specification does not define a severity rejection policy,
+so tooling fails on scan failure but does not invent a finding-count threshold.
 
 ## Foundation stack
 

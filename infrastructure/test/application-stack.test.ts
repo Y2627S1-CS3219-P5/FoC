@@ -352,6 +352,9 @@ test("publishes the explicit migrations-before-services release boundary", () =>
     "FrontendServiceName",
     "UserServiceServiceName",
     "SupplierServiceServiceName",
+    "FrontendLogGroupName",
+    "UserServiceLogGroupName",
+    "SupplierServiceLogGroupName",
     "AlertTopicArn",
   ]) {
     template.hasOutput(output, {});

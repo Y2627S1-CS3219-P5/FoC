@@ -10,6 +10,13 @@ const infrastructureRoot = resolve(
   "..",
 );
 const { config } = loadDeploymentConfig();
-const { manifest } = loadReleaseManifest();
 assertDeploymentGate(config, defaultGatePaths(infrastructureRoot));
-createFocDemoApp(config, manifest);
+const phase = process.env.FOC_CDK_PHASE;
+if (phase === "foundation") {
+  createFocDemoApp(config, undefined, "foundation");
+} else if (phase === undefined || phase === "release") {
+  const { manifest } = loadReleaseManifest();
+  createFocDemoApp(config, manifest, "release");
+} else {
+  throw new Error("FOC_CDK_PHASE must be 'foundation' or 'release'");
+}

@@ -19,13 +19,22 @@ test("rejects tags, latest, short SHAs, malformed digests, and unknown fields", 
     },
     {
       ...validReleaseManifest(),
-      images: { ...validReleaseManifest().images, userService: "latest" },
+      images: {
+        ...validReleaseManifest().images,
+        userService: {
+          ...validReleaseManifest().images.userService,
+          digest: "latest",
+        },
+      },
     },
     {
       ...validReleaseManifest(),
       images: {
         ...validReleaseManifest().images,
-        supplierService: "sha256:not-a-digest",
+        supplierService: {
+          ...validReleaseManifest().images.supplierService,
+          digest: "sha256:not-a-digest",
+        },
       },
     },
     { ...validReleaseManifest(), extra: true },

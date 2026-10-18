@@ -1863,3 +1863,29 @@ routes, reviewed authentication/global rate rules, and count-only AWS managed co
 protections. Tests verify the cross-region export custom resources and their generated IAM
 scope, cache/WAF invariants, tags, outputs, and absence of plaintext secrets or public
 application ingress.
+
+## 2026-10-18 — AWS immutable release and operations tooling
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #51; immutable
+  image preparation, exact plan/apply, ordered ECS data jobs, CloudFront smoke reuse,
+  environment lifecycle operations, tests, and runbook
+- **Repository files affected:** `infrastructure/{lib,scripts,test,config,README.md,RUNBOOK.md}`,
+  `frontend/e2e/supplier-ui.spec.ts`, `supplier-service/scripts/api-demo/`, and this
+  disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the release and operations controller without provisioning or mutating
+AWS. It added Linux/x86-64 SHA image build/reuse/push and mandatory scan recording,
+digest-qualified manifests, deterministic CDK plan hashes with exact human approval,
+strict bootstrap/migration/seed-before-Application sequencing, additive CloudFront gateway
+smoke reuse, and exact start/stop/status/destroy state machines. Fake-runner tests prove
+fail-closed ordering and safety; local API and browser behavior remains compatible, while
+persistent cloud smoke now verifies the 21 known seed records and archives its unique
+Supplier fixture.
