@@ -1,5 +1,5 @@
 -- AI assistance: Codex (GPT-6), 2026-10-18. Scope: transactional account-status outbox.
--- Author review: PENDING. Forward-only: never edit after applying.
+-- Author review: Reviewed and approved by @phuc. Forward-only: never edit after applying.
 CREATE TABLE outbox (
   id BIGSERIAL PRIMARY KEY,
   event_id UUID NOT NULL UNIQUE,

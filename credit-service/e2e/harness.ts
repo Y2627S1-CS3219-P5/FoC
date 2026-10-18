@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: End-to-end test harness: sends messages to the Credit Service topics as User Service
  *        and Order Service would, collects replies and DLQ messages, and reads the database.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import { randomUUID } from "node:crypto";
 import { KafkaJS } from "@confluentinc/kafka-javascript";

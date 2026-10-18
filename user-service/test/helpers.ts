@@ -1,4 +1,4 @@
-// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: Reviewed and approved by @phuc.
 import { randomUUID } from "node:crypto";
 import { Client, Pool } from "pg";
 import { migrate } from "../src/migrate";

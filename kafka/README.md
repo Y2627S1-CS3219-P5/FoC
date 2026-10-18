@@ -2,7 +2,7 @@
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Documented the shared Kafka broker and topic setup, and the topic smoke tests.
-Author review: PENDING
+Author review: Reviewed and approved by @phuc
 -->
 
 # Kafka

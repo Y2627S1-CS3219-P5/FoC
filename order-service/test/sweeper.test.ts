@@ -6,6 +6,10 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: The accept-vs-expiry race test now runs 100 rounds with staggered starts and asserts both outcomes occur.
  * Author review: Reviewed and approved by @mattis.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: The accept-vs-expiry race alternates which side starts 1-4 ms first and runs the
+ *        expire sweep alone, so both outcomes occur whatever the machine's speed.
+ * Author review of additional changes: Reviewed and approved by @phuc
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -250,9 +254,15 @@ test("accept racing expiry: never both", async () => {
     // Both are legal at their own clock: the accept at the real time, the sweep 90 minutes on
     // (past the listing deadline, before the pickup deadline)
     const future = new Date(Date.now() + 90 * 60_000);
-    // The accept starts 0-4 ms after the sweep, so each side wins some rounds
-    const accept = new Promise((r) => setTimeout(r, i % 5)).then(() => applyTransition(pool, e.id, "accept", member(COURIER)));
-    await Promise.all([accept, sweepDeadlines(pool, future)]);
+    // Each side starts 1-4 ms ahead in alternate rounds, so each wins some rounds on any machine.
+    // A fixed offset did not: depending on speed, one side won every round. The sweep is the
+    // expire action alone, so the full sweep's earlier phases don't shift the timing.
+    const lead = 1 + (i % 4);
+    const acceptFirst = i % 2 === 0;
+    const after = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const accept = after(acceptFirst ? 0 : lead).then(() => applyTransition(pool, e.id, "accept", member(COURIER)));
+    const expire = after(acceptFirst ? lead : 0).then(() => sweepAction(pool, "expire", future));
+    await Promise.all([accept, expire]);
   }
   let accepted = 0;
   let expired = 0;

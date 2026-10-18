@@ -1,4 +1,4 @@
-// AI assistance: Codex (GPT-6), 2026-10-18. Scope: transactional publishing tests. Author review: PENDING.
+// AI assistance: Codex (GPT-6), 2026-10-18. Scope: transactional publishing tests. Author review: Reviewed and approved by @phuc.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, beforeEach, describe, it } from "node:test";

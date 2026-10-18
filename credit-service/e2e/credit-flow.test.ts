@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: End-to-end tests: messages go through Kafka to the running Credit Service, and the
  *        replies, DLQ messages and database state are checked (implementation-proposal §12).
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

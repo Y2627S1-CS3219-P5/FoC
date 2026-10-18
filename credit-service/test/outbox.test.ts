@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Database tests for the outbox publisher (implementation-proposal.md §4.4, §12).
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, it } from "node:test";

@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: One-line JSON logs for the message consumer and publisher (implementation-proposal §7.3).
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 
 type Fields = Record<string, unknown>;

@@ -1,6 +1,6 @@
 -- AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-18. Scope: lets a hold be
 -- closed by ReservationTimedOut, per order-service/docs/order-credit-contract.md on
--- feat/order-service-core. Author review: PENDING
+-- feat/order-service-core. Author review: Reviewed and approved by @phuc
 --
 -- Never edit this file after it is merged; add a new numbered file instead.
 

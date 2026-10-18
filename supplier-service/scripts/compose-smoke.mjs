@@ -25,7 +25,7 @@
  * Author review: Pending project-author review.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18; supplied
  * disposable Credit database credentials now required by the Compose stack.
- * Author review: Pending project-author review.
+ * Author review: Reviewed and approved by @phuc project-author review.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";

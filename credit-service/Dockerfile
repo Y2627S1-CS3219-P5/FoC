@@ -1,8 +1,8 @@
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: image built the
 # same way as user-service/Dockerfile (two stages, fresh production install, allowlisted
-# runtime contents, non-root user, pinned base image). Author review: PENDING
+# runtime contents, non-root user, pinned base image). Author review: Reviewed and approved by @phuc
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: runs the service
-# entry point; added the e2e test stage. Author review: PENDING
+# entry point; added the e2e test stage. Author review: Reviewed and approved by @phuc
 
 # ---- Build stage: all packages + TypeScript compiler -> dist/ -------------------
 FROM node:22.23.3-alpine3.24 AS build

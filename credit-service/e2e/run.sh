@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: runs the Credit
-# Service end-to-end test in its own throwaway Compose stack. Author review: PENDING
+# Service end-to-end test in its own throwaway Compose stack. Author review: Reviewed and approved by @phuc
 #
 # Usage (from anywhere in the repo):  bash credit-service/e2e/run.sh
 #   --keep   leave the stack running afterwards (inspect with the printed commands)

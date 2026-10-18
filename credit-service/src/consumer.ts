@@ -4,7 +4,7 @@
  * Scope: The message consumer described in implementation-proposal §7.1 and §7.3: parse, call
  *        the handler, act on its outcome (direct rejection reply, DLQ), then commit the offset
  *        of that one message. Retries in place up to the author's limit (5) before the DLQ.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import { Pool } from "pg";
 import { handleAccountStatus } from "./accounts";

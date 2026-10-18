@@ -1,9 +1,11 @@
 #!/bin/sh
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: smoke tests for
 # the Kafka broker and the three topics, using Kafka's own command-line tools.
-# Author review: PENDING
+# Author review: Reviewed and approved by @phuc
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: also checks the two
-# dead-letter topics. Author review: PENDING
+# dead-letter topics. Author review: Reviewed and approved by @phuc
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18. Scope: also checks
+# credit.results.dlq. Author review: Reviewed and approved by @phuc
 #
 # Run with: docker compose run --rm kafka-test
 #
@@ -15,7 +17,7 @@ set -u
 
 BOOTSTRAP_SERVER="${BOOTSTRAP_SERVER:-kafka:9092}"
 BIN=/opt/kafka/bin
-TOPICS="user.account-status credit.commands credit.results user.account-status.dlq credit.commands.dlq"
+TOPICS="user.account-status credit.commands credit.results user.account-status.dlq credit.commands.dlq credit.results.dlq"
 
 RUN_ID="$(date +%s)-$$"
 TEMP_TOPIC="kafka-test.roundtrip-${RUN_ID}"
