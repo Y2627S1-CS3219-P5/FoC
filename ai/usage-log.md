@@ -2010,3 +2010,38 @@ passed: infrastructure typecheck/lint/format/build and 89 tests, six bootstrap u
 and the isolated Docker integration. Independent inspection found no remaining test
 containers. This local evidence does not claim successful live AWS
 deployment.
+
+## 2026-10-18 — Supplier browser sort-contract regression
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Diagnose and fix the issue #52 live-browser CI failure while
+  validating the approved AWS deployment implementation.
+- **Repository files affected:** `frontend/e2e/supplier-ui.spec.ts` and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> continue
+
+### Key response
+
+Codex reproduced the failing assertion with the captured live API order and confirmed
+that JavaScript `localeCompare` orders mixed-case names differently from the database's
+existing `ORDER BY name DESC, id ASC` contract. The browser journey now waits for the
+selected `name,desc` response, verifies its successful status and page/size/sort query,
+and waits until the rendered names match that live page in order. The existing backend
+SQL tests retain authority for descending sorting and the ID tie-break. No application
+sorting behavior or AWS resource was changed.
+
+A local live-browser run also reproduced a filter-reset race: observing the URL alone
+allowed the next filter action to reuse the preceding query. The test helper now scopes
+the reset button to the filter region and waits for the default API page and its rendered
+names before the next action. This also avoids the ambiguous second reset button shown
+for an empty catalogue.
+
+Verification passed: frontend lint, all 32 unit/component tests, nginx route checks,
+production build, and both real-browser member/administrator journeys (10.4 seconds).
+The local browser run used a temporary external Compose override to exclude only Credit
+services after the unchanged Credit init-script bind mount failed with exit 126 on this
+Mac; User, Supplier, Order, Kafka, and nginx still ran live. The disposable projects and
+volumes were cleaned after each attempt. Linux CI will validate the complete default stack.

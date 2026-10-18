@@ -15,8 +15,14 @@
  * Scope: Made persistent cloud smoke runs repeatable by avoiding exact mutable
  * seed names, generating a unique Supplier fixture, and archiving it after the suite.
  * Author review: PENDING.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18.
+ * Scope: Waited for the selected sort response and checked its request and rendered
+ * order without assuming JavaScript locale sorting matches PostgreSQL collation;
+ * synchronized filter resets with their live response and rendered catalogue.
+ * Author review: PENDING.
  */
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
+import type { SupplierPage } from '../src/suppliers/types'
 
 const memberUsername = requiredEnvironment('SUPPLIER_UI_MEMBER_USERNAME')
 const memberEmail = requiredEnvironment('SUPPLIER_UI_MEMBER_EMAIL')
@@ -65,11 +71,25 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
   await expect(page.getByRole('link', { name: 'Printer @ Com 2', exact: true })).toBeVisible()
 
   await clearFilters(page)
+  const sortedPageResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/v1/suppliers'
+      && url.searchParams.get('sort') === 'name,desc'
+  })
   await page.getByLabel('Sort by').selectOption('name,desc')
+  const sortedPageResponse = await sortedPageResponsePromise
+  expect(sortedPageResponse.status()).toBe(200)
+  const sortedRequest = new URL(sortedPageResponse.url())
+  expect(sortedRequest.searchParams.get('sort')).toBe('name,desc')
+  expect(sortedRequest.searchParams.get('page')).toBe('0')
+  expect(sortedRequest.searchParams.get('size')).toBe('12')
+  const sortedPage: SupplierPage = await sortedPageResponse.json()
+  expect(sortedPage.items.length).toBeGreaterThan(1)
   await expect(page).toHaveURL(/sort=name%2Cdesc/)
   await expect(page.getByText(/\d+ results?/)).toBeVisible()
-  const sortedNames = await page.locator('article h2').allInnerTexts()
-  expect(sortedNames).toEqual([...sortedNames].sort((left, right) => right.localeCompare(left)))
+  // Sorting belongs to the live API; browser locale collation can differ from PostgreSQL.
+  await expect(page.locator('article h2')).toHaveText(sortedPage.items.map((supplier) => supplier.name))
 
   await clearFilters(page)
   await expect(page.getByRole('navigation', { name: 'Supplier catalogue pages' })).toContainText(/Page 1 of [2-9]\d*/)
@@ -289,8 +309,22 @@ async function login(page: Page, username: string, password: string) {
 }
 
 async function clearFilters(page: Page) {
-  await page.getByRole('button', { name: 'Clear filters' }).click()
+  const defaultPagePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/v1/suppliers'
+      && url.searchParams.get('sort') === 'name,asc'
+      && !['q', 'buildingCode', 'category'].some((key) => url.searchParams.has(key))
+      && url.searchParams.get('page') === '0'
+  })
+  await page.getByRole('region', { name: 'Find a Supplier', exact: true })
+    .getByRole('button', { name: 'Clear filters', exact: true }).click()
+  const defaultPageResponse = await defaultPagePromise
+  expect(defaultPageResponse.status()).toBe(200)
+  const defaultPage: SupplierPage = await defaultPageResponse.json()
   await expect(page).toHaveURL(/\/suppliers$/)
+  await expect(page.getByRole('searchbox', { name: 'Search name or location' })).toHaveValue('')
+  await expect(page.locator('article h2')).toHaveText(defaultPage.items.map((supplier) => supplier.name))
   await expect(page.getByText(/\d+ results?/)).toBeVisible()
 }
 
