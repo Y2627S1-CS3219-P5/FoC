@@ -1907,3 +1907,22 @@ Claude summarised the two stubs (`StubSessionVerifier`, `StubSupplierDirectory`)
 ### Key response
 
 Claude marked the spec, the plan and the decisions entry as reviewed by @mattis, then carried out the plan's four tasks test-first: `http` mode and the four settings in `config.ts`; `HttpSessionVerifier` and the 503 mapping; `HttpSupplierDirectory` and the archived, unavailable and unauthenticated outcomes in `POST /errands`; the compose, `.env.example`, README and demo changes. Deviations from the plan, each noted in the execution ledger: the HTTP tests call `/errands/...` (the app's own routes) rather than `/api/v1/errands/...`; `upstream.ts` gained a `readJson` helper so a body that times out is a 503 and a non-JSON body a 500; the demo password is `DemoPassword1` because User Service requires at least 12 characters; the demo does not call `/whoami` because no later step uses the ids. Tests: 145/145 on PostgreSQL 16.8 (Docker was unresponsive, so the stack was not started); type check clean; the entry point was also run in `http` mode against fake User and Supplier servers to confirm the 202, 422 (both codes), 401 and 503 responses and the refusal to start without a base URL.
+
+## 2026-10-18 — Order Service: rebase of the User and Supplier integration onto the Kafka integration
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Mode:** refactor
+- **Allowed-use scope:** merge-conflict resolution and refactoring that carry out the author's decisions (spec round 6); no new design.
+- **Repository files affected:** `order-service/src/config.ts`, `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/http/auth.ts`, `order-service/src/index.ts`, `order-service/test/adapters.test.ts`, `order-service/test/userServiceVerifier.test.ts` (deleted), `order-service/README.md`, `compose.yaml`, `.env.example`, `ai/usage-log.md`, `docs/superpowers/specs/2026-10-18-order-user-supplier-integration.md`
+- **Author review:** PENDING
+
+### Prompts
+
+> merged, go ahead and rebase
+
+The author's four choices are quoted in the spec, round 6.
+
+### Key response
+
+Claude rebased `feat/order-user-supplier-integration` onto `origin/main` at `fed362c` and resolved the conflicts as the author chose: `AUTH_MODE=stub|http` with `HttpSessionVerifier`; `CREDIT_MODE=stub|kafka` and all Kafka settings kept from main; main's `AuthMode`, `AUTH_MODE=user-service`, `loadUserServiceConfig`, `UserServiceSessionVerifier`, `SessionVerificationUnavailableError`, the `auth.ts` 503 catch, the `CREDIT_MODE=kafka` startup check and `test/userServiceVerifier.test.ts` removed. Compose keeps main's `${ORDER_AUTH_MODE:-...}` override with the default changed to `http`, and `.env.example` sets `ORDER_AUTH_MODE=http`. The usage-log conflict kept both sides. The test for an invalid `CREDIT_MODE` now expects main's message ("CREDIT_MODE must be stub or kafka, not http"). Tests: 173/173 on PostgreSQL 16.8 (the Kafka integration suite needs `TEST_KAFKA_BROKERS` and did not run); type check clean.
+

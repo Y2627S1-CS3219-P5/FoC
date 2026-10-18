@@ -109,3 +109,13 @@ Questions:
 Answer:
 
 > Q1: order-serivce should wait for user-service and supplier-service to start first 2. Prefix them with ORDER_ 3. Actually we can just keep the existing message Q4: the same UNAUTHENTICATED, "A valid session is required" as the Order Services own 401, so frontend only need to handle one status code
+
+## Decisions — round 6 (after feat/order-credit-intergration was merged into main)
+
+Main gained its own User Service integration (`AUTH_MODE=user-service`, `UserServiceSessionVerifier`, a shared `USER_SERVICE_VERIFY_TIMEOUT_MS`, and a startup check refusing `CREDIT_MODE=kafka` without real sessions). The author chose, when rebasing this branch onto it (selected options, verbatim):
+
+1. **Which AUTH_MODE value selects the real User Service?** — "http (your spec)"
+2. **Which User Service verifier stays?** — "Yours (HttpSessionVerifier)"
+3. **Which .env setting controls Order's User Service timeout?** — "ORDER_ prefixed (your spec)"
+4. **Main refuses to start with CREDIT_MODE=kafka unless sessions are real. How should that check treat your modes?** — "Drop the check"
+

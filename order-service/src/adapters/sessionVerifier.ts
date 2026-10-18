@@ -24,17 +24,10 @@ export interface Principal {
 
 export interface SessionVerifier {
   /**
-   * The caller for an Authorization header value, or null if it isn't valid. Throws
-   * SessionVerificationUnavailableError when validity can't be decided (answered with 503).
+   * The caller for an Authorization header value, or null if it isn't valid. HttpSessionVerifier
+   * throws UpstreamUnavailableError (503) or UpstreamContractError (500) when it can't decide.
    */
   verify(authorization: string | undefined): Promise<Principal | null>;
-}
-
-/** User Service could not be asked, or gave an unusable answer. Never treated as logged out. */
-export class SessionVerificationUnavailableError extends Error {
-  constructor() {
-    super("session verification unavailable");
-  }
 }
 
 const STUB_TOKEN = /^Bearer stub\.([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\.(MEMBER|ADMINISTRATOR)$/;
