@@ -2,7 +2,7 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: The background outbox publisher loop and periodic cleanup (implementation-proposal §4.4).
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import { Pool } from "pg";
 import { OUTBOX } from "./config";

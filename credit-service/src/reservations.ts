@@ -7,7 +7,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: ReservationTimedOut handled with the terminal events, per
  *        order-service/docs/order-credit-contract.md on feat/order-service-core.
- * Author review of additional changes: PENDING
+ * Author review of additional changes: Reviewed and approved by @phuc
  */
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";

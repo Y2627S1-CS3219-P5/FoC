@@ -4,7 +4,7 @@
  * Scope: Kafka client and producer with the producer settings from implementation-proposal §7.2
  *        (acks=all, idempotence), using the author's chosen library
  *        (@confluentinc/kafka-javascript, KafkaJS-style API).
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import { KafkaJS } from "@confluentinc/kafka-javascript";
 import { loadKafkaConfig } from "./config";

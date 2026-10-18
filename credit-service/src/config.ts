@@ -7,7 +7,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Kafka settings (brokers, topics including the DLQs, consumer group, retry count,
  *        outbox publisher timings), per the author's decisions.
- * Author review of additional changes: PENDING
+ * Author review of additional changes: Reviewed and approved by @phuc
  */
 
 // The only file that reads process.env. Each part loads only what it needs, so the

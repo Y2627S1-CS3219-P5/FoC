@@ -3,7 +3,7 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Service entry point: wait for the database, connect the Kafka producer, start the
  *        consumer and the outbox publisher, and shut down cleanly on SIGTERM/SIGINT.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @phuc
  */
 import { CONSUMER_GROUP, loadCreditConfig } from "./config";
 import { createPool } from "./db";

@@ -1,12 +1,12 @@
-<!-- Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing implementation and verification notes. Author review: PENDING. -->
+<!-- Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing implementation and verification notes. Author review: Reviewed and approved by @phuc. -->
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Documented the Credit Service database and logic as implemented from docs/decision-record.md.
-Author review: PENDING
+Author review: Reviewed and approved by @phuc
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Documented the Kafka consumer, DLQs, outbox publisher loop and the end-to-end test.
-Author review of additional changes: PENDING
+Author review of additional changes: Reviewed and approved by @phuc
 -->
 
 # Credit Service
