@@ -1936,3 +1936,28 @@ configuration and committed pricing-snapshot SHA-256, recalculated at the deploy
 compared with the approved budget, and attributed to a named approver and timestamp. The
 same evidence is included in the release-plan hash and status output. No AWS resource was
 created, updated, or deleted.
+
+## 2026-10-18 — AWS live preflight response fixes
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** issue #52 preflight fixes for the observed NUS Service Quotas
+  error and IAM Identity Center policy-simulation responses
+- **Repository files affected:** `infrastructure/lib/preflight.ts`,
+  `infrastructure/test/preflight.test.ts`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> continue
+
+### Key response
+
+Codex corrected the quota fallback to require the recorded NUS service-control-policy
+ARN, the exact denied Service Quotas action, and `AccessDeniedException`. Generic or
+different policy denials remain blocked. It replaced the guessed pathless IAM role ARN
+with read-only `iam get-role` resolution and checks that the role name and account match
+the caller. Policy simulation now requires exactly one allowed evaluation for every
+requested action and reports denied, missing, duplicate, or unexpected action names
+instead of relying on an incorrect fixed result count. Regression tests reproduce the
+AWS response shapes, including IAM Identity Center role paths and Organizations policy
+decisions. No AWS resources were created, updated, or deleted by this work.

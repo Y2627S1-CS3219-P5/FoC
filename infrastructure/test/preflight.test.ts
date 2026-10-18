@@ -4,12 +4,66 @@ import type { CommandResult, CommandRunner } from "../lib/preflight.js";
 import { runPreflight } from "../lib/preflight.js";
 import { validConfig } from "./fixtures.js";
 
+const callerRoleName = "AWSReservedSSO_nusisb_IsbUsersPS_f6ff0b4cf288ddb3";
+const callerRoleArn = `arn:aws:iam::656253649128:role/aws-reserved/sso.amazonaws.com/ap-southeast-1/${callerRoleName}`;
+const recordedScpArn =
+  "arn:aws:organizations::864899849123:policy/o-celk1f6y0n/service_control_policy/p-evk2g3xk";
+const requestedActions = [
+  "cloudformation:CreateStack",
+  "ec2:CreateVpc",
+  "ecs:CreateCluster",
+  "ecr:CreateRepository",
+  "rds:CreateDBInstance",
+  "elasticloadbalancing:CreateLoadBalancer",
+  "cloudfront:CreateDistribution",
+  "wafv2:CreateWebACL",
+  "logs:CreateLogGroup",
+  "secretsmanager:CreateSecret",
+  "sns:CreateTopic",
+  "budgets:CreateBudget",
+  "iam:CreateRole",
+  "iam:PassRole",
+  "ssm:PutParameter",
+] as const;
+
+function allowedEvaluations() {
+  return requestedActions.map((action) => ({
+    EvalActionName: action,
+    EvalResourceName: "*",
+    EvalDecision: "allowed",
+    MatchedStatements: [],
+    MissingContextValues: [],
+    OrganizationsDecisionDetail: { AllowedByOrganizations: true },
+  }));
+}
+
+function recordedQuotaDenial(action: "ListServices" | "GetServiceQuota") {
+  return (
+    `An error occurred (AccessDeniedException) when calling the ${action} operation: ` +
+    `User: arn:aws:sts::656253649128:assumed-role/${callerRoleName}/e1156664@u.nus.edu ` +
+    `is not authorized to perform: servicequotas:${action} on resource: * ` +
+    `with an explicit deny in a service control policy: ${recordedScpArn}`
+  );
+}
+
 interface FakeOptions {
   readonly accountId?: string;
   readonly bootstrapExists?: boolean;
   readonly quotasReadable?: boolean;
   readonly quotaFailure?: string;
+  readonly quotaFailures?: Partial<
+    Record<"ListServices" | "GetServiceQuota", string>
+  >;
   readonly denyService?: string;
+  readonly roleArn?: string;
+  readonly roleName?: string;
+  readonly evaluations?: readonly {
+    readonly EvalActionName?: string;
+    readonly EvalDecision?: string;
+    readonly OrganizationsDecisionDetail?: {
+      readonly AllowedByOrganizations?: boolean;
+    };
+  }[];
 }
 
 function success(stdout = "{}"): CommandResult {
@@ -41,7 +95,7 @@ function fakeRunner(
       return success(
         JSON.stringify({
           Account: account,
-          Arn: `arn:aws:sts::${account}:assumed-role/NusRole/tester@u.nus.edu`,
+          Arn: `arn:aws:sts::${account}:assumed-role/${callerRoleName}/e1156664@u.nus.edu`,
         }),
       );
     }
@@ -81,15 +135,19 @@ function fakeRunner(
       operation === "service-quotas:list-services" ||
       operation === "service-quotas:get-service-quota"
     ) {
+      const action =
+        operation === "service-quotas:list-services"
+          ? "ListServices"
+          : "GetServiceQuota";
+      const actionFailure = options.quotaFailures?.[action];
+      if (actionFailure !== undefined) {
+        return failure(actionFailure);
+      }
       if (options.quotaFailure !== undefined) {
         return failure(options.quotaFailure);
       }
       if (options.quotasReadable === false) {
-        return failure(
-          operation === "service-quotas:list-services"
-            ? "An error occurred (AccessDeniedException): servicequotas:ListServices is not authorized, with an explicit deny in Organizations SCP"
-            : "An error occurred (AccessDeniedException): servicequotas:GetServiceQuota is not authorized for fargate/L-3032A538, with an explicit deny in the same Organizations SCP.",
-        );
+        return failure(recordedQuotaDenial(action));
       }
       return success(JSON.stringify({ Quota: { Value: 6 } }));
     }
@@ -105,12 +163,23 @@ function fakeRunner(
         ? failure("ParameterNotFound")
         : success(JSON.stringify({ Parameter: { Value: "27" } }));
     }
+    if (operation === "iam:get-role") {
+      return success(
+        JSON.stringify({
+          Role: {
+            Path: "/aws-reserved/sso.amazonaws.com/ap-southeast-1/",
+            RoleName: options.roleName ?? callerRoleName,
+            RoleId: "AROATESTCALLERROLE",
+            Arn: options.roleArn ?? callerRoleArn,
+          },
+        }),
+      );
+    }
     if (operation === "iam:simulate-principal-policy") {
       return success(
         JSON.stringify({
-          EvaluationResults: Array.from({ length: 14 }, () => ({
-            EvalDecision: "allowed",
-          })),
+          EvaluationResults: options.evaluations ?? allowedEvaluations(),
+          IsTruncated: false,
         }),
       );
     }
@@ -128,6 +197,23 @@ test("passes when all required read-only capabilities and bootstrap stacks are p
   assert.equal(report.status, "PASS");
   assert.equal(report.validUntil, "2026-10-19T08:00:00.000Z");
   assert.ok(report.checks.length >= 20);
+  const getRole = calls.find((call) => call.includes("get-role"));
+  assert.equal(getRole?.[getRole.indexOf("--role-name") + 1], callerRoleName);
+  const simulation = calls.find((call) =>
+    call.includes("simulate-principal-policy"),
+  );
+  assert.equal(
+    simulation?.[simulation.indexOf("--policy-source-arn") + 1],
+    callerRoleArn,
+    "IAM Identity Center role paths must be resolved rather than guessed from STS",
+  );
+  assert.deepEqual(
+    simulation?.slice(
+      simulation.indexOf("--action-names") + 1,
+      simulation.indexOf("--profile"),
+    ),
+    requestedActions,
+  );
   assert.equal(
     calls.some((call) => call.includes("create-stack")),
     false,
@@ -177,6 +263,155 @@ test("blocks an unrecognized Service Quotas access denial", () => {
     report.checks.find(({ id }) => id === "service-quotas")?.status,
     "BLOCKED",
   );
+});
+
+test("rejects generic Organizations SCP text without the recorded policy ARN", () => {
+  const report = runPreflight(
+    validConfig(),
+    fakeRunner({
+      quotasReadable: false,
+      quotaFailure:
+        "An error occurred (AccessDeniedException): servicequotas:ListServices servicequotas:GetServiceQuota denied with an explicit deny in Organizations SCP",
+    }),
+  );
+  assert.equal(
+    report.checks.find(({ id }) => id === "service-quotas")?.status,
+    "BLOCKED",
+  );
+});
+
+test("rejects a different SCP even when its denial shape matches AWS", () => {
+  const report = runPreflight(
+    validConfig(),
+    fakeRunner({
+      quotasReadable: false,
+      quotaFailures: {
+        ListServices: recordedQuotaDenial("ListServices").replace(
+          "p-evk2g3xk",
+          "p-otherpolicy",
+        ),
+        GetServiceQuota: recordedQuotaDenial("GetServiceQuota").replace(
+          "p-evk2g3xk",
+          "p-otherpolicy",
+        ),
+      },
+    }),
+  );
+  assert.equal(
+    report.checks.find(({ id }) => id === "service-quotas")?.status,
+    "BLOCKED",
+  );
+});
+
+test("rejects mismatched quota actions and a mixed readable/denied API result", () => {
+  for (const options of [
+    {
+      quotasReadable: false,
+      quotaFailures: { GetServiceQuota: recordedQuotaDenial("ListServices") },
+    },
+    { quotaFailures: { ListServices: recordedQuotaDenial("ListServices") } },
+  ]) {
+    const report = runPreflight(validConfig(), fakeRunner(options));
+    assert.equal(
+      report.checks.find(({ id }) => id === "service-quotas")?.status,
+      "BLOCKED",
+    );
+  }
+});
+
+test("reports the actual denied provisioning action from AWS simulation", () => {
+  const evaluations = allowedEvaluations().map((evaluation) =>
+    evaluation.EvalActionName === "iam:PassRole"
+      ? { ...evaluation, EvalDecision: "implicitDeny" }
+      : evaluation,
+  );
+  const report = runPreflight(validConfig(), fakeRunner({ evaluations }));
+  const check = report.checks.find(
+    ({ id }) => id === "provisioning-permission-simulation",
+  );
+  assert.equal(check?.status, "BLOCKED");
+  assert.match(
+    check?.detail ?? "",
+    /denied action: iam:PassRole \(implicitDeny\)/,
+  );
+});
+
+test("rejects missing, duplicate, unexpected, and unnamed action evaluations", () => {
+  const all = allowedEvaluations();
+  for (const [evaluations, expected] of [
+    [all.slice(0, 14), /missing action results: ssm:PutParameter/],
+    [
+      [
+        ...all.slice(0, 14),
+        {
+          EvalActionName: "cloudformation:CreateStack",
+          EvalDecision: "allowed",
+        },
+      ],
+      /duplicate action result: cloudformation:CreateStack/,
+    ],
+    [
+      [
+        ...all.slice(0, 14),
+        { EvalActionName: "iam:DeleteRole", EvalDecision: "allowed" },
+      ],
+      /unexpected action result: iam:DeleteRole/,
+    ],
+    [
+      [...all.slice(0, 14), { EvalDecision: "allowed" }],
+      /unexpected action result: missing action name/,
+    ],
+  ] as const) {
+    const report = runPreflight(validConfig(), fakeRunner({ evaluations }));
+    const check = report.checks.find(
+      ({ id }) => id === "provisioning-permission-simulation",
+    );
+    assert.equal(check?.status, "BLOCKED");
+    assert.match(check?.detail ?? "", expected);
+  }
+});
+
+test("blocks an explicit Organizations denial in a simulation result", () => {
+  const evaluations = allowedEvaluations().map((evaluation) =>
+    evaluation.EvalActionName === "ec2:CreateVpc"
+      ? {
+          ...evaluation,
+          OrganizationsDecisionDetail: { AllowedByOrganizations: false },
+        }
+      : evaluation,
+  );
+  const report = runPreflight(validConfig(), fakeRunner({ evaluations }));
+  const check = report.checks.find(
+    ({ id }) => id === "provisioning-permission-simulation",
+  );
+  assert.equal(check?.status, "BLOCKED");
+  assert.match(
+    check?.detail ?? "",
+    /denied action: ec2:CreateVpc \(Organizations policy\)/,
+  );
+});
+
+test("does not simulate an unresolved or mismatched caller role", () => {
+  for (const options of [
+    { denyService: "iam:get-role" },
+    { roleArn: callerRoleArn.replace("656253649128", "111122223333") },
+    { roleArn: callerRoleArn.replace(callerRoleName, "DifferentRole") },
+    { roleName: "DifferentRole" },
+    { accountId: "111122223333" },
+  ]) {
+    const calls: string[][] = [];
+    const report = runPreflight(validConfig(), fakeRunner(options, calls));
+    assert.equal(
+      report.checks.find(
+        ({ id }) => id === "provisioning-permission-simulation",
+      )?.status,
+      "BLOCKED",
+    );
+    assert.equal(
+      calls.some((call) => call.includes("simulate-principal-policy")),
+      false,
+    );
+  }
 });
 
 test("does not accept the SCP fallback when a required capability is denied", () => {

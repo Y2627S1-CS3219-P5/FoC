@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { z } from "zod";
 import type { DeploymentConfig } from "./config.js";
 import { configFingerprint } from "./config.js";
 
@@ -60,6 +61,27 @@ export const REQUIRED_QUOTA_CHECK_IDS = [
   "fargate-vcpu-quota",
 ] as const;
 
+const NUS_SERVICE_QUOTAS_SCP_ARN =
+  "arn:aws:organizations::864899849123:policy/o-celk1f6y0n/service_control_policy/p-evk2g3xk";
+
+const REQUIRED_PROVISIONING_ACTIONS = [
+  "cloudformation:CreateStack",
+  "ec2:CreateVpc",
+  "ecs:CreateCluster",
+  "ecr:CreateRepository",
+  "rds:CreateDBInstance",
+  "elasticloadbalancing:CreateLoadBalancer",
+  "cloudfront:CreateDistribution",
+  "wafv2:CreateWebACL",
+  "logs:CreateLogGroup",
+  "secretsmanager:CreateSecret",
+  "sns:CreateTopic",
+  "budgets:CreateBudget",
+  "iam:CreateRole",
+  "iam:PassRole",
+  "ssm:PutParameter",
+] as const;
+
 export const systemCommandRunner: CommandRunner = (executable, args) => {
   const result = spawnSync(executable, args, {
     encoding: "utf8",
@@ -94,10 +116,12 @@ function isExpectedNusServiceQuotasScpDenial(
     return false;
   }
   const detail = `${result.stderr} ${result.stdout}`;
+  const deniedPolicy =
+    /explicit deny in a service control policy:\s*(\S+)/i.exec(detail)?.[1];
   return (
-    /AccessDeniedException/i.test(detail) &&
-    detail.includes(`servicequotas:${action}`) &&
-    /explicit deny in (?:the )?(?:same )?Organizations SCP/i.test(detail)
+    /\bAccessDeniedException\b/i.test(detail) &&
+    new RegExp(`\\bservicequotas:${action}\\b`).test(detail) &&
+    deniedPolicy === NUS_SERVICE_QUOTAS_SCP_ARN
   );
 }
 
@@ -337,22 +361,117 @@ function requiredCapabilityCommands(
   ];
 }
 
-function assumedRolePrincipal(callerArn: string): string | undefined {
-  const match = /^arn:aws:sts::(\d{12}):assumed-role\/(.+)\/[^/]+$/.exec(
-    callerArn,
-  );
-  if (match === null) {
-    return callerArn.startsWith("arn:aws:iam::") ? callerArn : undefined;
-  }
-  return `arn:aws:iam::${match[1]}:role/${match[2]}`;
-}
-
 function parseJson<T>(result: CommandResult): T | undefined {
   try {
     return JSON.parse(result.stdout) as T;
   } catch {
     return undefined;
   }
+}
+
+function resolveSimulationPrincipal(
+  config: DeploymentConfig,
+  callerArn: string | undefined,
+  runner: CommandRunner,
+): { readonly arn: string } | { readonly error: string } {
+  const assumedRole =
+    /^arn:aws:sts::(\d{12}):assumed-role\/([\w+=,.@-]{1,64})\/[^/]+$/.exec(
+      callerArn ?? "",
+    );
+  if (assumedRole === null || assumedRole[1] !== config.accountId) {
+    return {
+      error:
+        "caller must be an assumed IAM role in the approved account for read-only policy simulation",
+    };
+  }
+
+  const roleName = assumedRole[2];
+  if (roleName === undefined) {
+    return { error: "caller ARN did not contain an IAM role name" };
+  }
+  const roleResult = runner(
+    "aws",
+    awsArgs(config, config.primaryRegion, [
+      "iam",
+      "get-role",
+      "--role-name",
+      roleName,
+    ]),
+  );
+  if (roleResult.status !== 0) {
+    return {
+      error: `could not resolve caller IAM role ${roleName}: ${summarizeFailure(roleResult)}`,
+    };
+  }
+  const role = parseJson<{ Role?: { Arn?: string; RoleName?: string } }>(
+    roleResult,
+  )?.Role;
+  const roleArn = /^arn:aws:iam::(\d{12}):role\/(.+)$/.exec(role?.Arn ?? "");
+  if (
+    roleArn?.[1] !== config.accountId ||
+    roleArn[2]?.split("/").at(-1) !== roleName ||
+    role?.RoleName !== roleName ||
+    role.Arn === undefined
+  ) {
+    return {
+      error: `IAM get-role did not return the matching caller role ${roleName} in approved account ${config.accountId}`,
+    };
+  }
+  return { arn: role.Arn };
+}
+
+const policySimulationSchema = z.object({
+  EvaluationResults: z.array(
+    z.object({
+      EvalActionName: z.string().optional(),
+      EvalDecision: z.string().optional(),
+      OrganizationsDecisionDetail: z
+        .object({
+          AllowedByOrganizations: z.boolean().optional(),
+        })
+        .optional(),
+    }),
+  ),
+});
+
+function simulationProblems(result: CommandResult): readonly string[] {
+  const response = policySimulationSchema.safeParse(parseJson<unknown>(result));
+  if (!response.success) {
+    return ["IAM simulation did not return action evaluations"];
+  }
+
+  const requiredActions = new Set<string>(REQUIRED_PROVISIONING_ACTIONS);
+  const seenActions = new Set<string>();
+  const problems: string[] = [];
+  for (const evaluation of response.data.EvaluationResults) {
+    const action = evaluation?.EvalActionName;
+    if (typeof action !== "string" || !requiredActions.has(action)) {
+      problems.push(
+        `unexpected action result: ${action ?? "missing action name"}`,
+      );
+      continue;
+    }
+    if (seenActions.has(action)) {
+      problems.push(`duplicate action result: ${action}`);
+    }
+    seenActions.add(action);
+    if (evaluation.EvalDecision !== "allowed") {
+      problems.push(
+        `denied action: ${action} (${evaluation.EvalDecision ?? "missing decision"})`,
+      );
+    } else if (
+      evaluation.OrganizationsDecisionDetail?.AllowedByOrganizations === false
+    ) {
+      problems.push(`denied action: ${action} (Organizations policy)`);
+    }
+  }
+  const missingActions = REQUIRED_PROVISIONING_ACTIONS.filter(
+    (action) => !seenActions.has(action),
+  );
+  if (missingActions.length > 0) {
+    problems.push(`missing action results: ${missingActions.join(", ")}`);
+  }
+  return problems;
 }
 
 export function runPreflight(
@@ -549,14 +668,12 @@ export function runPreflight(
   }
 
   const callerArn = identity?.Arn;
-  const principal =
-    callerArn === undefined ? undefined : assumedRolePrincipal(callerArn);
-  if (principal === undefined) {
+  const principal = resolveSimulationPrincipal(config, callerArn, runner);
+  if ("error" in principal) {
     checks.push({
       id: "provisioning-permission-simulation",
       status: "BLOCKED",
-      detail:
-        "could not derive an IAM role ARN for read-only policy simulation",
+      detail: principal.error,
     });
   } else {
     const simulation = runner(
@@ -565,41 +682,21 @@ export function runPreflight(
         "iam",
         "simulate-principal-policy",
         "--policy-source-arn",
-        principal,
+        principal.arn,
         "--action-names",
-        "cloudformation:CreateStack",
-        "ec2:CreateVpc",
-        "ecs:CreateCluster",
-        "ecr:CreateRepository",
-        "rds:CreateDBInstance",
-        "elasticloadbalancing:CreateLoadBalancer",
-        "cloudfront:CreateDistribution",
-        "wafv2:CreateWebACL",
-        "logs:CreateLogGroup",
-        "secretsmanager:CreateSecret",
-        "sns:CreateTopic",
-        "budgets:CreateBudget",
-        "iam:CreateRole",
-        "iam:PassRole",
-        "ssm:PutParameter",
+        ...REQUIRED_PROVISIONING_ACTIONS,
       ]),
     );
-    const evaluation = parseJson<{
-      EvaluationResults?: readonly { EvalDecision?: string }[];
-    }>(simulation);
-    const allAllowed =
-      simulation.status === 0 &&
-      evaluation?.EvaluationResults?.length === 14 &&
-      evaluation?.EvaluationResults?.every(
-        ({ EvalDecision }) => EvalDecision === "allowed",
-      );
+    const problems =
+      simulation.status === 0 ? simulationProblems(simulation) : [];
+    const allAllowed = simulation.status === 0 && problems.length === 0;
     checks.push({
       id: "provisioning-permission-simulation",
       status: allAllowed ? "PASS" : "BLOCKED",
       detail: allAllowed
         ? "read-only IAM simulation allows the representative provisioning actions; live deployment may still be restricted by SCPs or resource conditions"
         : simulation.status === 0
-          ? "one or more representative provisioning actions are not allowed"
+          ? problems.join("; ")
           : summarizeFailure(simulation),
     });
   }
