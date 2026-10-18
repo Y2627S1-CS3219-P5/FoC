@@ -95,6 +95,32 @@ under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend
 and the approved metadata follow-up is quoted once under
 [Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
 
+## 2026-10-18 — AWS demo deployment specification
+
+- **Tool:** OpenAI Codex (GPT-5)
+- **Allowed-use scope:** Researching current AWS capabilities, interviewing the project
+  author, and drafting documentation for GitHub issue #44. No AWS resources were created.
+- **Repository files affected:** `infrastructure/SPEC.md`, three architecture decisions
+  under `docs/adr/`, and this usage log.
+- **Author review:** The architecture, cost, security, lifecycle, and documentation
+  decisions were reviewed and approved by @ron. Final document wording remains pending
+  pull-request review.
+
+### Prompt
+
+> `$grill-with-docs lets draft a full spec`
+
+### Key response
+
+Codex used a decision-tree interview to record a cost-conscious deployment for the current
+frontend, User Service, and Supplier Service only. The approved design uses CloudFront and
+WAF, an internal ALB, nginx, ECS Fargate with Service Connect, and one private RDS
+PostgreSQL instance with isolated service databases. It specifies explicit migrations and
+repeatable Supplier seeding, Secrets Manager, least-privilege IAM, CloudWatch operations,
+immutable ECR images, rolling rollback, start/stop/destroy controls, acceptance tests, and
+deployment blockers. Order and Credit resources, Kubernetes, EC2 host management, API
+Gateway, real personal data, and AWS resource creation were excluded.
+
 ## 2026-09-27 — Supplier administrator management UI
 
 - **Tool:** OpenAI Codex (GPT-6)
