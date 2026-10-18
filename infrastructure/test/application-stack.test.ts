@@ -132,7 +132,7 @@ test("injects only runtime settings and secret references", () => {
   assert.doesNotMatch(rendered, /KAFKA_BROKERS/);
 });
 
-test("uses Service Connect, public task subnets, safe rolling deploys, and stop-safe scaling", () => {
+test("uses Service Connect, public task subnets, safe rolling deploys, and active scaling bounds", () => {
   const { template } = synthesizedApplication();
   for (const serviceName of [
     "foc-demo-frontend",
@@ -183,7 +183,7 @@ test("uses Service Connect, public task subnets, safe rolling deploys, and stop-
   }
   template.resourcePropertiesCountIs(
     "AWS::ApplicationAutoScaling::ScalableTarget",
-    { MaxCapacity: 2, MinCapacity: 0 },
+    { MaxCapacity: 2, MinCapacity: 1 },
     3,
   );
   template.resourceCountIs("AWS::ApplicationAutoScaling::ScalingPolicy", 6);

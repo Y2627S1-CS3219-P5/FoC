@@ -107,16 +107,17 @@ execution roles receive only the ECR, log, and specific secret access generated 
 
 Each service uses a rolling deployment with 100/200 minimum/maximum healthy percentages,
 deployment-circuit-breaker rollback, 30-second stop timeout, and CPU and memory target
-tracking. Autoscaling has the approved `minCapacity: 0` and `maxCapacity: 2`; all task
-sizes and target percentages remain required deployment inputs rather than inferred
-defaults. Dedicated CloudWatch log groups retain User logs for 30 days and frontend,
-Supplier, and deployment-failure events for 14 days.
+tracking. Active-mode autoscaling has `minCapacity: 1` and `maxCapacity: 2`, so idle
+services remain available; the separate stop operation suspends scaling and explicitly
+sets desired counts to zero. All task sizes and target percentages remain required
+deployment inputs rather than inferred defaults. Dedicated CloudWatch log groups retain
+User logs for 30 days and frontend, Supplier, and deployment-failure events for 14 days.
 
 The SNS alert topic emails the reviewed address. Alarms cover unhealthy frontend targets,
 ALB target 5xx responses, per-service CPU, memory, and desired-minus-running task
 shortfalls, RDS storage/CPU/connections, and ECS deployment failures captured through
-EventBridge. Missing data is non-breaching so an intentional scale-to-zero service does
-not page solely because metrics stop arriving.
+EventBridge. Missing data is non-breaching so an explicitly stopped desired-zero service
+does not page solely because metrics stop arriving.
 
 The frontend Dockerfile exposes an explicit `cloud` target using `nginx.cloud.conf`. That
 gateway has `/healthz` and only the approved User and Supplier public routes; the default

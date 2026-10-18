@@ -448,7 +448,9 @@ export class ApplicationStack extends Stack {
       vpcSubnets: { subnetGroupName: "public-tasks" },
     });
     const scaling = service.autoScaleTaskCount({
-      minCapacity: 0,
+      // Active mode always retains one task. The separate stop operation
+      // suspends scaling and explicitly sets desired count to zero.
+      minCapacity: 1,
       maxCapacity: 2,
     });
     scaling.scaleOnCpuUtilization(`${runtime.id}CpuScaling`, {
