@@ -5,15 +5,16 @@
 # that all five credit event types were sent and the stub logged no contract violation. Author review: Reviewed and approved by @mattis.
 # Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18. Scope: real User Service logins and a
 # real supplier instead of stub tokens and a fixed supplier id. Author review: Reviewed and approved by @mattis.
+# Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-10-18. Scope: run against the real Credit Service:
+# dropped the reservation-timeout step and the stub-only checks. Author review: Reviewed and approved by @mattis.
 #
 # Usage:  docker compose up -d --build && bash order-service/scripts/demo.sh
 # Reads ALLOWED_EMAIL_DOMAIN and BOOTSTRAP_ADMIN_USERNAME / BOOTSTRAP_ADMIN_PASSWORD from the shell or $ROOT/.env.
-# Needs curl and jq. BASE is the gateway; RESERVATION_TIMEOUT_SECONDS must match the service's value.
+# Needs curl and jq. BASE is the gateway. Expects the real Credit Service (CREDIT_MODE=kafka, the compose default).
 # Exits non-zero at the first step whose HTTP status or state differs from what is expected.
 set -euo pipefail
 
 BASE=${BASE:-http://localhost:8080/api/v1}
-TIMEOUT_SECONDS=${RESERVATION_TIMEOUT_SECONDS:-30}
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 
 for tool in curl jq; do
@@ -165,7 +166,7 @@ call GET "/errands/$E1" "$TOKEN_A"
 expect 200
 jq -r '.history[] | "\(.at)  \(.fromState // "-") -> \(.toState)  \(.action)  by \(.actorType)"' <<<"$BODY"
 
-heading "8. Amount 150 is over the stub limit: RESERVATION_REJECTED"
+heading "8. Amount 150 is more than A has left: RESERVATION_REJECTED (INSUFFICIENT_CREDIT)"
 create_errand 150
 E2=$ID
 wait_state "$TOKEN_A" "$E2" RESERVATION_REJECTED 20
@@ -194,16 +195,6 @@ call POST "/admin/errands/$E4/resolve" "$TOKEN_D" '{"outcome":"REQUESTER","reaso
 expect 200
 show '{id, state}'
 
-heading "10b. Amount $((${STUB_CREDIT_SILENT_AMOUNT:-999})) gets no Credit reply: RESERVATION_TIMED_OUT after $((TIMEOUT_SECONDS + 10)) s"
-create_errand "${STUB_CREDIT_SILENT_AMOUNT:-999}"
-E5=$ID
-show '{id, state, reservationDeadline}'
-sleep $((TIMEOUT_SECONDS + 10))
-call GET "/errands/$E5" "$TOKEN_A"
-expect 200
-show '{id, state}'
-[[ $(jq -r .state <<<"$BODY") == RESERVATION_TIMED_OUT ]] || fail "errand $E5 did not time out"
-
 heading "11. Outbox: every credit message and whether it was published"
 OUTBOX_SQL="select event_type, payload->>'order_id' as order_id, published_at is not null as published from outbox order by created_at"
 for ((i = 0; i < 20; i++)); do
@@ -215,16 +206,11 @@ done
 docker compose -f "$ROOT/compose.yaml" exec -T order-db psql -U order_bootstrap -d orders -c "$OUTBOX_SQL"
 [[ "$PENDING" == 0 ]] || fail "$PENDING outbox rows are still unpublished"
 
-for type in ReserveRequested OrderCompleted OrderCancelled OrderFailed ReservationTimedOut; do
+for type in ReserveRequested OrderCompleted OrderCancelled OrderFailed; do
   N=$(docker compose -f "$ROOT/compose.yaml" exec -T order-db psql -U order_bootstrap -d orders -Atc \
     "select count(*) from outbox where event_type = '$type' and published_at is not null")
   [[ "$N" -ge 1 ]] || fail "no published $type event in the outbox"
 done
-echo "All five event types were published."
-
-# grep -c exits 1 on zero matches, which must not trip set -e
-VIOLATIONS=$(docker compose -f "$ROOT/compose.yaml" logs order-service | grep -c credit.stub.contract_violation || true)
-echo "Stub contract violations in the service log: $VIOLATIONS"
-[[ "$VIOLATIONS" == 0 ]] || fail "$VIOLATIONS credit.stub.contract_violation log lines"
+echo "All four event types were published."
 
 printf '\nDemo passed: every step returned the expected status.\n'

@@ -13,6 +13,9 @@ Author review of additional changes: Reviewed and approved by @phuc
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
 Scope: Documented the HTTP User and Supplier adapters, their settings and response codes.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+Scope: The demo now runs against the real Credit Service.
+Author review: Reviewed and approved by @mattis.
 -->
 
 # Order Service
@@ -44,8 +47,6 @@ How Order answers when User or Supplier does not give a usable reply (no retries
 | Supplier `404` (unknown id, or an archived supplier for a member) | `422 SUPPLIER_UNAVAILABLE` |
 | `5xx`, no reply within the timeout, or unreachable | `503 SERVICE_UNAVAILABLE` |
 | Supplier `400`/`403`, User 4xx other than `401`, or a `200` body Order does not expect | `500 INTERNAL_ERROR`, logged |
-
-TODO(author): rationale
 
 Not done yet: reacting to account suspensions (OS-F6), and the frontend pages.
 
@@ -161,19 +162,16 @@ forwards the `Authorization` header to User Service's `GET /auth/verify` on ever
 can't be reached, requests get `503 SERVICE_UNAVAILABLE`, never 401. A requester also needs a credit account:
 User Service creates one when an account first becomes `ACTIVE` (a `user.account-status` message).
 
-The demo script uses stub tokens and relies on the stub Credit's behaviour (its limit and its silent amount),
-so run it with both stubs. Stub sessions are refused with real credits:
+The demo script runs against the real User, Supplier and Credit services, the compose defaults:
 
 ```sh
-ORDER_AUTH_MODE=stub ORDER_CREDIT_MODE=stub docker compose up -d order-service
 bash order-service/scripts/demo.sh
 ```
 
 `scripts/demo.sh` (needs `curl` and `jq`) registers three fresh members, logs them and the bootstrap administrator in
 through the User Service, picks the first active supplier, and walks through the whole lifecycle through the gateway at
 `http://localhost:8080/api/v1` (override with `BASE`) and exits non-zero at the first unexpected status.
-It takes about a minute because step 10b waits for the reservation timeout (`RESERVATION_TIMEOUT_SECONDS + 10`
-seconds; set the same variable in the shell if you changed it for the service).
+It doesn't show the reservation timeout, because the real Credit Service always answers.
 
 Settings (all read in `src/config.ts`):
 
