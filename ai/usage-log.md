@@ -2507,3 +2507,35 @@ Verification: infrastructure `npm run check` passed (typecheck, lint, formatting
 `npm run build` passed, and `npm audit --offline` reported zero vulnerabilities.
 User Service header-only changes passed typecheck, build, and 10 tests; its
 database-dependent outbox suite was not exercised. `git diff --check` passed.
+
+## 2026-10-18 — ECS deployment-event scope and pricing-evidence ADR
+
+Tool: OpenAI Codex (GPT-6). Contributor: @ron (AI-assisted).
+Issue: #52. Implementation and final wording review: PENDING.
+
+User authorization: Continue implementation and full AWS deployment according to the
+approved specification. The deployment coordinator requested this narrow correction
+after proving that the existing event rule misses AWS's documented failure payload,
+and requested the missing root ADR for the already-approved pricing-evidence trade-off.
+
+Using the TDD, AWS CDK, AWS Containers, and domain-modeling skills, Codex first added a
+template regression that failed because the rule required absent `detail.clusterArn`
+and lacked top-level service resource scope. The fix uses exactly the three constructed
+ECS service ARNs in `resources`, retains `SERVICE_DEPLOYMENT_FAILED`, and preserves
+rule identity, target, IAM, and alarm settings. The regression checks the emitted
+pattern exactly against the documented event shape and owned service references.
+[AWS's failure-event example](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_service_deployment_events.html)
+supplies the independent event contract. Actual EventBridge differential validation
+was supplied by the deployment coordinator; this implementer made no AWS calls.
+
+ADR 0004 records the existing SPEC sections 17/24 decision: committed public-pricing
+snapshot, deterministic estimate, configuration/rate fingerprints, named approval,
+and deliberate refresh instead of a duplicate Calculator link. Design approval by
+@ron on 2026-10-18 is distinguished from pending implementation/wording review.
+No new pricing policy, alarm threshold, glossary term, or AWS resource was introduced.
+
+Verification: the new regression failed on the previous pattern and passed after the
+fix. Infrastructure `npm run check` passed typecheck, lint, formatting, and all 140
+tests (including strict four-stack pinned-CLI offline synthesis); `npm run build`
+passed, `npm audit --offline` reported zero vulnerabilities, and `git diff --check`
+passed. Deployment and real alarm delivery remain the coordinator's live checks.

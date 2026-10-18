@@ -320,10 +320,10 @@ test("creates stop-safe alarms, SNS email, and deployment-failure event handling
   template.hasResourceProperties("AWS::Events::Rule", {
     EventPattern: {
       detail: {
-        clusterArn: Match.anyValue(),
         eventName: ["SERVICE_DEPLOYMENT_FAILED"],
       },
       "detail-type": ["ECS Deployment State Change"],
+      resources: Match.anyValue(),
       source: ["aws.ecs"],
     },
   });
@@ -335,6 +335,40 @@ test("creates stop-safe alarms, SNS email, and deployment-failure event handling
         MetricValue: "1",
       }),
     ],
+  });
+});
+
+test("captures documented ECS failure events for exactly the three owned services", () => {
+  const { template } = synthesizedApplication();
+  const services = template.findResources("AWS::ECS::Service") as Record<
+    string,
+    { readonly Properties: { readonly ServiceName: string } }
+  >;
+  const ownedServiceReferences = [
+    "foc-demo-frontend",
+    "foc-demo-user-service",
+    "foc-demo-supplier-service",
+  ].map((serviceName) => {
+    const service = Object.entries(services).find(
+      ([, resource]) => resource.Properties.ServiceName === serviceName,
+    );
+    assert.ok(service, `Missing approved service ${serviceName}`);
+    return { Ref: service[0] };
+  });
+
+  // AWS's emitted failure payload contains detail.eventName and the service ARN
+  // in top-level resources, not detail.clusterArn. Exact equality excludes any
+  // missing-field predicate, unrelated service, wildcard, or COMPLETED event.
+  // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs_service_deployment_events.html
+  const rules = Object.values(template.findResources("AWS::Events::Rule")) as {
+    readonly Properties: { readonly EventPattern: unknown };
+  }[];
+  assert.equal(rules.length, 1);
+  assert.deepEqual(rules[0]?.Properties.EventPattern, {
+    detail: { eventName: ["SERVICE_DEPLOYMENT_FAILED"] },
+    "detail-type": ["ECS Deployment State Change"],
+    resources: ownedServiceReferences,
+    source: ["aws.ecs"],
   });
 });
 

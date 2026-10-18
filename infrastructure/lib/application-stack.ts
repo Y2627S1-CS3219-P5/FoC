@@ -719,10 +719,14 @@ export class ApplicationStack extends Stack {
       description: "Capture ECS circuit-breaker deployment failures",
       eventPattern: {
         detail: {
-          clusterArn: [props.cluster.clusterArn],
           eventName: ["SERVICE_DEPLOYMENT_FAILED"],
         },
         detailType: ["ECS Deployment State Change"],
+        resources: [
+          resources.frontend.service.serviceArn,
+          resources.user.service.serviceArn,
+          resources.supplier.service.serviceArn,
+        ],
         source: ["aws.ecs"],
       },
       ruleName: "foc-demo-ecs-deployment-failures",
