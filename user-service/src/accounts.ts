@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -9,7 +10,8 @@
  */
 import bcrypt from "bcryptjs";
 import { DatabaseError, Pool, PoolClient } from "pg";
-import { pool } from "./db";
+import { pool, inTransaction } from "./db";
+import { recordStatusChange } from "./outbox";
 import { loadAppConfig } from "./config";
 
 const ALLOWED_EMAIL_DOMAIN = loadAppConfig().allowedEmailDomain;
@@ -78,7 +80,7 @@ function validate(input: NewAccountInput): Record<string, string> {
 
 // The single place accounts are created: used by registration and by the admin bootstrap
 // `db` is the pool by default, or a client inside the caller's transaction
-export async function createAccount(input: NewAccountInput, db: Pool | PoolClient = pool): Promise<Account> {
+export async function prepareAccount(input: NewAccountInput) {
   const errors = validate(input);
   if (Object.keys(errors).length > 0) {
     throw new ValidationError(errors);
@@ -88,14 +90,29 @@ export async function createAccount(input: NewAccountInput, db: Pool | PoolClien
   const email = (input.email as string).toLowerCase();    // US-F2.3.1
   const passwordHash = await bcrypt.hash(input.password as string, BCRYPT_COST);
 
+  return { username, email, passwordHash, role: input.role };
+}
+
+export async function createAccount(input: NewAccountInput, db: Pool | PoolClient = pool): Promise<Account> {
+  const prepared = await prepareAccount(input);
+  return db instanceof Pool
+    ? inTransaction(db, (client) => insertPreparedAccount(prepared, client))
+    : insertPreparedAccount(prepared, db);
+}
+
+/** Caller owns the transaction. The account and initial activation must commit together. */
+export async function insertPreparedAccount(prepared: Awaited<ReturnType<typeof prepareAccount>>, db: PoolClient): Promise<Account> {
+  const { username, email, passwordHash, role } = prepared;
+
   try {
     const result = await db.query(
       `INSERT INTO users (username, email, password_hash, display_name, role, status)
        VALUES ($1, $2, $3, $4, $5, 'ACTIVE')
        RETURNING id, username, email, display_name, role, status`,
-      [username, email, passwordHash, username, input.role],
+      [username, email, passwordHash, username, role],
     );
     const u = result.rows[0];
+    await recordStatusChange(db, { accountId: u.id, newStatus: "ACTIVE", firstActive: true });
     return {
       id: u.id, username: u.username, email: u.email,
       displayName: u.display_name, role: u.role, status: u.status,

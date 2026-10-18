@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-10
@@ -7,6 +8,7 @@
  */
 import { AppendedEntry, appendAudit } from "./audit";
 import { InvalidStatusTransitionError, runAdminAction } from "./roles";
+import { recordStatusChange } from "./outbox";
 
 export class SelfSuspendError extends Error {} // -> 403
 
@@ -44,6 +46,7 @@ export async function changeAccountStatus(
     let appended: AppendedEntry | undefined;
     if (t.status === rule.from) {
       await client.query("UPDATE users SET status = $1, updated_at = now() WHERE id = $2", [rule.to, targetId]);
+      await recordStatusChange(client, { accountId: targetId, newStatus: rule.to as "ACTIVE" | "SUSPENDED", firstActive: false });
       appended = await appendAudit(client, {
         actorType: "USER", actorId, action: rule.audit, targetId,
         previousValue: rule.from, newValue: rule.to, reason,

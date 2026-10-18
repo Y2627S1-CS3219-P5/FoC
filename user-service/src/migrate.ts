@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -53,7 +54,7 @@ function readMigrationFiles(): MigrationFile[] {
   });
 }
 
-async function migrate(client: Client): Promise<void> {
+export async function migrate(client: Client): Promise<void> {
   const files = readMigrationFiles();
 
   const tables = await client.query(
@@ -147,7 +148,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+if (require.main === module) main().catch((err) => {
   console.error("Migrations failed:", err instanceof Error ? err.message : err);
   process.exit(1);
 });

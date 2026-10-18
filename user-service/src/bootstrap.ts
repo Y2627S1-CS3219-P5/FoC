@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -9,7 +10,8 @@
  * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { pool } from "./db";
-import { createAccount, ValidationError, ConflictError } from "./accounts";
+import { prepareAccount, insertPreparedAccount, ValidationError, ConflictError } from "./accounts";
+import { wakePublisher } from "./publisherWake";
 import { loadAppConfig } from "./config";
 import { appendAudit, logAuditAppended } from "./audit";
 
@@ -30,6 +32,8 @@ export async function bootstrapFirstAdmin(): Promise<void> {
 
   // The advisory lock makes check-then-create atomic across instances: if two
   // replicas start at once, the second waits here, then sees the admin and skips.
+  // Hash before acquiring a connection. The locked existence check below remains authoritative.
+  const prepared = await prepareAccount({ username, email, password, role: "ADMINISTRATOR" });
   const client = await pool.connect();
   try {
     await client.query("SELECT pg_advisory_lock($1)", [BOOTSTRAP_LOCK_ID]);
@@ -44,12 +48,13 @@ export async function bootstrapFirstAdmin(): Promise<void> {
     await client.query("BEGIN");
     let appended;
     try {
-      const admin = await createAccount({ username, email, password, role: "ADMINISTRATOR" }, client);
+      const admin = await insertPreparedAccount(prepared, client);
       appended = await appendAudit(client, {
         actorType: "SYSTEM", actorId: null, action: "FIRST_ADMIN_CREATED", targetId: admin.id,
         previousValue: null, newValue: "ADMINISTRATOR", reason: null,
       });
       await client.query("COMMIT");
+      wakePublisher();
       console.log(`Admin bootstrap: created first administrator '${admin.username}'`);  // never log the password
     } catch (err) {
       await client.query("ROLLBACK");

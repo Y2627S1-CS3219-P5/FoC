@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
@@ -26,6 +27,8 @@ import express, { Request, Response, NextFunction } from "express";
 import { loadAppConfig, loadAuditKey, DB_RESILIENCE } from "./config";
 import { adminAuditRouter } from "./adminAudit";
 import { pool } from "./db";
+import { createProducer } from "./kafka";
+import { startOutboxPublisher } from "./publisher";
 import {
   isDatabaseUnavailable,
   markDatabaseDown,
@@ -93,6 +96,8 @@ async function main(): Promise<void> {
   loadAuditKey();
   await retryWhileDatabaseUnavailable("Startup", () => pool.query("SELECT 1"));
   await retryWhileDatabaseUnavailable("First-admin bootstrap", bootstrapFirstAdmin);
+  // Connect/retry in the background; Kafka outages must not block HTTP readiness.
+  const publisher = startOutboxPublisher(pool, createProducer());
   const server = app.listen(PORT, () => console.log(`user-service listening on ${PORT}`));
 
   // Graceful shutdown (docker compose stop sends SIGTERM, then force-kills after 10 s):
@@ -107,9 +112,15 @@ async function main(): Promise<void> {
       process.exit(1);
     }, DB_RESILIENCE.shutdownTimeoutMs).unref();
     server.close(async () => {
-      await pool.end();
-      console.log("Shutdown complete");
-      process.exit(0);
+      try {
+        await publisher.stop();
+        await pool.end();
+        console.log("Shutdown complete");
+        process.exit(0);
+      } catch (err) {
+        console.error("Shutdown failed:", err instanceof Error ? err.message : err);
+        process.exit(1);
+      }
     });
     server.closeIdleConnections(); // idle keep-alive connections would otherwise hold close() open
   };
