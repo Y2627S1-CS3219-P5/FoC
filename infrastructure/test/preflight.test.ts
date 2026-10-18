@@ -85,12 +85,10 @@ function fakeRunner(
         return failure(options.quotaFailure);
       }
       if (options.quotasReadable === false) {
-        const action =
-          operation === "service-quotas:list-services"
-            ? "ListServices"
-            : "GetServiceQuota";
         return failure(
-          `AccessDeniedException: servicequotas:${action} is not authorized, with an explicit deny in Organizations SCP`,
+          operation === "service-quotas:list-services"
+            ? "An error occurred (AccessDeniedException): servicequotas:ListServices is not authorized, with an explicit deny in Organizations SCP"
+            : "An error occurred (AccessDeniedException): servicequotas:GetServiceQuota is not authorized for fargate/L-3032A538, with an explicit deny in the same Organizations SCP.",
         );
       }
       return success(JSON.stringify({ Quota: { Value: 6 } }));

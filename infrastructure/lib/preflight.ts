@@ -97,7 +97,7 @@ function isExpectedNusServiceQuotasScpDenial(
   return (
     /AccessDeniedException/i.test(detail) &&
     detail.includes(`servicequotas:${action}`) &&
-    /explicit deny in (?:the )?Organizations SCP/i.test(detail)
+    /explicit deny in (?:the )?(?:same )?Organizations SCP/i.test(detail)
   );
 }
 
