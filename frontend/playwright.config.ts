@@ -4,6 +4,10 @@
  * Scope: Configured the isolated real-browser Supplier UI verification for
  * issue #31.
  * Author review: Reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18
+ * Scope: Made the issue #42 CI behavior explicit by forbidding focused tests,
+ * disabling retries, and bounding the complete browser run.
+ * Author review: Pending project-author review.
  */
 import { defineConfig } from '@playwright/test'
 
@@ -15,7 +19,10 @@ if (!baseURL) {
 
 export default defineConfig({
   testDir: './e2e',
+  forbidOnly: !!process.env.CI,
   fullyParallel: false,
+  globalTimeout: 15 * 60 * 1000,
+  retries: 0,
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
