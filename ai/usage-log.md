@@ -2286,3 +2286,46 @@ The observed-index regression failed before the fix and passed afterward. Infras
 typecheck, lint, formatting, all 114 tests, production build, offline audit (zero
 vulnerabilities), and `git diff --check` passed. No AWS calls, resource mutations, image
 pushes, or registry changes were performed by this source-only correction.
+
+## 2026-10-18 — Container OS security patches before AWS release
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Remediate available OS package fixes found by issue #52 ECR
+  Basic scans before deploying the authorized cloud release; no AWS calls or image
+  pushes were performed by this correction.
+- **Repository files affected:** `frontend/Dockerfile`, `user-service/Dockerfile`,
+  `supplier-service/Dockerfile`, `infrastructure/database-bootstrap/Dockerfile`,
+  and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+Fresh official base images still contained vulnerable Alpine libraries. Codex added
+`apk upgrade --no-cache` to each external Alpine build/runtime stage without changing
+the base references, Node/nginx versions, runtime users, commands, or local/cloud routes.
+The dedicated database-bootstrap image receives the same OS correction. Supported
+same-branch Alpine packages patch the known vulnerabilities; the release must still be
+rebuilt, rescanned, and reviewed before deployment. Package repositories can change
+between builds, so reproducibility comes from building once and deploying that immutable
+image digest, not assuming a later source rebuild produces identical bytes.
+
+All four Linux/AMD64 images built successfully. Actual runtime checks confirm Node
+22.23.3 and UID 1000 for User, Supplier, and database bootstrap; zlib 1.3.2-r1 and
+OpenSSL libraries 3.5.9-r0 are installed in all four images. The frontend also contains
+curl 8.22.0-r0, pcre2 10.49-r0, expat 2.9.0-r0, libxml2 2.13.9-r1, libuuid 2.41.6-r1,
+and nghttp2 1.69.0-r0, while nginx remains 1.29.8. Gateway configuration, static UI,
+and health-response checks passed. AMD64 nginx on the ARM Mac emitted emulation-only
+`io_setup` warnings; the health request nevertheless succeeded. Node entry-point syntax,
+Supplier seed/assets presence, PostgreSQL client loading, six bootstrap unit tests,
+static local/cloud gateway contracts, and `git diff --check` passed.
+
+These are local packaging checks, not an ECR clean-scan claim or live cloud acceptance.
+The full npm audit independently reported a frontend development-only source-map-js
+High advisory and Supplier development-tooling advisories (one Critical handlebars and
+24 Moderate findings); production User/Supplier installs reported zero. No npm package
+was changed as part of this OS-only correction. Full CI and exact-release ECR rescans
+remain required on the combined branch.

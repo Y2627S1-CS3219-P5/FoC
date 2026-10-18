@@ -2,9 +2,13 @@
 # of the frontend into an nginx gateway image. Author review: Reviewed and approved by @t-leongchuan
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: issue #49
 # cloud-only gateway target and health check. Author review: PENDING.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: apply supported
+# Alpine OS security patches before building immutable issue #52 release images.
+# Author review: PENDING.
 
 # Stage 1: build the website into plain static files (HTML/CSS/JS) in /app/dist
 FROM node:22-alpine AS build
+RUN apk upgrade --no-cache
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -13,6 +17,7 @@ RUN npm run build
 
 # Stage 2: common static site shared by the full/local and approved AWS gateways.
 FROM nginx:1.29-alpine AS gateway-base
+RUN apk upgrade --no-cache
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 

@@ -4,9 +4,13 @@
 # Author review: Reviewed and approved by @t-leongchuan
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: included the
 # pinned Singapore RDS trust bundle for verified TLS in issue #48. Author review: PENDING.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: apply supported
+# Alpine OS security patches before building immutable issue #52 release images.
+# Author review: PENDING.
 
 # ---- Build stage: all packages + TypeScript compiler -> dist/ -------------------
 FROM node:22.23.3-alpine3.24 AS build
+RUN apk upgrade --no-cache
 WORKDIR /app
 
 # Dependencies first, so this layer is cached until package*.json changes
@@ -18,6 +22,7 @@ RUN npm run build
 
 # ---- Runtime stage: only what the service and the migration step run ------------
 FROM node:22.23.3-alpine3.24 AS runtime
+RUN apk upgrade --no-cache
 WORKDIR /app
 ENV NODE_ENV=production
 

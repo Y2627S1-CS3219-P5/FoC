@@ -2,7 +2,11 @@
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: copied bundled Supplier image assets into the issue #17 runtime image. Author review of additional changes: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: included the
 # Singapore RDS trust bundle and enforced a non-root runtime for issue #48. Author review: PENDING.
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18. Scope: apply supported
+# Alpine OS security patches before building immutable issue #52 release images.
+# Author review: PENDING.
 FROM node:22-alpine AS build
+RUN apk upgrade --no-cache
 
 WORKDIR /app
 
@@ -13,6 +17,7 @@ COPY supplier-service/ ./
 RUN npm run build
 
 FROM node:22-alpine AS runtime
+RUN apk upgrade --no-cache
 
 WORKDIR /app
 ENV NODE_ENV=production
