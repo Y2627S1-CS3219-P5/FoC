@@ -1838,3 +1838,28 @@ scale-to-zero-aware alarms, and the migration-before-service release seam. It al
 a cloud-only frontend route allowlist and health endpoint, redacted request completion
 logs, and a cloud User publisher flag that avoids starting Kafka while preserving durable
 outbox records and the existing local behavior.
+
+## 2026-10-18 — AWS CloudFront and WAF edge stack
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #50; CloudFront
+  VPC origin, cache and forwarding behaviors, CloudFront-scope WAF, cross-region CDK
+  references, tests, and documentation
+- **Repository files affected:** `infrastructure/lib/{app,edge-stack}.ts`,
+  `infrastructure/test/edge-stack.test.ts`, `infrastructure/README.md`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the isolated edge ticket without provisioning or changing AWS. It added
+the generated CloudFront HTTPS endpoint, private Singapore ALB VPC origin, uncached and
+uncompressed API behavior that preserves strong Supplier ETags, cached static assets,
+and exact header/query forwarding. It added controlled WAF denial of internal and excluded
+routes, reviewed authentication/global rate rules, and count-only AWS managed common
+protections. Tests verify the cross-region export custom resources and their generated IAM
+scope, cache/WAF invariants, tags, outputs, and absence of plaintext secrets or public
+application ingress.

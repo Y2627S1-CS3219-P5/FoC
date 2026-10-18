@@ -2,6 +2,7 @@ import { App, Tags } from "aws-cdk-lib";
 import { ApplicationStack } from "./application-stack.js";
 import type { DeploymentConfig } from "./config.js";
 import { DataStack } from "./data-stack.js";
+import { EdgeStack } from "./edge-stack.js";
 import { FoundationStack } from "./foundation-stack.js";
 import type { ReleaseManifest } from "./release-manifest.js";
 
@@ -33,6 +34,7 @@ export function createFocDemoApp(
     description:
       "FoC demo frontend, User, and Supplier ECS application resources",
     env: { account: config.accountId, region: config.primaryRegion },
+    crossRegionReferences: true,
     config,
     releaseManifest,
     vpc: foundation.vpc,
@@ -55,6 +57,19 @@ export function createFocDemoApp(
   // must run and verify the canonical jobs before deploying Application.
   application.addStackDependency(data);
 
+  const edge = new EdgeStack(app, "FoCDemoEdge", {
+    stackName: "foc-demo-edge",
+    description: "FoC demo CloudFront VPC origin and WAF edge resources",
+    env: { account: config.accountId, region: config.edgeRegion },
+    crossRegionReferences: true,
+    config,
+    internalLoadBalancer: application.internalLoadBalancer,
+  });
+  edge.addStackDependency(
+    application,
+    "CloudFront VPC origin requires the fully deployed Singapore internal ALB",
+  );
+
   for (const [key, value] of Object.entries({
     Project: "FoC",
     Environment: "demo",
@@ -65,6 +80,7 @@ export function createFocDemoApp(
     Tags.of(foundation).add(key, value);
     Tags.of(data).add(key, value);
     Tags.of(application).add(key, value);
+    Tags.of(edge).add(key, value);
   }
   return app;
 }

@@ -32,11 +32,19 @@ AWS resources were created or changed, and no cloud release was run.
 Author review: Pending pull-request review by @ron.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Drafted the issue #50 CloudFront VPC origin, WAF edge stack, cross-region reference
+review, tests, and operating guidance. No AWS resources were created or changed.
+Author review: Pending pull-request review by @ron.
+-->
+
 # FoC AWS infrastructure
 
 This TypeScript AWS CDK package implements the pre-provisioning guardrails from
 [`SPEC.md`](SPEC.md), the regional Foundation stack, PostgreSQL data stack, and ECS
-Application stack.
+Application stack, plus the global CloudFront/WAF Edge stack.
 Provisioning remains blocked until the configuration, cost, capability, quota, and
 bootstrap gates pass.
 
@@ -133,6 +141,41 @@ The release boundary remains deliberate: run and wait for `database-bootstrap`,
 non-zero exit, before updating any long-running service. The Application stack depends on
 Data and outputs this required order for the later release runner; CloudFormation itself
 never starts a migration or seed task.
+
+## Edge stack
+
+`foc-demo-edge` is explicitly deployed in `us-east-1`, where AWS requires a
+CloudFront-scope WAF. It creates the generated `*.cloudfront.net` HTTPS endpoint and a
+CloudFront VPC origin that reaches the Singapore internal ALB on HTTP port 80. All viewer
+behaviors redirect HTTP to HTTPS. The distribution uses no alias, custom certificate, or
+public ALB origin.
+
+The default SPA behavior is uncached and compressed. `/assets/*` uses CloudFront's
+optimized cache and compression. `/api/*` permits all REST methods, forwards all query
+strings and only `Authorization`, `Content-Type`, `Origin`, `Accept`, and `If-Match`, and
+has zero minimum/default/maximum TTL. CloudFront does not allow `Authorization` in an
+origin-request-policy allowlist, so the exact forwarding contract is split between a
+zero-TTL cache policy (`Authorization`) and an origin request policy (the remaining four
+headers and all query strings). API compression is disabled because CloudFront can turn a
+strong origin ETag into a weak ETag when it compresses a response, which would break the
+Supplier `If-Match` contract. No response-headers policy removes or overwrites `ETag` or
+`X-Request-Id`.
+
+The WAF evaluates a controlled 404 denial first for `/healthz`, backend `/health`,
+`/auth/verify`, Supplier Swagger, and the excluded Order/Credit route families. This keeps
+nginx `/healthz` available to the private ALB while denying it at the public edge. A
+stricter per-IP login/register rate rule runs before the global per-IP rate rule; both use
+the reviewed config windows and limits and return controlled JSON 429 responses. AWS
+managed common protections remain count-only with metrics and sampled requests enabled.
+Web-ACL data protection substitutes the `Authorization` header in retained samples so
+bearer credentials are not stored in WAF evidence.
+
+The Edge and Application stacks deliberately enable CDK's experimental native
+cross-region references rather than copying ALB identifiers into source. Synthesis creates
+a cross-region export writer in Singapore and reader in `us-east-1`, with provider IAM
+limited to CDK's `/cdk/exports/` SSM parameters. Both regions therefore require a modern
+CDK bootstrap before deployment. Tests inspect the generated custom resources, Lambda
+providers, and IAM policies; no custom-resource code is authored by this repository.
 
 ## Prerequisites
 
