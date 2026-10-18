@@ -4,8 +4,12 @@
  * Scope: Error bodies and the mapping from repository and database failures to HTTP statuses,
  *        implementing the approved plan.
  * Author review: Reviewed and approved by @mattis.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: 503 SERVICE_UNAVAILABLE for an unreachable User or Supplier service, per the User and Supplier integration plan.
+ * Author review: PENDING
  */
 import type { ErrorRequestHandler, Response } from "express";
+import { UpstreamUnavailableError } from "../adapters/upstream";
 import { isDatabaseUnavailable } from "../dbAvailability";
 import type { FieldError } from "../domain/validation";
 import type { Action } from "../domain/transitions";
@@ -43,7 +47,7 @@ export function sendTransitionFailure(res: Response, action: Action, r: Extract<
   }
 }
 
-/** Express error middleware: bad JSON is 400, an unreachable database is 503, anything else 500. */
+/** Express error middleware: bad JSON is 400, an unreachable database, User or Supplier is 503, anything else 500. */
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   if (res.headersSent) return next(err);
   const status = (err as { status?: unknown }).status;
@@ -55,6 +59,10 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   }
   if (isDatabaseUnavailable(err)) {
     log.warn("http.database_unavailable", { path: req.path, message: errorMessage(err) });
+    return sendError(res, 503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable");
+  }
+  if (err instanceof UpstreamUnavailableError) {
+    log.warn("http.upstream_unavailable", { path: req.path, service: err.service, message: err.message });
     return sendError(res, 503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable");
   }
   log.error("http.unhandled_error", { path: req.path, message: errorMessage(err), stack: err instanceof Error ? err.stack : undefined });

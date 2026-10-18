@@ -6,6 +6,9 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
  * Scope: Tests that a non-party learns neither the later state (failed accept) nor actor ids (history).
  * Author review: Reviewed and approved by @mattis.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: HTTP tests for the User and Supplier HTTP adapters (503, 401, 422 and 500 outcomes), per the User and Supplier integration plan.
+ * Author review: PENDING
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -15,7 +18,7 @@ import { after, before, test } from "node:test";
 import { Pool } from "pg";
 import { createTestDatabase, TestDatabase } from "./helpers";
 import { createApp } from "../src/http/app";
-import { StubSessionVerifier } from "../src/adapters/sessionVerifier";
+import { HttpSessionVerifier, StubSessionVerifier } from "../src/adapters/sessionVerifier";
 import { STUB_SUPPLIERS, StubSupplierDirectory } from "../src/adapters/supplierDirectory";
 import { StubCreditBus } from "../src/adapters/creditBus";
 import { publishOutboxBatch } from "../src/outbox";
@@ -349,6 +352,21 @@ test("database failure is 503 SERVICE_UNAVAILABLE and never leaks details", asyn
     const r = await fetch(`${url}/errands/open`, { headers: { authorization: member(randomUUID()) } });
     assert.equal(r.status, 503);
     assert.equal((await r.json()).error, "SERVICE_UNAVAILABLE");
+  } finally {
+    await new Promise<void>((r) => s.close(() => r()));
+  }
+});
+
+test("User Service down is 503 SERVICE_UNAVAILABLE", async () => {
+  const userDown = (async () => new Response(null, { status: 503 })) as typeof fetch;
+  const verifier = new HttpSessionVerifier({ baseUrl: "http://user-service:3001", timeoutMs: 1000 }, userDown);
+  const app = createApp({ pool, verifier, suppliers: new StubSupplierDirectory() });
+  const s = app.listen(0);
+  await new Promise<void>((r) => s.once("listening", r));
+  try {
+    const r = await fetch(`http://127.0.0.1:${(s.address() as AddressInfo).port}/errands/open`, { headers: { authorization: "Bearer real.jwt" } });
+    assert.equal(r.status, 503);
+    assert.deepEqual(await r.json(), { error: "SERVICE_UNAVAILABLE", message: "Service temporarily unavailable" });
   } finally {
     await new Promise<void>((r) => s.close(() => r()));
   }

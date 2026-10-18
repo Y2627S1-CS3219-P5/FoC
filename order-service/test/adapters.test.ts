@@ -16,8 +16,9 @@ import { randomUUID } from "node:crypto";
 import { after, afterEach, before, beforeEach, describe, it, mock } from "node:test";
 import { Pool } from "pg";
 import { StubCreditBus } from "../src/adapters/creditBus";
-import { StubSessionVerifier } from "../src/adapters/sessionVerifier";
+import { HttpSessionVerifier, StubSessionVerifier } from "../src/adapters/sessionVerifier";
 import { STUB_SUPPLIERS, StubSupplierDirectory } from "../src/adapters/supplierDirectory";
+import { UpstreamContractError, UpstreamUnavailableError } from "../src/adapters/upstream";
 import { loadAdapterConfig } from "../src/config";
 import { sweepDeadlines } from "../src/deadlines/sweeper";
 import { applyTransition, createErrand } from "../src/errands/repository";
@@ -340,5 +341,83 @@ describe("adapter config", () => {
   it("config rejects CREDIT_MODE=http", () => {
     process.env.CREDIT_MODE = "http";
     assert.throws(() => loadAdapterConfig(), /^Error: CREDIT_MODE must be stub or kafka, not http$/);
+  });
+});
+
+// A fetch stand-in that records each call and answers with `respond`
+type FetchCall = { url: string; init: RequestInit };
+export function fakeFetch(respond: (call: FetchCall) => Response | Promise<Response>) {
+  const calls: FetchCall[] = [];
+  const f = (async (input: string | URL | Request, init: RequestInit = {}) => {
+    const call = { url: String(input), init };
+    calls.push(call);
+    return respond(call);
+  }) as typeof fetch;
+  return { fetch: f, calls };
+}
+const reply = (status: number, body?: unknown) =>
+  new Response(body === undefined ? null : typeof body === "string" ? body : JSON.stringify(body), { status });
+// Never answers; rejects only when the caller's signal aborts. AbortSignal.timeout() does not keep
+// the event loop alive and a fake has no socket, so hold a timer open until the abort.
+const hang = (call: FetchCall) =>
+  new Promise<Response>((_, reject) => {
+    const keepAlive = setTimeout(() => {}, 5000);
+    call.init.signal?.addEventListener("abort", () => {
+      clearTimeout(keepAlive);
+      reject(call.init.signal!.reason);
+    });
+  });
+const networkError = () => Promise.reject(new TypeError("fetch failed"));
+
+describe("http session verifier", () => {
+  const USER = { baseUrl: "http://user-service:3001", timeoutMs: 1000 };
+  const id = randomUUID();
+
+  it("http verifier forwards the header to /auth/verify and returns the principal", async () => {
+    const f = fakeFetch(() => reply(200, { id: id.toUpperCase(), role: "MEMBER" }));
+    const p = await new HttpSessionVerifier(USER, f.fetch).verify("Bearer abc.def");
+    assert.equal(f.calls.length, 1);
+    assert.equal(f.calls[0].url, "http://user-service:3001/auth/verify");
+    assert.equal(f.calls[0].init.method ?? "GET", "GET");
+    assert.equal(new Headers(f.calls[0].init.headers).get("authorization"), "Bearer abc.def");
+    assert.deepEqual(p, { id, role: "MEMBER" });
+  });
+
+  it("http verifier returns null on 401", async () => {
+    const f = fakeFetch(() => reply(401, { error: "UNAUTHENTICATED" }));
+    assert.equal(await new HttpSessionVerifier(USER, f.fetch).verify("Bearer x"), null);
+  });
+
+  it("http verifier returns null without calling User when the header is missing", async () => {
+    const f = fakeFetch(() => reply(200, { id, role: "MEMBER" }));
+    assert.equal(await new HttpSessionVerifier(USER, f.fetch).verify(undefined), null);
+    assert.equal(f.calls.length, 0);
+  });
+
+  it("http verifier throws UpstreamUnavailableError on 500, 503 and a network error", async () => {
+    for (const respond of [() => reply(500), () => reply(503), networkError]) {
+      await assert.rejects(new HttpSessionVerifier(USER, fakeFetch(respond).fetch).verify("Bearer x"), UpstreamUnavailableError);
+    }
+  });
+
+  it("http verifier throws UpstreamUnavailableError after the timeout", async () => {
+    const started = Date.now();
+    await assert.rejects(
+      new HttpSessionVerifier({ ...USER, timeoutMs: 50 }, fakeFetch(hang).fetch).verify("Bearer x"),
+      UpstreamUnavailableError,
+    );
+    assert.ok(Date.now() - started < 1000);
+  });
+
+  it("http verifier throws UpstreamContractError on 403 and 404", async () => {
+    for (const status of [403, 404]) {
+      await assert.rejects(new HttpSessionVerifier(USER, fakeFetch(() => reply(status)).fetch).verify("Bearer x"), UpstreamContractError);
+    }
+  });
+
+  it("http verifier throws UpstreamContractError on an unexpected 200 body", async () => {
+    for (const body of [{ id: "x", role: "MEMBER" }, { id, role: "SUPPORT" }, { role: "MEMBER" }, "not json"]) {
+      await assert.rejects(new HttpSessionVerifier(USER, fakeFetch(() => reply(200, body)).fetch).verify("Bearer x"), UpstreamContractError);
+    }
   });
 });
