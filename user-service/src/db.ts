@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -8,7 +9,8 @@
  *        dropped connection no longer crashes the process.
  * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
+import { wakePublisher } from "./publisherWake";
 import { loadDatabaseConfig, DB_RESILIENCE } from "./config";
 import { markDatabaseDown, markDatabaseUp } from "./dbAvailability";
 
@@ -25,3 +27,21 @@ export const pool = new Pool({
 pool.on("error", (err) => markDatabaseDown(err));
 // A new connection succeeded, so the database is reachable
 pool.on("connect", () => markDatabaseUp());
+
+export async function inTransaction<T>(db: Pool, action: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await db.connect();
+  let broken: Error | undefined;
+  try {
+    await client.query("BEGIN");
+    const result = await action(client);
+    await client.query("COMMIT");
+    wakePublisher();
+    return result;
+  } catch (err) {
+    try { await client.query("ROLLBACK"); }
+    catch (rollbackError) { broken = rollbackError instanceof Error ? rollbackError : new Error(String(rollbackError)); }
+    throw err;
+  } finally {
+    client.release(broken);
+  }
+}

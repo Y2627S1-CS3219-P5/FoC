@@ -1,3 +1,4 @@
+<!-- Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing implementation and verification notes. Author review: PENDING. -->
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
@@ -20,6 +21,39 @@ Author review of additional changes: Reviewed and approved by @t-leongchuan
 # User Service
 
 Accounts, login, profiles and roles for FoC. Express + TypeScript + PostgreSQL.
+
+## Account-status publishing
+
+Registration and first-admin bootstrap atomically insert an initial `ACTIVE` notification into
+`outbox`. Suspend/restore append a notification only when status changes, in the same transaction
+as the account update and audit entry. Administrators receive credit accounts too. Passwords are
+validated and hashed before registration acquires its database connection.
+
+The background publisher sends up to 100 events per Kafka call to `user.account-status`, keyed
+by account ID, then marks them published after acknowledgment. It uses a shared advisory lock
+across replicas, a 200 ms fallback poll, wake-on-commit, outage back-off, and hourly cleanup of
+rows published more than seven days ago. Logs include publish count/duration, failures/recovery,
+and backlog count/oldest age once per minute. HTTP startup and `/health` do not wait for Kafka.
+
+`KAFKA_BROKERS` is required for the service (comma-separated); `KAFKA_CLIENT_ID` defaults to
+`user-service`. Compose supplies both. Provision topics separately with `kafka-init`; for a fresh
+local stack run `docker compose up -d kafka-init` as well as the usual service startup.
+Deploy Credit Service migration `0003_account_status_dedup.sql` and its handler before enabling
+this producer. Existing users are not automatically backfilled. Activation is asynchronous, so
+an immediate order may still encounter `ACCOUNT_NOT_FOUND` until Credit processes the activation.
+See [the implementation notes](docs/account-status-publishing.md) for the contract and rollout limits.
+
+From `user-service/`, run `npm run build` and `npm run typecheck`. Run database tests with
+`TEST_DATABASE_URL` set to a **disposable PostgreSQL superuser URL** and `npm test`; integration
+cases are skipped when it is unset. Tests create and drop isolated databases.
+
+For `npm run test:e2e`, first build both User and Credit services and install both services'
+dependencies. Set `TEST_DATABASE_URL` and `KAFKA_BROKERS` to isolated test infrastructure with
+the five topics from `kafka/create-topics.sh` provisioned. Never point this test at a shared
+broker: it starts a real Credit Service with the `credit-service` consumer group. It checks
+HTTP registration while Kafka is unreachable, outbox recovery after restart, the initial credit
+grant, suspend/restore, reservation results, and replay protection. The broker's advertised
+listener must be reachable from the host running the tests.
 
 ## Rules for changing this service
 
