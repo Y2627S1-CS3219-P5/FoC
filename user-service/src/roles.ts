@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
@@ -14,6 +15,7 @@
 import { PoolClient } from "pg";
 import { pool } from "./db";
 import { Role } from "./accounts";
+import { wakePublisher } from "./publisherWake";
 import { ADMIN_ACTIONS_LOCK_ID, AppendedEntry, appendAudit, logAuditAppended } from "./audit";
 
 export const ROLES: readonly Role[] = ["MEMBER", "ADMINISTRATOR"];
@@ -69,6 +71,7 @@ export async function runAdminAction<T>(
 
     const { result, appended } = await action(client, target.rows[0]);
     await client.query("COMMIT");
+    wakePublisher();
     if (appended) logAuditAppended(appended);
     return result;
   } catch (err) {

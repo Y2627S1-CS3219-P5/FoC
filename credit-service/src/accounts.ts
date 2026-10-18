@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
@@ -97,6 +98,12 @@ export async function handleAccountStatus(
   msg: AccountStatusNotification,
 ): Promise<AccountStatusOutcome> {
   return inTransaction(pool, async (client): Promise<AccountStatusOutcome> => {
+    // Atomic with the effects below. In particular, replayed restores must not undo suspensions.
+    const marker = await client.query(
+      "INSERT INTO processed_account_status (operation_id) VALUES ($1) ON CONFLICT DO NOTHING",
+      [msg.operationId],
+    );
+    if (marker.rowCount === 0) return { kind: "duplicate" };
     if (msg.newStatus === "ACTIVE" && msg.firstActive) {
       const grant = loadCreditConfig().initialCreditGrant;
       const inserted = await client.query(

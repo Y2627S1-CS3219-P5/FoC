@@ -1,3 +1,4 @@
+// Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing and verification. Author review: PENDING.
 /*
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-10-09
@@ -22,6 +23,21 @@ function required(name: string): string {
   }
   return value;
 }
+
+export function loadKafkaConfig() {
+  const brokers = required("KAFKA_BROKERS").split(",").map((broker) => broker.trim()).filter(Boolean);
+  if (brokers.length === 0) throw new Error("KAFKA_BROKERS must contain at least one broker");
+  return { brokers, clientId: process.env.KAFKA_CLIENT_ID || "user-service" };
+}
+
+export const OUTBOX = {
+  topic: "user.account-status",
+  lockId: 3219004,
+  batchSize: 100,
+  idlePollMs: 200,
+  retentionDays: 7,
+  cleanupIntervalMs: 60 * 60 * 1000,
+} as const;
 
 export function loadDatabaseConfig() {
   return { databaseUrl: required("DATABASE_URL") };

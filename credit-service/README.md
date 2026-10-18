@@ -1,3 +1,4 @@
+<!-- Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: account-status publishing implementation and verification notes. Author review: PENDING. -->
 <!--
 AI Assistance Disclosure:
 Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
@@ -20,6 +21,7 @@ Owns every credit balance on the platform. The design is in
 |---|---|
 | Database: roles, schema (decision D1), migration runner | Done |
 | Message handling: account status, initial grant, reserve, capture, release, forfeit | Done |
+| Account-status replay protection | `processed_account_status` (`0003`), written atomically with effects; retain markers indefinitely |
 | Outbox: insert, publish batch, retention cleanup | Done |
 | Balance read (`getBalance`) | Done; no HTTP route yet |
 | Kafka topics, including the two DLQs | Created by the shared `kafka-init` Compose service, see [../kafka/README.md](../kafka/README.md) |

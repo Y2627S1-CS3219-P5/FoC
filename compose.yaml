@@ -1,3 +1,4 @@
+# Additional AI assistance: Codex (GPT-6), 2026-10-18. Scope: User Service Kafka configuration. Author review: PENDING.
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: merged the User and Supplier Compose definitions while preserving their separate databases, startup order, and runtime configuration. Author review: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: configured Supplier-to-User session verification for issue #16. Author review: Reviewed and approved by @ron.
 # Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-25. Scope: recorded the approved 1000 ms Supplier verification deployment timeout for issue #17. Author review of additional changes: Reviewed and approved by @ron.
@@ -29,6 +30,8 @@ services:
       - "${USER_PORT:-3001}:3001"
     environment:
       PORT: 3001
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_CLIENT_ID: user-service
       # The app role: row access only, no schema changes
       DATABASE_URL: postgres://user_app:${USER_DB_APP_PASSWORD:?Set USER_DB_APP_PASSWORD in .env}@user-db:5432/users
       ALLOWED_EMAIL_DOMAIN: ${ALLOWED_EMAIL_DOMAIN:-u.nus.edu}
