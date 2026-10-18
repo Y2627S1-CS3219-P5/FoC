@@ -5,6 +5,9 @@
  * Additional AI assistance: OpenAI Codex (GPT-6), 2026-09-27; covered the
  * issue #33 metadata operation and schemas. Contract decision and
  * implementation reviewed and approved by @ron.
+ * Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18; verified the
+ * Swagger JSON/YAML HTTP endpoints with the patched YAML dependency.
+ * Author review of this regression: Pending project-author review.
  */
 import { INestApplication, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
@@ -20,6 +23,7 @@ import { SupplierListQueryPipe } from "../suppliers/http/supplier-list-query.pip
 import { SupplierMutationBodyPipe } from "../suppliers/http/supplier-mutation-body.pipe";
 import { SupplierController } from "../suppliers/http/supplier.controller";
 import {
+  configureSupplierOpenApi,
   createSupplierOpenApiDocument,
   SUPPLIER_BEARER_AUTH_NAME,
 } from "./swagger";
@@ -58,17 +62,40 @@ class OpenApiTestModule {}
 
 describe("Supplier OpenAPI document", () => {
   let app: INestApplication;
+  let baseUrl: string;
 
   beforeAll(async () => {
     app = await NestFactory.create(OpenApiTestModule, {
       abortOnError: false,
       logger: false,
     });
-    await app.init();
+    configureSupplierOpenApi(app);
+    await app.listen(0, "127.0.0.1");
+    baseUrl = await app.getUrl();
   });
 
   afterAll(async () => {
     await app?.close();
+  });
+
+  it("serves compatible JSON and YAML documents through Swagger", async () => {
+    const jsonResponse = await fetch(`${baseUrl}/api/docs-json`);
+    expect(jsonResponse.status).toBe(200);
+    expect(jsonResponse.headers.get("content-type")).toContain(
+      "application/json",
+    );
+    expect(await jsonResponse.json()).toEqual(
+      createSupplierOpenApiDocument(app),
+    );
+
+    const yamlResponse = await fetch(`${baseUrl}/api/docs-yaml`);
+    expect(yamlResponse.status).toBe(200);
+    expect(yamlResponse.headers.get("content-type")).toContain("text/yaml");
+    const yaml = await yamlResponse.text();
+    expect(yaml).toContain("openapi: 3.0.0");
+    expect(yaml).toContain("title: FoC Supplier Service API");
+    expect(yaml).toContain("/api/v1/suppliers:");
+    expect(yaml).toContain("supplier-bearer:");
   });
 
   it("describes every implemented health and Supplier operation", () => {
@@ -85,10 +112,9 @@ describe("Supplier OpenAPI document", () => {
       "/api/v1/suppliers/{id}/restore",
       "/health",
     ]);
-    expect(Object.keys(document.paths["/api/v1/suppliers"] ?? {}).sort()).toEqual([
-      "get",
-      "post",
-    ]);
+    expect(
+      Object.keys(document.paths["/api/v1/suppliers"] ?? {}).sort(),
+    ).toEqual(["get", "post"]);
     expect(
       Object.keys(document.paths["/api/v1/suppliers/{id}"] ?? {}).sort(),
     ).toEqual(["delete", "get", "put"]);
@@ -108,9 +134,9 @@ describe("Supplier OpenAPI document", () => {
     expect(document.paths["/api/v1/suppliers"]?.get?.security).toEqual([
       { [SUPPLIER_BEARER_AUTH_NAME]: [] },
     ]);
-    expect(document.paths["/api/v1/suppliers/metadata"]?.get?.security).toEqual([
-      { [SUPPLIER_BEARER_AUTH_NAME]: [] },
-    ]);
+    expect(document.paths["/api/v1/suppliers/metadata"]?.get?.security).toEqual(
+      [{ [SUPPLIER_BEARER_AUTH_NAME]: [] }],
+    );
   });
 
   it("documents list parameters and the full mutation/precondition contract", () => {
@@ -121,9 +147,11 @@ describe("Supplier OpenAPI document", () => {
     const archive = document.paths["/api/v1/suppliers/{id}"]?.delete;
     const restore = document.paths["/api/v1/suppliers/{id}/restore"]?.post;
 
-    expect(list?.parameters?.map((parameter) =>
-      "$ref" in parameter ? parameter.$ref : parameter.name,
-    )).toEqual([
+    expect(
+      list?.parameters?.map((parameter) =>
+        "$ref" in parameter ? parameter.$ref : parameter.name,
+      ),
+    ).toEqual([
       "q",
       "buildingCode",
       "category",

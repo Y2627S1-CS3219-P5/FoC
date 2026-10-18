@@ -1,5 +1,5 @@
 {
-  "//": "AI Assistance Disclosure: see AI-DISCLOSURES.md#strict-json-files. OpenAI Codex (GPT-6), 2026-09-25 and 2026-09-26; Supplier backend package configuration, integration check, and official NestJS Swagger dependency. Project-author review was completed and approved by @ron; the strict-JSON metadata exception still requires course-owner approval.",
+  "//": "AI Assistance Disclosure: see AI-DISCLOSURES.md#strict-json-files. OpenAI Codex (GPT-6), 2026-09-25 and 2026-09-26; Supplier backend package configuration, integration check, and official NestJS Swagger dependency. Project-author review was completed and approved by @ron. Additional assistance 2026-10-18: scoped Swagger YAML security patch; review pending. The strict-JSON metadata exception still requires course-owner approval.",
   "name": "foc-supplier-service",
   "version": "0.1.0",
   "private": true,
@@ -51,6 +51,11 @@
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
+  },
+  "overrides": {
+    "@nestjs/swagger": {
+      "js-yaml": "5.4.1"
+    }
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",

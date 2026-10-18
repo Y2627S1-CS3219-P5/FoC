@@ -2212,3 +2212,36 @@ through the existing public budget/command-runner boundary.
 
 Verification passed: infrastructure typecheck, lint, formatting, all 104 tests, production
 TypeScript build, offline dependency audit (zero vulnerabilities), and `git diff --check`.
+
+## 2026-10-18 — Supplier Swagger YAML dependency security patch
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Resolve the issue #52 production dependency advisory before
+  building the authorized cloud release; no AWS calls, image pushes, or other service
+  changes were performed by this correction.
+- **Repository files affected:** `supplier-service/package.json`,
+  `supplier-service/package-lock.json`, `supplier-service/src/openapi/swagger.spec.ts`,
+  `supplier-service/AI-DISCLOSURES.md`, and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+The Supplier production audit reported the moderate YAML loader advisory
+[GHSA-r3ph-w7gj-g6xm](https://github.com/nodeca/js-yaml/security/advisories/GHSA-r3ph-w7gj-g6xm)
+through Swagger's exact `js-yaml` 5.3.0 dependency. Official npm registry metadata
+confirmed Swagger 11.4.7 is the latest 11.x release and YAML 5.4.1 retains its CommonJS
+export; the upstream advisory identifies 5.4.1 as patched. Codex added an override scoped
+only to Swagger's YAML dependency and regenerated the lockfile mechanically. No forced
+Swagger major upgrade, unrelated dependency refresh, or Supplier operation changed.
+The sidecar records removal once a compatible Swagger release directly uses a patched
+dependency. A localhost-only Nest test verifies real Swagger JSON and YAML responses,
+exercising the `dump` API rather than only inspecting generated document objects.
+
+Verification passed: clean `npm ci --ignore-scripts`, Supplier typecheck, all 25 suites
+and 217 tests, production build, formatting for changed JSON/TypeScript files, and
+`git diff --check`. `npm audit --omit=dev` reports zero vulnerabilities, and `npm ls`
+confirms Swagger 11.4.7 resolves only its scoped YAML dependency to 5.4.1.
