@@ -1744,3 +1744,23 @@ Claude mapped oversized bodies to 413 and unsupported charset or encoding to 415
 ### Key response
 
 Claude documented the pickup-timeout re-listing deviation as an open question for the author, added `StubCreditBus.restore()` so a restart causes no false violations, added demo self-checks, hid the current state and history actor ids from non-parties, strengthened the accept-vs-expiry race test, type-checked the tests, and recorded the disclosures.
+
+## 2026-10-18 — AWS deployment preflight and cost guardrails
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** implementation of approved specification issue #46; configuration validation, read-only AWS preflight, deterministic cost estimation, tests, and documentation
+- **Repository files affected:** `infrastructure/` package/config/preflight/cost/gate/test/docs files, root `.gitignore`, and this disclosure
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompts
+
+> `$implement-spec` Done merged PR into main, can you proceed with full deployment
+
+### Key response
+
+Codex implemented the first unblocked infrastructure ticket without provisioning. It added
+a locked TypeScript CDK scaffold, rejected unresolved deployment inputs instead of choosing
+defaults, performed only read-only AWS capability checks, reproduced the public-price cost
+estimate with deterministic integer arithmetic, and made synth/deploy entry depend on
+matching current preflight and budget evidence. It recorded the existing school SCP quota
+denial and absent CDK bootstrap as blockers rather than weakening the approved design.

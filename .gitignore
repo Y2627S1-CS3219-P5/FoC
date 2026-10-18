@@ -24,3 +24,8 @@ Thumbs.db
 
 # Node Modules
 node_modules/
+
+# AWS CDK local artifacts and reviewed-but-environment-specific deployment inputs
+infrastructure/cdk.out/
+infrastructure/artifacts/
+infrastructure/config/demo.json

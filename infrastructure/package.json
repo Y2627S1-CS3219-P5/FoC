@@ -1,0 +1,39 @@
+{
+  "name": "@foc/infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AWS CDK infrastructure and deployment guardrails for the FoC demo environment",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "preflight": "node --import tsx scripts/preflight.ts",
+    "estimate": "node --import tsx scripts/estimate.ts",
+    "gate": "node --import tsx scripts/gate.ts",
+    "synth": "npm run gate && cdk synth --strict",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.220.0",
+    "constructs": "^10.4.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.10.0",
+    "aws-cdk": "2.1031.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-awscdk": "^4.4.4",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2"
+  }
+}

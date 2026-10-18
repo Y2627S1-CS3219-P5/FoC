@@ -1,0 +1,121 @@
+{
+  "accountId": "REPLACE_WITH_12_DIGIT_ACCOUNT_ID",
+  "awsProfile": "REPLACE_WITH_SSO_PROFILE",
+  "primaryRegion": "ap-southeast-1",
+  "edgeRegion": "us-east-1",
+  "owner": "REPLACE_WITH_OPERATIONAL_OWNER",
+  "alertEmail": "REPLACE_WITH_CONFIRMED_ALERT_EMAIL",
+  "monthlyBudgetUsd": "REPLACE_WITH_APPROVED_NUMBER",
+  "bootstrapAdministrator": {
+    "username": "REPLACE_WITH_ADMIN_USERNAME",
+    "email": "REPLACE_WITH_ADMIN_U_NUS_EMAIL"
+  },
+  "services": {
+    "frontend": {
+      "cpu": "REPLACE_WITH_MEASURED_FARGATE_CPU",
+      "memoryMiB": "REPLACE_WITH_MEASURED_FARGATE_MEMORY",
+      "cpuTargetPercent": "REPLACE_WITH_MEASURED_TARGET",
+      "memoryTargetPercent": "REPLACE_WITH_MEASURED_TARGET"
+    },
+    "userService": {
+      "cpu": "REPLACE_WITH_MEASURED_FARGATE_CPU",
+      "memoryMiB": "REPLACE_WITH_MEASURED_FARGATE_MEMORY",
+      "cpuTargetPercent": "REPLACE_WITH_MEASURED_TARGET",
+      "memoryTargetPercent": "REPLACE_WITH_MEASURED_TARGET"
+    },
+    "supplierService": {
+      "cpu": "REPLACE_WITH_MEASURED_FARGATE_CPU",
+      "memoryMiB": "REPLACE_WITH_MEASURED_FARGATE_MEMORY",
+      "cpuTargetPercent": "REPLACE_WITH_MEASURED_TARGET",
+      "memoryTargetPercent": "REPLACE_WITH_MEASURED_TARGET"
+    }
+  },
+  "waf": {
+    "global": {
+      "requestsPerEvaluationWindow": "REPLACE_WITH_BOUNDED_TEST_RESULT",
+      "evaluationWindowSeconds": "REPLACE_WITH_60_120_300_OR_600"
+    },
+    "authentication": {
+      "requestsPerEvaluationWindow": "REPLACE_WITH_BOUNDED_TEST_RESULT",
+      "evaluationWindowSeconds": "REPLACE_WITH_60_120_300_OR_600"
+    }
+  },
+  "alarms": {
+    "unhealthyFrontendTargets": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
+    "applicationServerErrors": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
+    "ecsCpuPercent": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
+    "ecsMemoryPercent": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
+    "rdsFreeStorageBytes": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
+    "rdsCpuPercent": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
+    "rdsConnections": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    },
+    "ecsDeploymentFailures": {
+      "threshold": "REPLACE",
+      "evaluationPeriods": "REPLACE",
+      "periodSeconds": "REPLACE"
+    }
+  },
+  "database": {
+    "allocatedStorageGiB": "REPLACE_AFTER_COST_REVIEW",
+    "maximumStorageGiB": "REPLACE_AFTER_COST_REVIEW",
+    "backupRetentionDays": "REPLACE_WITH_1_TO_7"
+  },
+  "monthlyUsage": {
+    "taskHours": {
+      "frontend": "REPLACE_WITH_ESTIMATED_TASK_HOURS",
+      "userService": "REPLACE_WITH_ESTIMATED_TASK_HOURS",
+      "supplierService": "REPLACE_WITH_ESTIMATED_TASK_HOURS"
+    },
+    "rdsInstanceHours": "REPLACE_WITH_ESTIMATED_ACTIVE_HOURS",
+    "albHours": "REPLACE_WITH_ESTIMATED_ACTIVE_HOURS",
+    "albCapacityUnitHours": "REPLACE_WITH_ESTIMATED_LCU_HOURS",
+    "cloudFrontRequests": "REPLACE_WITH_ESTIMATED_REQUESTS",
+    "cloudFrontDataOutGb": "REPLACE_WITH_ESTIMATED_GB",
+    "wafRequests": "REPLACE_WITH_ESTIMATED_REQUESTS",
+    "secretsApiRequests": "REPLACE_WITH_ESTIMATED_REQUESTS",
+    "ecrStorageGbMonths": "REPLACE_WITH_ESTIMATED_GB_MONTHS",
+    "logIngestionGb": "REPLACE_WITH_ESTIMATED_GB",
+    "logStorageGbMonths": "REPLACE_WITH_ESTIMATED_GB_MONTHS",
+    "cloudWatchAlarmMetrics": "REPLACE_WITH_FINAL_ALARM_METRIC_COUNT",
+    "rdsBackupStorageGbMonths": "REPLACE_WITH_ESTIMATED_EXCESS_BACKUP_GB_MONTHS",
+    "oneOffJobVcpuHours": "REPLACE_WITH_ESTIMATED_VCPU_HOURS",
+    "oneOffJobMemoryGbHours": "REPLACE_WITH_ESTIMATED_GB_HOURS"
+  },
+  "costApproval": {
+    "approvedBy": "REPLACE_WITH_TEAM_LEADER",
+    "approvedAt": "REPLACE_WITH_ISO_8601_TIMESTAMP",
+    "pricingCalculatorEstimateUrl": "REPLACE_WITH_SHARED_AWS_PRICING_CALCULATOR_URL"
+  },
+  "quotaApproval": {
+    "confirmedBy": "REPLACE_WITH_REVIEWER",
+    "confirmedAt": "REPLACE_WITH_ISO_8601_TIMESTAMP",
+    "evidenceReference": "REPLACE_WITH_NUS_CONFIRMATION_OR_QUOTA_REVIEW_REFERENCE"
+  }
+}
