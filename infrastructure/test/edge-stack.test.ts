@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Stack } from "aws-cdk-lib";
@@ -57,6 +60,33 @@ function searchStrings(value: unknown): string[] {
   }
   return [];
 }
+
+test("decodes and normalizes every internal-path and authentication-scope match before inspection", () => {
+  const { edgeTemplate } = synthesizedEdge();
+  const webAcl = onlyResource(edgeTemplate, "AWS::WAFv2::WebACL");
+  let inspected = 0;
+  const inspect = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(inspect);
+      return;
+    }
+    if (value === null || typeof value !== "object") return;
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "ByteMatchStatement") {
+        assert.deepEqual(
+          (child as Record<string, unknown>).TextTransformations,
+          [
+            { Priority: 0, Type: "URL_DECODE" },
+            { Priority: 1, Type: "NORMALIZE_PATH" },
+          ],
+        );
+        inspected += 1;
+      } else inspect(child);
+    }
+  };
+  inspect(webAcl.Properties.Rules);
+  assert.ok(inspected >= 20);
+});
 
 test("creates an explicit cross-region Edge dependency without copied ALB identifiers", () => {
   const { applicationStack, applicationTemplate, edgeStack, edgeTemplate } =

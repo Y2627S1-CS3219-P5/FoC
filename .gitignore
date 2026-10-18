@@ -1,3 +1,5 @@
+# Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18.
+# Scope: AWS deployment config, dependencies, and generated artifacts. Author review: PENDING.
 # AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25. Scope: ignored Supplier dependency and test/build artifacts. Author review: Reviewed and approved by @ron.
 # Build output
 dist/

@@ -37,10 +37,14 @@ function config(passwordSuffix = "one") {
   };
 }
 
-function fakeClients({ failSchema = false } = {}) {
+function fakeClients({
+  failSchema = false,
+  elevatedRole = false,
+  wrongDatabaseOwner = false,
+} = {}) {
   const state = {
     roles: new Set(),
-    databases: new Set(),
+    databases: new Set(wrongDatabaseOwner ? ["users"] : []),
     clients: [],
     formatCalls: [],
     queries: [],
@@ -58,6 +62,18 @@ function fakeClients({ failSchema = false } = {}) {
       },
       async query(text, values = []) {
         state.queries.push({ database, text, values });
+        if (text.startsWith("SELECT rolsuper")) {
+          return {
+            rowCount: 1,
+            rows: [
+              {
+                rolsuper: elevatedRole,
+                rolreplication: false,
+                rolbypassrls: false,
+              },
+            ],
+          };
+        }
         if (
           failSchema &&
           database === "users" &&
@@ -71,7 +87,17 @@ function fakeClients({ failSchema = false } = {}) {
         if (text.includes("FROM pg_database")) {
           return {
             rowCount: state.databases.has(values[0]) ? 1 : 0,
-            rows: [],
+            rows: state.databases.has(values[0])
+              ? [
+                  {
+                    owner: wrongDatabaseOwner
+                      ? "unexpected_owner"
+                      : values[0] === "users"
+                        ? "user_migrator"
+                        : "supplier_migrator",
+                  },
+                ]
+              : [],
           };
         }
         if (text.startsWith("SELECT format")) {
@@ -123,6 +149,57 @@ test("creates missing resources, repairs every run, and resynchronizes passwords
   assert.equal(
     state.clients.every(({ ended }) => ended),
     true,
+  );
+});
+
+test("grants only SET ROLE membership to master and refuses an elevated service role", async () => {
+  const { factory, state } = fakeClients();
+  await runBootstrap(config(), {
+    clientFactory: factory,
+    logger: { info() {} },
+  });
+  const grants = state.formatCalls.filter(({ template }) =>
+    template.startsWith("GRANT %I TO"),
+  );
+  assert.deepEqual(
+    grants.map(({ args }) => args),
+    [
+      ["user_migrator", "focmaster"],
+      ["supplier_migrator", "focmaster"],
+    ],
+  );
+  assert.ok(
+    grants.every(({ template }) =>
+      template.includes("WITH INHERIT FALSE, SET TRUE"),
+    ),
+  );
+  assert.ok(
+    state.clients.filter(({ database }) => database !== "postgres").length ===
+      2,
+  );
+  const elevated = fakeClients({ elevatedRole: true });
+  await assert.rejects(
+    runBootstrap(config(), {
+      clientFactory: elevated.factory,
+      logger: { info() {} },
+    }),
+    /unexpectedly elevated/,
+  );
+});
+
+test("refuses an existing database owned by an unexpected role before changing database grants", async () => {
+  const { factory, state } = fakeClients({ wrongDatabaseOwner: true });
+  await assert.rejects(
+    runBootstrap(config(), { clientFactory: factory, logger: { info() {} } }),
+    /unexpected owner for database users/,
+  );
+  assert.equal(
+    state.formatCalls.some(
+      ({ template }) =>
+        template.includes("PRIVILEGES ON DATABASE") ||
+        template.includes("CONNECT, TEMPORARY"),
+    ),
+    false,
   );
 });
 

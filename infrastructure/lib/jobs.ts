@@ -1,5 +1,7 @@
-import { chmodSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
+import { writeOwnerOnlyJson } from "./private-json.js";
 import type { DeploymentConfig } from "./config.js";
 import { parseJson, runChecked, type CommandRunner } from "./commands.js";
 import { JOBS, type JobDefinition } from "./deployment-names.js";
@@ -328,15 +330,7 @@ function runOneJob(options: {
 }
 
 function writeEvidence(path: string, evidence: ReleaseJobsEvidence): void {
-  const absolutePath = resolve(path);
-  mkdirSync(dirname(absolutePath), { recursive: true, mode: 0o700 });
-  const temporary = `${absolutePath}.${process.pid}.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(evidence, null, 2)}\n`, {
-    mode: 0o600,
-  });
-  chmodSync(temporary, 0o600);
-  renameSync(temporary, absolutePath);
-  chmodSync(absolutePath, 0o600);
+  writeOwnerOnlyJson(path, evidence);
 }
 
 function pascal(value: string): string {

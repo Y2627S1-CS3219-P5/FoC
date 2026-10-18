@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import type { DeploymentConfig } from "./config.js";
 import { parseJson, runChecked, type CommandRunner } from "./commands.js";
 import {
@@ -43,6 +46,11 @@ export function runCloudSmoke(options: {
       "/api/v1/auth/verify",
       "/api/docs",
       "/api/docs-json",
+      "/%61uth/verify",
+      "/api/%64ocs",
+      "/api/v1/errands",
+      "/api/v1/%65rrands",
+      "/api/v1/unused/../credits",
     ].map((path) => [path, requireStatus(runner, `${baseUrl}${path}`, 404)]),
   );
   const password = readSecret(
@@ -112,6 +120,7 @@ function requireStatus(
         "--silent",
         "--show-error",
         "--location",
+        "--path-as-is",
         "--connect-timeout",
         "10",
         "--max-time",

@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import type { CommandRequest, CommandResult } from "../lib/commands.js";
 import { DEPLOYMENT_TAGS } from "../lib/deployment-names.js";
 import type { DeploymentConfig } from "../lib/config.js";

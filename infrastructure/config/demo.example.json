@@ -6,6 +6,10 @@
   "owner": "REPLACE_WITH_OPERATIONAL_OWNER",
   "alertEmail": "REPLACE_WITH_CONFIRMED_ALERT_EMAIL",
   "monthlyBudgetUsd": "REPLACE_WITH_APPROVED_NUMBER",
+  "budgetAlerts": {
+    "actualPercent": 80,
+    "forecastPercent": 100
+  },
   "bootstrapAdministrator": {
     "username": "REPLACE_WITH_ADMIN_USERNAME",
     "email": "REPLACE_WITH_ADMIN_U_NUS_EMAIL"
@@ -102,7 +106,7 @@
       "supplierService": "REPLACE_WITH_ESTIMATED_TASK_HOURS"
     },
     "rdsInstanceHours": "REPLACE_WITH_ESTIMATED_ACTIVE_HOURS",
-    "albHours": "REPLACE_WITH_ESTIMATED_ACTIVE_HOURS",
+    "albHours": 730,
     "albCapacityUnitHours": "REPLACE_WITH_ESTIMATED_LCU_HOURS",
     "cloudFrontRequests": "REPLACE_WITH_ESTIMATED_REQUESTS",
     "cloudFrontDataOutGb": "REPLACE_WITH_ESTIMATED_GB",
@@ -111,7 +115,7 @@
     "ecrStorageGbMonths": "REPLACE_WITH_ESTIMATED_GB_MONTHS",
     "logIngestionGb": "REPLACE_WITH_ESTIMATED_GB",
     "logStorageGbMonths": "REPLACE_WITH_ESTIMATED_GB_MONTHS",
-    "cloudWatchAlarmMetrics": "REPLACE_WITH_FINAL_ALARM_METRIC_COUNT",
+    "cloudWatchAlarmMetrics": 30,
     "rdsBackupStorageGbMonths": "REPLACE_WITH_ESTIMATED_EXCESS_BACKUP_GB_MONTHS",
     "oneOffJobVcpuHours": "REPLACE_WITH_ESTIMATED_VCPU_HOURS",
     "oneOffJobMemoryGbHours": "REPLACE_WITH_ESTIMATED_GB_HOURS"

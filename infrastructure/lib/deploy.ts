@@ -1,4 +1,8 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { resolve } from "node:path";
+import { ensureMonitoringBudget, type BudgetEvidence } from "./budget.js";
 import type { CommandRunner } from "./commands.js";
 import {
   deployExactStack,
@@ -21,6 +25,7 @@ export interface ApplyDeploymentResult {
   readonly phase: "foundation" | "release";
   readonly approvalToken: string;
   readonly cloudFrontUrl?: string;
+  readonly budget?: BudgetEvidence;
 }
 
 export function applyApprovedDeployment(
@@ -28,8 +33,13 @@ export function applyApprovedDeployment(
 ): ApplyDeploymentResult {
   const verified = verifyApprovedPlan(options, options.approvalToken);
   if (options.phase === "foundation") {
+    const budget = ensureMonitoringBudget(options.config, options.runner);
     deployExactStack(options, "foundation");
-    return { phase: "foundation", approvalToken: verified.approvalToken };
+    return {
+      phase: "foundation",
+      approvalToken: verified.approvalToken,
+      budget,
+    };
   }
   if (options.releaseManifest === undefined) {
     throw new Error("Release apply requires a release manifest");

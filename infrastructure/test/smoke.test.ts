@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { CommandRequest, CommandRunner } from "../lib/commands.js";
@@ -77,4 +80,17 @@ test("reuses API and browser journeys through the gateway without probing privat
     .map(({ args }) => args.at(-1));
   assert.ok(publicChecks.includes("https://example.cloudfront.net/health"));
   assert.ok(publicChecks.includes("https://example.cloudfront.net/api/docs"));
+  for (const path of [
+    "/%61uth/verify",
+    "/api/%64ocs",
+    "/api/v1/%65rrands",
+    "/api/v1/unused/../credits",
+  ]) {
+    assert.equal(evidence.forbiddenRoutes[path], 404);
+  }
+  assert.ok(
+    calls
+      .filter(({ executable }) => executable === "curl")
+      .every(({ args }) => args.includes("--path-as-is")),
+  );
 });

@@ -1,4 +1,7 @@
 #!/bin/sh
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+# Scope: AWS demo deployment implementation and pre-deployment review fixes.
+# Author review: PENDING.
 # Test-only equivalent of RDS rds.force_ssl=1. Prepend the rejection so the
 # image's broader host rules cannot accept a plaintext connection first.
 set -eu

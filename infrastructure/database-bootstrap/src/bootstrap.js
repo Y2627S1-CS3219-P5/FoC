@@ -93,16 +93,29 @@ async function ensureRole(client, name, password) {
   if (result.rowCount === 0) {
     await formattedStatement(client, "CREATE ROLE %I", [name]);
   }
+  const privileges = await client.query(
+    "SELECT rolsuper, rolreplication, rolbypassrls FROM pg_roles WHERE rolname = $1",
+    [name],
+  );
+  if (
+    privileges.rows[0]?.rolsuper ||
+    privileges.rows[0]?.rolreplication ||
+    privileges.rows[0]?.rolbypassrls
+  ) {
+    throw new Error(`Refusing unexpectedly elevated database role ${name}`);
+  }
   await formattedStatement(
     client,
-    "ALTER ROLE %I WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT PASSWORD %L",
+    // A nonsuperuser cannot specify SUPERUSER/REPLICATION/BYPASSRLS attributes,
+    // even to turn them off. New roles default false; existing ones are checked.
+    "ALTER ROLE %I WITH LOGIN NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD %L",
     [name, password],
   );
 }
 
 async function ensureDatabase(client, database, owner) {
   const result = await client.query(
-    "SELECT 1 FROM pg_database WHERE datname = $1",
+    "SELECT pg_get_userbyid(datdba) AS owner FROM pg_database WHERE datname = $1",
     [database],
   );
   if (result.rowCount === 0) {
@@ -112,11 +125,9 @@ async function ensureDatabase(client, database, owner) {
       database,
       owner,
     ]);
+  } else if (result.rows[0]?.owner !== owner) {
+    throw new Error(`Refusing unexpected owner for database ${database}`);
   }
-  await formattedStatement(client, "ALTER DATABASE %I OWNER TO %I", [
-    database,
-    owner,
-  ]);
 }
 
 async function isolateDatabase(client, service) {
@@ -183,8 +194,20 @@ export async function runBootstrap(
       }
     }
     for (const service of SERVICES) {
+      // RDS's master is NOSUPERUSER. CREATE DATABASE ... OWNER requires SET
+      // ROLE membership; never grant a service role access to the master role.
+      await formattedStatement(
+        master,
+        "GRANT %I TO %I WITH INHERIT FALSE, SET TRUE",
+        [service.migrator.name, config.connection.user],
+      );
       await ensureDatabase(master, service.database, service.migrator.name);
-      await isolateDatabase(master, service);
+      await formattedStatement(master, "SET ROLE %I", [service.migrator.name]);
+      try {
+        await isolateDatabase(master, service);
+      } finally {
+        await master.query("RESET ROLE");
+      }
       logger.info(
         `Database bootstrap: synchronized database ${service.database}`,
       );
@@ -194,6 +217,8 @@ export async function runBootstrap(
       const databaseClient = clientFactory({
         ...config.connection,
         database: service.database,
+        user: service.migrator.name,
+        password: config.rolePasswords[service.migrator.name],
       });
       await databaseClient.connect();
       try {

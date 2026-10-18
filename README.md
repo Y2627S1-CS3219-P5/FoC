@@ -1,4 +1,9 @@
 <!--
+AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+Scope: AWS deployment consolidated implementation and review-remediation summary.
+Author review: PENDING.
+-->
+<!--
 AI Assistance Disclosure:
 Tool: OpenAI Codex (GPT-6), date: 2026-09-25
 Scope: Added the consolidated project AI Use Summary for the Supplier backend foundation and its integration with the merged User Service contract.
@@ -70,6 +75,19 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
   one-service-per-folder skeleton** for core implementation.
 
 ## AI Use Summary
+
+OpenAI Codex (GPT-6) assisted on 2026-10-18 with the approved temporary AWS deployment:
+CDK infrastructure, strict deployment configuration and cost gates, private RDS databases
+and verified TLS, Fargate/Service Connect, CloudFront/WAF, scoped secrets and IAM,
+database jobs, release and lifecycle tooling, and API/browser verification. Review fixes
+align encoded-path checks with nginx, account for monitoring costs, own telemetry-log
+retention, and verify bootstrap using a PostgreSQL master without SUPERUSER. Cloud-only
+application seams disable Kafka publishing and exclude unfinished Order routes.
+Deployment code and local checks do not by themselves prove a live deployment; live AWS
+acceptance evidence is recorded separately. Project-author review is pending.
+[Infrastructure disclosure manifest](infrastructure/AI-DISCLOSURES.md) covers strict JSON
+and unchanged upstream certificate assets without invalidating their formats; the existing
+course-owner exception remains pending. Prompts and responses are in `ai/usage-log.md`.
 
 OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the first three Supplier backend increments from the author-approved specification: NestJS/Drizzle and PostgreSQL foundations; guarded, edit-preserving seed identities; least-privilege Compose setup; real User Service bearer verification; authenticated catalogue reads; request correlation and bundled assets; and administrator-only create/full-update/archive/restore with strict bodies, normalized race-safe duplicate creation rejection, and ETag concurrency. The isolated real-service integration runner now verifies API and SQL mutation state, concurrent stale-write rejection, lifecycle no-ops, repeat-migration/seed preservation, and fail-closed authentication. No Supplier frontend, User Service application changes, Order Service integration, or physical Supplier deletion were included. Project-author review of all three backend increments was completed and approved by @ron. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) retain the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.
 

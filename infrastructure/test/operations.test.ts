@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { CommandRequest, CommandRunner } from "../lib/commands.js";
@@ -28,6 +31,7 @@ function operationRunner(options: {
   return (request) => {
     options.calls.push(request);
     const [service, operation] = request.args;
+    if (service === "budgets") return failure("NotFoundException");
     if (service === "sts") {
       return success(
         JSON.stringify({
@@ -284,6 +288,7 @@ test("destroy deletes only the four exact stacks in reverse dependency order", (
       return success(JSON.stringify({ clusters: [{ status: "INACTIVE" }] }));
     }
     if (service === "logs") return success(JSON.stringify({ logGroups: [] }));
+    if (service === "budgets") return failure("NotFoundException");
     if (service === "resourcegroupstaggingapi") {
       return success(JSON.stringify({ ResourceTagMappingList: [] }));
     }
@@ -298,6 +303,15 @@ test("destroy deletes only the four exact stacks in reverse dependency order", (
     `foc-demo:DESTROY:${config.accountId}`,
   );
   assert.deepEqual(residuals, []);
+  assert.ok(
+    calls.some(
+      ({ args }) =>
+        argumentAfter(
+          { executable: "aws", args },
+          "--log-group-name-prefix",
+        ) === "/aws/ecs/containerinsights/foc-demo-cluster/performance",
+    ),
+  );
   const order = calls
     .filter(
       ({ args }) => args[0] === "cloudformation" && args[1] === "delete-stack",

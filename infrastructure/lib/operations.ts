@@ -1,4 +1,13 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import type { DeploymentConfig } from "./config.js";
+import {
+  BUDGET_NAME,
+  readMonitoringBudget,
+  removeMonitoringBudget,
+  type BudgetEvidence,
+} from "./budget.js";
 import {
   parseJson,
   runChecked,
@@ -127,6 +136,7 @@ export interface EnvironmentStatus {
   }[];
   readonly pendingSnsConfirmation: boolean;
   readonly monthlyBudgetUsd: number;
+  readonly monitoringBudget: BudgetEvidence;
   readonly costApproval: DeploymentConfig["costApproval"];
   readonly trackingPortalReminder: string;
 }
@@ -346,6 +356,7 @@ export function readEnvironmentStatus(
       ({ SubscriptionArn }) => SubscriptionArn === "PendingConfirmation",
     ),
     monthlyBudgetUsd: context.config.monthlyBudgetUsd,
+    monitoringBudget: readMonitoringBudget(context.config, context.runner),
     costApproval: context.config.costApproval,
     trackingPortalReminder:
       "Use the NUS tracking portal for authoritative remaining project credit; stopped services are not zero-cost.",
@@ -407,7 +418,13 @@ export function destroyEnvironment(
       `wait for exact stack ${stack.name} deletion`,
     );
   }
-  return inspectResiduals(context, residualTargets);
+  const budget = removeMonitoringBudget(context.config, context.runner);
+  return [
+    ...inspectResiduals(context, residualTargets),
+    ...(budget.state === "ABSENT"
+      ? []
+      : [`budget:${BUDGET_NAME}:${budget.state}`]),
+  ];
 }
 
 function operationalInventory(
@@ -689,6 +706,8 @@ function captureResidualTargets(
       "/foc/demo/jobs/user-migration",
       "/foc/demo/jobs/supplier-migration",
       "/foc/demo/jobs/supplier-seed",
+      "/aws/ecs/containerinsights/foc-demo-cluster/performance",
+      "/foc/demo/events/ecs-deployment-failures",
     ],
   };
 }

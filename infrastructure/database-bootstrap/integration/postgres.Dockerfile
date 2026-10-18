@@ -13,6 +13,7 @@ RUN apk add --no-cache openssl \
   && chmod 644 /certs/server.crt
 
 COPY require-ssl.sh /docker-entrypoint-initdb.d/010-require-ssl.sh
+COPY rds-master.sql /docker-entrypoint-initdb.d/020-rds-master.sql
 RUN chmod 755 /docker-entrypoint-initdb.d/010-require-ssl.sh
 
 CMD ["postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/certs/server.crt", "-c", "ssl_key_file=/certs/server.key"]

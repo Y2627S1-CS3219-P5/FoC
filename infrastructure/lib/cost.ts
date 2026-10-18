@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { createHash } from "node:crypto";
 import type { DeploymentConfig } from "./config.js";
 import { configFingerprint } from "./config.js";
@@ -251,9 +254,9 @@ export function estimateMonthlyCost(
   );
   add(
     "waf-rules",
-    "Two rate rules and one managed rule group",
+    "Internal-path denial, two rate rules, and one managed rule group",
     "wafRuleMonth",
-    3,
+    4,
     "rule-months",
     "rule-month",
   );
@@ -301,11 +304,64 @@ export function estimateMonthlyCost(
   );
   add(
     "alarms",
-    "CloudWatch standard alarm metrics",
+    "30 standard alarm metrics: 18 explicit plus 12 target-tracking (or configured higher count)",
     "cloudWatchAlarmMetricMonth",
-    config.monthlyUsage.cloudWatchAlarmMetrics,
+    Math.max(30, config.monthlyUsage.cloudWatchAlarmMetrics),
     "metric-months",
     "metric-month",
+  );
+  // Original Container Insights is billed as custom metrics, not enhanced
+  // observability. RunningTaskCount became free in October 2026. The paid
+  // dimension counts are 13/cluster, 14/service, and 10/task-definition family.
+  // Task-hours conservatively overcount two replicas' shared metric series.
+  const serviceHours = Object.values(config.monthlyUsage.taskHours).map(
+    (hours) => Math.min(730, hours),
+  );
+  const jobHours = Math.min(730, config.monthlyUsage.oneOffJobVcpuHours * 4);
+  const clusterHours = Math.min(730, Math.max(...serviceHours) + jobHours);
+  const totalServiceHours = serviceHours.reduce((sum, hours) => sum + hours, 0);
+  const metricHours =
+    13 * clusterHours + 24 * totalServiceHours + 10 * jobHours;
+  add(
+    "container-insights-metrics",
+    "Original Container Insights paid cluster/service/task-family metrics, hourly prorated",
+    "cloudWatchCustomMetricMonth",
+    metricHours,
+    "metric-hours",
+    "metric-month (730 hours)",
+    730,
+  );
+  add(
+    "deployment-failure-metric",
+    "One ECS deployment-failure custom metric, conservatively retained all month",
+    "cloudWatchCustomMetricMonth",
+    1,
+    "metric-months",
+    "metric-month",
+  );
+  // AWS's documented example volumes are planning assumptions, not a traffic
+  // guarantee. Include these separately from application logs, with two
+  // containers per Service Connect task and one per one-off job.
+  const performanceLogGb =
+    (0.0181 * clusterHours +
+      (0.02816 + 0.06437 + 2 * 0.04426) * totalServiceHours +
+      (0.06437 + 0.04426) * jobHours) /
+    730;
+  add(
+    "container-insights-log-ingestion",
+    "Container Insights performance-log ingestion (AWS example-volume assumption)",
+    "cloudWatchLogIngestionGb",
+    performanceLogGb,
+    "GB",
+    "GB",
+  );
+  add(
+    "container-insights-log-storage",
+    "Container Insights performance logs, conservatively full-month storage despite 14-day retention",
+    "cloudWatchLogStorageGbMonth",
+    performanceLogGb,
+    "GB-months",
+    "GB-month",
   );
   add(
     "ecr-storage",

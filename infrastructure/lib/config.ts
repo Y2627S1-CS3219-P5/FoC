@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -95,6 +98,12 @@ export const deploymentConfigSchema = z
     owner: z.string().trim().min(1),
     alertEmail: z.string().email(),
     monthlyBudgetUsd: z.number().positive(),
+    budgetAlerts: z
+      .object({
+        actualPercent: z.number().positive().max(100),
+        forecastPercent: z.number().positive().max(100),
+      })
+      .strict(),
     bootstrapAdministrator: z
       .object({
         username: z
@@ -174,7 +183,8 @@ export const deploymentConfigSchema = z
         ecrStorageGbMonths: z.number().nonnegative(),
         logIngestionGb: z.number().nonnegative(),
         logStorageGbMonths: z.number().nonnegative(),
-        cloudWatchAlarmMetrics: z.number().int().nonnegative(),
+        // 15 explicit alarms (3 list two metrics) plus 12 target-tracking alarms.
+        cloudWatchAlarmMetrics: z.number().int().min(30),
         rdsBackupStorageGbMonths: z.number().nonnegative(),
         oneOffJobVcpuHours: z.number().nonnegative(),
         oneOffJobMemoryGbHours: z.number().nonnegative(),

@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import type { DeploymentConfig } from "../lib/config.js";
 import type { ReleaseManifest } from "../lib/release-manifest.js";
 
@@ -54,7 +57,8 @@ export function validConfig(): DeploymentConfig {
     edgeRegion: "us-east-1",
     owner: "course-team-owner",
     alertEmail: "alerts@u.nus.edu",
-    monthlyBudgetUsd: 110,
+    monthlyBudgetUsd: 150,
+    budgetAlerts: { actualPercent: 80, forecastPercent: 100 },
     bootstrapAdministrator: {
       username: "demo_admin",
       email: "demo_admin@u.nus.edu",
@@ -124,7 +128,7 @@ export function validConfig(): DeploymentConfig {
       ecrStorageGbMonths: 3,
       logIngestionGb: 1,
       logStorageGbMonths: 1,
-      cloudWatchAlarmMetrics: 12,
+      cloudWatchAlarmMetrics: 30,
       rdsBackupStorageGbMonths: 0,
       oneOffJobVcpuHours: 0,
       oneOffJobMemoryGbHours: 0,

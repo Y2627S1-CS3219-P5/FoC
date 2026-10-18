@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Stack } from "aws-cdk-lib";
@@ -86,6 +89,19 @@ test("configures the private Service Connect namespace on the ECS cluster", () =
       Namespace: Match.anyValue(),
     },
   });
+});
+
+test("owns the Container Insights performance logs with bounded retention and deletion", () => {
+  const { template } = synthesizedTemplate();
+  template.hasResource("AWS::Logs::LogGroup", {
+    Properties: {
+      LogGroupName: "/aws/ecs/containerinsights/foc-demo-cluster/performance",
+      RetentionInDays: 14,
+    },
+    DeletionPolicy: "Delete",
+    UpdateReplacePolicy: "Delete",
+  });
+  template.hasOutput("ContainerInsightsLogGroupName", {});
 });
 
 test("creates only the three disposable immutable and scanned component repositories", () => {

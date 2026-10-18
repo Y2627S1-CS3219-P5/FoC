@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,6 +54,9 @@ try {
       `SNS confirmation pending: ${status.pendingSnsConfirmation ? "yes" : "no"}`,
     );
     console.log(`Approved monthly budget: USD ${status.monthlyBudgetUsd}`);
+    console.log(
+      `Monitoring budget: ${status.monitoringBudget.state} (account-wide)`,
+    );
     console.log(
       `Reproducible monthly estimate: USD ${costEvidence.totalMonthlyUsd}`,
     );

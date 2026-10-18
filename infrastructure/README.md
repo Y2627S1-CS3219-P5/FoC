@@ -111,7 +111,11 @@ values are never committed or emitted as stack outputs.
 The stack defines four reusable, non-service Fargate task definitions with separate,
 least-privilege execution roles and empty task roles:
 
-1. `database-bootstrap` creates or repairs the fixed databases and roles.
+1. `database-bootstrap` creates the fixed databases and repairs ordinary role/grant settings.
+   Its master login is `NOSUPERUSER`, matching RDS: the master receives only explicit
+   `SET ROLE` membership in each migrator role, with inheritance disabled. Schema setup
+   authenticates as that database's migrator. Service roles never receive master or
+   cross-service role membership; unexpectedly elevated roles fail closed.
 2. `user-migration` applies User Service migrations.
 3. `supplier-migration` applies Supplier Service migrations.
 4. `supplier-seed` imports the repeatable Supplier seed.
@@ -326,6 +330,22 @@ service output.
 
 `test:data-integration` is an opt-in local Docker check. It builds the bootstrap and
 service images, starts a disposable TLS-only PostgreSQL 17.11 container, runs the canonical
-job sequence, reruns bootstrap and seed, verifies administrator-edit preservation and
+job sequence using a `NOSUPERUSER CREATEDB CREATEROLE` master, reruns bootstrap and seed, verifies administrator-edit preservation and
 database-role isolation, then removes its containers, volume, network, and local images.
 It does not use AWS or cloud credentials.
+
+## Monitoring budget and telemetry accounting
+
+Foundation apply attempts the exact monitoring-only `foc-demo-monthly` AWS Budget after
+plan verification. It uses the configured monthly amount and alert email; the explicit
+example proposal is actual 80%/forecast 100%, not a claim that those exact percentages
+were previously approved. It covers the whole school project account because cost-tag
+activation has not been established. Permissions denial is recorded as unavailable;
+other errors fail the command. No automatic budget actions are configured. A matching
+existing budget is reused; differing settings are never overwritten. Status reports it,
+and confirmed destroy removes and checks the matching exact-name budget.
+
+Container Insights uses the original metric billing model. Its performance log group is
+created before the cluster, retained for 14 days, and deleted with Foundation. Cost
+estimates include four WAF rules, thirty alarm metrics, custom telemetry metrics, and
+performance-log volume separately from application logs. See [the cost assumptions](cost/PLANNING-ESTIMATE.md).

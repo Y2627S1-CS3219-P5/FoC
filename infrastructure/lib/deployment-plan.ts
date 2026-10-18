@@ -1,12 +1,10 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { createHash } from "node:crypto";
-import {
-  chmodSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { writeOwnerOnlyJson } from "./private-json.js";
 import type { DeploymentConfig } from "./config.js";
 import { configFingerprint } from "./config.js";
 import { runChecked, type CommandRunner } from "./commands.js";
@@ -311,16 +309,4 @@ function readApprovedCostEstimate(
     );
   }
   return estimate;
-}
-
-function writeOwnerOnlyJson(path: string, value: unknown): void {
-  const absolutePath = resolve(path);
-  mkdirSync(dirname(absolutePath), { recursive: true, mode: 0o700 });
-  const temporary = `${absolutePath}.${process.pid}.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
-    mode: 0o600,
-  });
-  chmodSync(temporary, 0o600);
-  renameSync(temporary, absolutePath);
-  chmodSync(absolutePath, 0o600);
 }

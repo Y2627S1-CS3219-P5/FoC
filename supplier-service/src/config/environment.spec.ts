@@ -1,3 +1,5 @@
+// Additional AI assistance: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: verified-TLS RDS configuration regression tests. Author review: PENDING.
 /**
  * AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-09-25.
  * Scope: tested required, bounded User Service verification runtime

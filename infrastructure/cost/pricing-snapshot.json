@@ -22,6 +22,7 @@
     "cloudWatchLogIngestionGb": "0.70",
     "cloudWatchLogStorageGbMonth": "0.03",
     "cloudWatchAlarmMetricMonth": "0.10",
+    "cloudWatchCustomMetricMonth": "0.30",
     "ecrStorageGbMonth": "0.10",
     "monitoringBudgetMonth": "0.00",
     "ecsServiceConnectControlPlaneMonth": "0.00"

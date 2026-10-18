@@ -1,4 +1,8 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { dirname, resolve } from "node:path";
+import { writeOwnerOnlyJson } from "../lib/private-json.js";
 import { fileURLToPath } from "node:url";
 import { loadDeploymentConfig } from "../lib/config.js";
 import { systemCommandRunner } from "../lib/commands.js";
@@ -59,6 +63,15 @@ try {
     console.log(
       `PASS: applied exact ${result.phase} plan ${result.approvalToken}`,
     );
+    if (result.budget) {
+      writeOwnerOnlyJson(
+        resolve(infrastructureRoot, "artifacts", "budget.json"),
+        result.budget,
+      );
+      console.log(
+        `Monitoring budget: ${result.budget.state} (account-wide; actual ${result.budget.actualPercent}%, forecast ${result.budget.forecastPercent}%)`,
+      );
+    }
     if (result.cloudFrontUrl)
       console.log(`Application: ${result.cloudFrontUrl}`);
   }

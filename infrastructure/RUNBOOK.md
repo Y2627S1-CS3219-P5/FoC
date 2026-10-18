@@ -181,7 +181,15 @@ This permanently removes demo User/Supplier data, secrets, images, and retained 
 validates every stack before deleting only Edge, Application, Data, and Foundation in that
 order. It never falls back to wildcard or tag-based deletion. After CloudFormation reports
 completion, read-only checks report any exact repository, cluster, database, distribution,
-log group, stack, or tagged-resource residue for manual review. Local evidence is retained.
+log group, stack, or tagged-resource residue for manual review. This includes the
+14-day Container Insights performance group. The matching account-wide monitoring budget
+is also removed and checked; missing permission is reported as budget residue requiring
+manual inspection. Local evidence is retained.
+
+Foundation apply records `artifacts/budget.json`: created, matching, or permission
+unavailable. The configured actual/forecast alert percentages are visible in this receipt
+and status. The example 80%/100% values are conservative proposed defaults. Notifications
+do not cap spending, and the account-wide budget includes other team workloads.
 
 Complete teardown before **11 December 2026**. If the school account denies a required
 delete or inspection capability, preserve the failure evidence and escalate it to the NUS

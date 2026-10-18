@@ -1,3 +1,6 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { CfnOutput, Duration, Stack, type StackProps } from "aws-cdk-lib";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
@@ -42,7 +45,12 @@ function uriPathMatch(
       fieldToMatch: { uriPath: {} },
       positionalConstraint,
       searchString: path,
-      textTransformations: [{ priority: 0, type: "NONE" }],
+      // nginx decodes and normalizes before selecting a location. Inspect the
+      // same path so percent encoding or dot segments cannot bypass the guard.
+      textTransformations: [
+        { priority: 0, type: "URL_DECODE" },
+        { priority: 1, type: "NORMALIZE_PATH" },
+      ],
     },
   };
 }

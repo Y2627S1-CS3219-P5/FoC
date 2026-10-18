@@ -1,3 +1,6 @@
+# AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+# Scope: AWS demo deployment implementation and pre-deployment review fixes.
+# Author review: PENDING.
 services:
   postgres:
     build:
@@ -5,10 +8,14 @@ services:
       dockerfile: postgres.Dockerfile
     environment:
       POSTGRES_DB: postgres
-      POSTGRES_PASSWORD: integration-master-password
-      POSTGRES_USER: focmaster
+      POSTGRES_PASSWORD: integration-fixture-superuser
+      POSTGRES_USER: fixture_superuser
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U focmaster -d postgres"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -U fixture_superuser -d postgres",
+        ]
       interval: 2s
       timeout: 2s
       retries: 30

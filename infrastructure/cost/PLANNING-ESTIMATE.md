@@ -19,17 +19,38 @@ Tier, NUS credit, discount, tax, or customer-specific pricing.
 
 ## Illustrative scenarios
 
-| Scenario                                                   | Estimated monthly cost (USD) |
-| ---------------------------------------------------------- | ---------------------------: |
-| Retain chargeable resources; ECS and RDS stopped all month |                        33.89 |
-| 80 active hours; three tasks at 0.25 vCPU / 1 GB           |                        43.60 |
-| Always on; three tasks at 0.25 vCPU / 1 GB                 |                       105.55 |
-| Always at maximum scale; six tasks at 0.25 vCPU / 1 GB     |                       156.29 |
+| Scenario                                                  | Estimated monthly cost (USD) |
+| --------------------------------------------------------- | ---------------------------: |
+| Retained resources; ECS/RDS stopped, no one-off jobs      |                        39.66 |
+| Measured sizing; 80 active hours per service and RDS      |                        58.22 |
+| Measured sizing; always on, one task per service          |                       207.38 |
+| Measured sizing; always at maximum, two tasks per service |                       330.78 |
 
-The 105.55 scenario assumes 730 hours, a single-AZ `db.t4g.micro`, 20 GB RDS gp3,
-one ALB plus 73 LCU-hours, 10 GB/100,000 CloudFront requests, 100,000 WAF requests,
-eight secrets, 1 GB of logs, twelve alarm metrics, and 3 GB of ECR storage. Task sizing is
-illustrative only and must be replaced with measurements.
+These scenarios use frontend 0.5 vCPU/1 GiB and User/Supplier each 1 vCPU/2 GiB,
+a single-AZ `db.t4g.micro`, 20 GiB gp3, and an ALB retained **730 hours even when
+ECS/RDS are stopped**, plus 73 LCU-hours. Other assumptions are 10 GB/100,000
+CloudFront requests, 100,000 WAF requests, eight secrets/1,000 API calls, 1 GB
+application-log ingestion and storage, and 3 GB ECR storage. Active scenarios allow
+2 vCPU-hours and 4 GB-hours for database/release jobs. The approved budget stays USD60;
+only the 80-hour scenario fits, with little headroom for more usage or other team resources.
+
+The estimator includes all four WAF rules. Fifteen explicit CloudWatch alarms contain
+18 alarm metrics (the three task-shortfall expressions each list two); six target-tracking
+policies create twelve further alarms, for **30 billable alarm metrics**. It also includes
+the deployment-failure custom metric and original Container Insights: 13 cluster metrics,
+14 paid service metrics, and 10 per task-definition family, prorated by active hours.
+The `RunningTaskCount` series is free from October 2026. Job time is conservatively
+bounded by vCPU-hours divided by the smallest task CPU allocation, 0.25 vCPU.
+Two replicas share the same service/family series, so using task-hours can overestimate.
+Performance-log ingestion/storage are separately added using AWS's example-volume
+assumptions, with two containers per Service Connect task. Actual telemetry volume varies.
+See [CloudWatch pricing](https://aws.amazon.com/cloudwatch/pricing/) and the committed
+Singapore offer snapshot for the USD0.30 custom-metric and USD0.10 alarm-metric rates.
+
+Metrics are emitted when tasks run; a stopped service does not produce Container Insights
+metrics. See [ECS Container Insights](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cloudwatch-container-insights.html).
+No Free Tier, credit, or volume discount is subtracted. These are planning estimates,
+not hard spending limits; RDS stop time and workload bursts must be monitored.
 
 Important continuing costs remain when compute is stopped: the ALB, WAF, Secrets Manager,
 RDS storage, alarms, retained logs, and ECR storage. RDS also restarts automatically after

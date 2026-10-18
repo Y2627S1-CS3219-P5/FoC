@@ -1,7 +1,11 @@
+// AI Assistance Disclosure: OpenAI Codex (GPT-6), 2026-10-18.
+// Scope: AWS demo deployment implementation and pre-deployment review fixes.
+// Author review: PENDING.
 import { CfnOutput, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as ecr from "aws-cdk-lib/aws-ecr";
 import * as ecs from "aws-cdk-lib/aws-ecs";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as servicediscovery from "aws-cdk-lib/aws-servicediscovery";
 import type { Construct } from "constructs";
 
@@ -56,11 +60,25 @@ export class FoundationStack extends Stack {
     // is not assignable to their interfaces with exactOptionalPropertyTypes.
     this.vpc = network as ec2.IVpc;
 
+    const performanceLogs = new logs.LogGroup(
+      this,
+      "ContainerInsightsPerformanceLogGroup",
+      {
+        logGroupName: "/aws/ecs/containerinsights/foc-demo-cluster/performance",
+        retention: logs.RetentionDays.TWO_WEEKS,
+        removalPolicy: RemovalPolicy.DESTROY,
+      },
+    );
     const cluster = new ecs.Cluster(this, "Cluster", {
       clusterName: "foc-demo-cluster",
       // Required for the stop-safe DesiredTaskCount - RunningTaskCount alarms.
       containerInsightsV2: ecs.ContainerInsights.ENABLED,
       vpc: this.vpc,
+    });
+    // Own the normally auto-created group before the cluster emits telemetry.
+    cluster.node.addDependency(performanceLogs);
+    new CfnOutput(this, "ContainerInsightsLogGroupName", {
+      value: performanceLogs.logGroupName,
     });
     this.cluster = cluster as ecs.ICluster;
     this.serviceConnectNamespace = cluster.addDefaultCloudMapNamespace({

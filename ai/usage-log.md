@@ -1961,3 +1961,52 @@ requested action and reports denied, missing, duplicate, or unexpected action na
 instead of relying on an incorrect fixed result count. Regression tests reproduce the
 AWS response shapes, including IAM Identity Center role paths and Organizations policy
 decisions. No AWS resources were created, updated, or deleted by this work.
+
+## 2026-10-18 — AWS pre-deployment review remediation
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Implemented the deployment code-review findings under the
+  already-authorized AWS specification; no AWS mutations were performed.
+- **Repository files affected:** Infrastructure source, tests, scripts, configuration
+  examples, pricing/operational docs and disclosure manifest; root `README.md`,
+  `frontend/AI-DISCLOSURES.md`, Supplier TLS-test disclosure, `.gitignore`, and this log.
+- **Author review:** Implementation review pending. The approved monthly budget remains
+  USD60; budget-alert percentages 80% actual/100% forecast are explicit proposed defaults.
+
+### Prompts
+
+> `$implement-spec` Done mergerd PR into main, can you proceed with full deployment
+
+> sure lets set budget as per your recommendation, owner is ron, email is e1156664@u.nus.edu
+
+> continue
+
+### Key response
+
+Codex aligned WAF URI inspection with nginx by URL-decoding before path normalization,
+added encoded public-route smoke probes, and brought the Container Insights performance
+log group under 14-day retention and stack deletion/residual checks. The deterministic
+estimate now includes four WAF rules, thirty billable alarm metrics including scaling and
+metric-math inputs, original Container Insights custom metrics and performance logs,
+and a deployment-failure custom metric. Official Singapore pricing and CloudWatch
+documentation support the quantities. At the reviewed measured sizes, retained ALB 730
+hours/73 LCU-hours and 80 active service/RDS hours, the estimate is USD58.218291066;
+always-on usage is USD207.378197912. The USD60 gate remains enforced.
+
+The deployment wrapper attempts one exact-name account-wide monitoring-only AWS Budget,
+records optional permission denial, verifies existing amount/alerts/subscribers rather than
+overwriting, and includes it in status and confirmed teardown. Evidence writers share one
+atomic owner-only JSON helper. Per-file leading comments and a schema-preserving strict
+JSON/upstream-certificate manifest disclose assistance without claiming author approval.
+
+A realistic PostgreSQL 17.11 integration fixture exposed two genuine restricted-master
+issues hidden by the earlier SUPERUSER fixture: superuser-only ALTER ROLE attributes and
+the SET ROLE membership needed for another database owner. The bootstrap now checks
+unexpectedly elevated roles, grants only noninherited master-to-migrator membership,
+authenticates schema setup as each migrator, and rejects unexpected existing database
+owners. Final focused unit/infrastructure/build checks and the isolated bootstrap,
+migrations, repeatable 21-row seed/edit-preservation, TLS, and role-isolation integration
+passed: infrastructure typecheck/lint/format/build and 89 tests, six bootstrap unit tests,
+and the isolated Docker integration. Independent inspection found no remaining test
+containers. This local evidence does not claim successful live AWS
+deployment.

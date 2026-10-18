@@ -38,6 +38,12 @@ psql_as() {
 "${compose[@]}" create postgres >/dev/null
 "${compose[@]}" cp postgres:/certs/server.crt "${FOC_DATA_INTEGRATION_CA}"
 "${compose[@]}" up --detach --wait postgres
+master_flags="$(psql_as focmaster integration-master-password postgres \
+  "SELECT 'nonsuperuser-verified' FROM pg_roles WHERE rolname = current_user AND NOT rolsuper AND rolcreatedb AND rolcreaterole;")"
+if [[ "${master_flags}" != *"nonsuperuser-verified"* ]]; then
+  echo "FAIL: bootstrap fixture must use a NOSUPERUSER CREATEDB CREATEROLE master" >&2
+  exit 1
+fi
 "${compose[@]}" build bootstrap user-migrate supplier-migrate supplier-seed
 
 "${compose[@]}" run --rm bootstrap
@@ -76,6 +82,8 @@ expect_failure psql_as user_app integration-user-runtime supplier "SELECT 1;"
 expect_failure psql_as supplier_app integration-supplier-runtime users "SELECT 1;"
 expect_failure psql_as user_migrator integration-user-migrator supplier "SELECT 1;"
 expect_failure psql_as supplier_migrator integration-supplier-migrator users "SELECT 1;"
+expect_failure psql_as supplier_app integration-supplier-runtime supplier "SET ROLE focmaster;"
+expect_failure psql_as user_app integration-user-runtime users "SET ROLE user_migrator;"
 
 "${compose[@]}" exec -T -e PGPASSWORD=integration-user-runtime postgres \
   psql "host=postgres port=5432 dbname=users user=user_app sslmode=verify-full sslrootcert=/certs/server.crt" \
