@@ -1914,7 +1914,7 @@ Claude marked the spec, the plan and the decisions entry as reviewed by @mattis,
 - **Mode:** refactor
 - **Allowed-use scope:** merge-conflict resolution and refactoring that carry out the author's decisions (spec round 6); no new design.
 - **Repository files affected:** `order-service/src/config.ts`, `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/http/auth.ts`, `order-service/src/index.ts`, `order-service/test/adapters.test.ts`, `order-service/test/userServiceVerifier.test.ts` (deleted), `order-service/README.md`, `compose.yaml`, `.env.example`, `ai/usage-log.md`, `docs/superpowers/specs/2026-10-18-order-user-supplier-integration.md`
-- **Author review:** PENDING
+- **Author review:** Reviewed and approved by @mattis.
 
 ### Prompts
 

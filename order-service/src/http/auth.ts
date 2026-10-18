@@ -9,7 +9,7 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
  * Scope: removed the SessionVerificationUnavailableError handling; HttpSessionVerifier's errors
  *        reach the error handler (503 or 500), per the author.
- * Author review: PENDING
+ * Author review: Reviewed and approved by @mattis.
  */
 import type { NextFunction, Request, Response } from "express";
 import type { Principal, SessionVerifier } from "../adapters/sessionVerifier";
