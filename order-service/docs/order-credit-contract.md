@@ -4,6 +4,10 @@ Tool: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Summarised the Order → Credit message contract agreed by the Order Service author,
        matching the fields validated by credit-service/src/messages.ts on origin/branch_credit.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+Scope: Added credit.results.dlq and how Order Service handles redelivered and unusable replies;
+       marked the Credit Service changes as done.
+Author review of additional changes: Reviewed and approved by @phuc
 -->
 
 # Order ⇄ Credit Message Contract
@@ -17,6 +21,7 @@ transaction as the errand change, so a committed state change always produces it
 |---|---|---|---|---|
 | Commands | `credit.commands` | `order_id` | Order Service | Credit Service |
 | Replies | `credit.results` | `order_id` | Credit Service | Order Service |
+| Unusable replies | `credit.results.dlq` | the reply's key | Order Service | people (inspection) |
 
 ## Message types sent by Order Service
 
@@ -100,6 +105,13 @@ Both replies carry `event_id`, `operation_id` (of the `ReserveRequested`), `orde
 `occurred_at` and `schema_version: 1`. The first outcome for an errand is final, whether that's
 a reply or the timeout.
 
+Order Service applies each `event_id` once: it records the `event_id` in the same transaction as
+the reply's effect, so a redelivered reply changes nothing. It sends a reply to
+`credit.results.dlq`, with the reason, when the reply is not valid JSON or fails the checks above,
+when its Kafka key is not its `order_id`, when no errand has that `order_id`, when its
+`operation_id` is not the errand's reservation operation, or when applying it fails 5 times in a
+row for a reason other than an outage. A database or Kafka outage only delays the reply.
+
 ## Why the timeout can't strand credits
 
 Every message for one errand uses `order_id` as its key, and each topic has one partition. So
@@ -126,10 +138,10 @@ the `ReservationTimedOut` comes after it and releases the new hold.
 5. **Messages for one errand are published in the order they were written.** One partition per
    topic plus the `order_id` key keep that order through Kafka.
 
-## Changes needed in Credit Service
+## Changes needed in Credit Service (done)
 
-The branch `origin/branch_credit` handles everything above except `ReservationTimedOut`. Adding
-it takes:
+Done in Credit Service (`credit-service/src/reservations.ts`, migration `0002`). The branch
+`origin/branch_credit` handled everything above except `ReservationTimedOut`. Adding it took:
 
 1. **`src/messages.ts`.** Accept `type: "ReservationTimedOut"` with `operation_id`, `order_id`,
    `requester_id` and `amount`, and no `courier_id`.

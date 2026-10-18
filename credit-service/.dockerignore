@@ -1,5 +1,5 @@
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-16. Scope: limited the
-# build context to what the build stage needs, as in user-service. Author review: PENDING
+# build context to what the build stage needs, as in user-service. Author review: Reviewed and approved by @phuc
 node_modules
 dist
 .env

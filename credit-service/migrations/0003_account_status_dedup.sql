@@ -1,4 +1,4 @@
--- AI assistance: Codex (GPT-6), 2026-10-18. Scope: safe status replay. Author review: PENDING.
+-- AI assistance: Codex (GPT-6), 2026-10-18. Scope: safe status replay. Author review: Reviewed and approved by @phuc.
 -- Retain these markers: outbox cleanup must not allow Kafka replays to reapply old statuses.
 CREATE TABLE processed_account_status (
   operation_id UUID PRIMARY KEY,

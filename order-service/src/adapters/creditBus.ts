@@ -8,6 +8,9 @@
  * Scope: Added restore(), which rebuilds the holds from already-published outbox rows so a
  *        service restart does not cause false contract violations.
  * Author review: Reviewed and approved by @mattis.
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-18
+ * Scope: restore() replays rows in outbox id order, the order they were published.
+ * Author review of additional changes: Reviewed and approved by @phuc
  */
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
@@ -54,7 +57,7 @@ export class StubCreditBus implements MessagePublisher {
    */
   async restore(): Promise<void> {
     const { rows } = await this.pool.query(
-      `SELECT payload FROM outbox WHERE published_at IS NOT NULL ORDER BY created_at`,
+      `SELECT payload FROM outbox WHERE published_at IS NOT NULL ORDER BY id`,
     );
     this.replaying = true;
     try {
