@@ -1887,5 +1887,5 @@ digest-qualified manifests, deterministic CDK plan hashes with exact human appro
 strict bootstrap/migration/seed-before-Application sequencing, additive CloudFront gateway
 smoke reuse, and exact start/stop/status/destroy state machines. Fake-runner tests prove
 fail-closed ordering and safety; local API and browser behavior remains compatible, while
-persistent cloud smoke now verifies the 21 known seed records and archives its unique
-Supplier fixture.
+persistent cloud smoke avoids assuming administrator-editable seed names and archives its
+unique Supplier fixture.

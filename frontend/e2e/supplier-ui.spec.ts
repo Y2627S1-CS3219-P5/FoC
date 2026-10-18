@@ -12,8 +12,8 @@
  * Scope: Added browser regressions for sticky navigation and aligned time fields.
  * Author review: Reviewed and approved by @ron.
  * Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18.
- * Scope: Made persistent cloud smoke runs repeatable by checking the durable seed
- * subset, generating a unique Supplier fixture, and archiving it after the suite.
+ * Scope: Made persistent cloud smoke runs repeatable by avoiding exact mutable
+ * seed names, generating a unique Supplier fixture, and archiving it after the suite.
  * Author review: PENDING.
  */
 import { expect, test, type APIRequestContext, type Page, type TestInfo } from '@playwright/test'
@@ -25,30 +25,6 @@ const adminUsername = requiredEnvironment('SUPPLIER_UI_ADMIN_USERNAME')
 const adminPassword = requiredEnvironment('SUPPLIER_UI_ADMIN_PASSWORD')
 const fixtureSuffix = `${Date.now()}-${process.pid}`
 let createdSupplierId: string | undefined
-
-const expectedSeedSupplierNames = [
-  "Anna's x Soup Union",
-  'NUS Co-op',
-  'Printer @ Com 2',
-  'Cool Spot',
-  'InstaChef',
-  'Cafe+ Robot Cafe',
-  'A Hot Hideout',
-  'Arise and Shine',
-  'Bakehaus / Aurea',
-  'Central Square @ YIH',
-  'Pasta Express',
-  'TOMORO COFFEE',
-  'Octobox',
-  'Smooy',
-  'Goh Bros E-Print Pte Ltd',
-  'Cheers Unmanned Convenience Store',
-  'Nami',
-  'Supersnacks',
-  'Good Day Cafe',
-  'The Coffee Roaster',
-  'he by He Brews',
-] as const
 
 test.describe.configure({ mode: 'serial' })
 
@@ -66,7 +42,6 @@ test('MEMBER browses, searches, filters, sorts, pages and views live Suppliers r
   await expect(page).toHaveURL(/\/suppliers$/)
   await expect(page.getByRole('heading', { name: 'Suppliers', exact: true })).toBeVisible()
   await expect(page.getByText(/\d+ results?/)).toBeVisible()
-  await assertKnownSeedSuppliersPresent(page)
   await expect(page.getByRole('link', { name: /Manage Suppliers|Manage/ })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Add Supplier' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Archive' })).toHaveCount(0)
@@ -317,18 +292,6 @@ async function clearFilters(page: Page) {
   await page.getByRole('button', { name: 'Clear filters' }).click()
   await expect(page).toHaveURL(/\/suppliers$/)
   await expect(page.getByText(/\d+ results?/)).toBeVisible()
-}
-
-async function assertKnownSeedSuppliersPresent(page: Page) {
-  const token = await page.evaluate(() => window.sessionStorage.getItem('foc.accessToken'))
-  expect(token).toBeTruthy()
-  const response = await page.request.get('/api/v1/suppliers?page=0&size=50&sort=name,asc', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  expect(response.status(), await response.text()).toBe(200)
-  const body = await response.json() as { items: Array<{ name: string }> }
-  const names = new Set(body.items.map(({ name }) => name))
-  for (const seedName of expectedSeedSupplierNames) expect(names.has(seedName), seedName).toBe(true)
 }
 
 async function archiveSupplierFixture(request: APIRequestContext, supplierId: string) {
