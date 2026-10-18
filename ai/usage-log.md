@@ -73,6 +73,18 @@ Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-10-18
 Scope: Designed, implemented, documented, and verified the issue #42 pull-request CI
 foundation after a project-author-approved grilling round.
 Author review: Pending project-author review.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Scaffolded the Order Service (package, config, pool, migration runner) by copying and adapting Credit Service files, and implemented the author's planned errands/errand_history/outbox schema with its tests.
+Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Recorded the AI-drafted Order Service implementation plan and Order-Credit message contract (commit 8eba7ab).
+Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Recorded the Order Service fix rounds for the input validation (a3c54c2), transitions (06509d8), stub credit bus (caf7e35) and HTTP API (8733643) tasks.
+Author review: Reviewed and approved by @mattis.
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
+Scope: Recorded the Order Service final whole-branch review fix wave.
+Author review: Reviewed and approved by @mattis.
 -->
 
 # AI Usage Log
@@ -1438,3 +1450,271 @@ tests and production build passed; Supplier typecheck, 213 Jest tests and Nest b
 the User Service build passed; the complete live Supplier integration suite passed; both
 Chromium member/administrator journeys passed; and both disposable Compose projects removed
 their containers and volumes.
+
+## 2026-10-16 — Order Service: scaffold, schema and migration runner
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** boilerplate and scaffolding copied from the Credit Service, and implementation of a schema and tests specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/package.json`, `tsconfig.json`, `AGENTS.md`, `src/{config,db,dbAvailability,log,migrations,migrate}.ts`, `migrations/0001_create_order_tables.sql`, `test/{helpers,schema.test}.ts`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 1 of the order-service-core plan: scaffold, schema and migration runner.
+
+### Key response
+
+Claude copied the Credit Service database and migration-runner files (dropping the Kafka and credit
+specific parts, renaming credit to order, new advisory lock ID), added the migration SQL from the plan,
+and wrote schema tests first (check constraints, and that `order_app` cannot update `errand_history`).
+Tests: 6/6 against a disposable PostgreSQL 17.
+
+## 2026-10-16 — Order Service: errand states, transition table and input validation
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of a transition table and validation rules specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/src/domain/{states,transitions,validation}.ts`, `order-service/test/{transitions,validation}.test.ts`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 2 of the order-service-core plan: states, transition table and create-input validation.
+
+### Key response
+
+Claude wrote the tests first (transition table invariants, create-input validation cases), then the
+state enum, the transition table as plain data (with a `reservationTimeout` action added to the
+`Action` union) and a pure validator that returns every field error. Tests pass; type-checked.
+
+## 2026-10-16 — Order Service: atomic create and state transitions with outbox events
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the repository, message payloads and outbox insert specified in the approved plan and the Order ⇄ Credit contract (no new design)
+- **Repository files affected:** `order-service/src/config.ts`, `order-service/src/errands/{errand,repository}.ts`, `order-service/src/domain/messages.ts`, `order-service/src/outbox.ts`, `order-service/test/repository.test.ts`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 3 of the order-service-core plan: create errand and apply transitions atomically.
+
+### Key response
+
+Claude wrote the repository tests first (contract payload keys, happy path, deadlines, party and
+visibility errors, and real concurrent races: ten accepts, accept vs cancel, double confirm), then
+`createErrand` and `applyTransition(InTx)`: one conditional `UPDATE` built from the transition table,
+followed by the history row and, for closing transitions, one outbox message, with failures classified
+after a re-read and rolled back. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: handle Credit reservation replies
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the reply handler and parser specified in the approved plan and the Order ⇄ Credit contract (no new design)
+- **Repository files affected:** `order-service/src/credit/creditResults.ts`, `order-service/src/domain/messages.ts`, `order-service/test/creditResults.test.ts`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 4 of the order-service-core plan: handle CreditReserved and CreditReservationRejected replies.
+
+### Key response
+
+Claude wrote the tests first (open, reject, duplicates, late reserve after rejection releasing via one
+`OrderCancelled`, late replies after timeout, unknown order, parser validation), then
+`parseCreditResult` and `handleCreditResult`: one transaction that locks the errand row with
+`SELECT … FOR UPDATE`, then writes the state change, `CREDIT` history row and any outbox row. The second
+late reserve is detected by its `late_reserve_released` history row. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: errand read queries
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the read queries specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/src/errands/queries.ts`, `order-service/test/queries.test.ts`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 5 of the order-service-core plan: errand read queries.
+
+### Key response
+
+Claude wrote the tests first (own errands excluded from the open list, hidden states and past listings,
+courier and requester views, detail visibility for requester, courier, admin and OPEN, ordered history,
+admin filters, paging totals), then `listOpen`, `listMine`, `getErrandForViewer` and `adminListErrands`
+with parameterised SQL and a `COUNT(*) OVER ()` total. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: deadline sweeper
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the sweeper specified in the approved plan (no new design)
+- **Repository files affected:** `order-service/src/deadlines/sweeper.ts`, `order-service/src/config.ts`, `order-service/test/sweeper.test.ts`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 6 of the order-service-core plan: the deadline sweeper.
+
+### Key response
+
+Claude wrote the tests first (expiry, pickup, delivery, confirmation and reservation timeouts, errands before
+their deadline left alone, two concurrent sweeps, and the accept-versus-expiry and reply-versus-timeout races),
+then `sweepDeadlines`, which derives its five system actions from the transition table and processes due errands
+in `FOR UPDATE SKIP LOCKED` batches through `applyTransitionInTx`, and `startDeadlineSweeper`, a non-overlapping
+timer loop that logs errors and whose `stop()` waits for a running sweep. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: deadline sweeper fix round
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fixes for review findings on the deadline sweeper (no new design)
+- **Repository files affected:** `order-service/src/deadlines/sweeper.ts`, `order-service/test/sweeper.test.ts`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Fix the review findings on the deadline sweeper: the reservation race test did not race, and one failing row blocked its batch.
+
+### Key response
+
+Claude ordered the sweep actions explicitly (reservation timeout first, pickup timeout before expiry), made the race test
+assert that both outcomes occur, and wrapped each row in a savepoint so a failing row is logged and skipped while other rows
+and actions continue. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: outbox publisher and stub adapters
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation and tests for the outbox publisher and the stub User, Supplier and Credit adapters, adapted from `credit-service/src/outbox.ts` and `src/publisher.ts`
+- **Repository files affected:** `order-service/src/outbox.ts`, `order-service/src/config.ts`, `order-service/src/adapters/sessionVerifier.ts`, `order-service/src/adapters/supplierDirectory.ts`, `order-service/src/adapters/creditBus.ts`, `order-service/test/outbox.test.ts`, `order-service/test/adapters.test.ts`, `ai/usage-log.md`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 7 of the order-service-core plan: the outbox publisher and the stub adapters.
+
+### Key response
+
+Claude wrote the tests first, then `publishOutboxBatch` and `startOutboxPublisher` (non-overlapping loop whose `stop()` waits), `loadAdapterConfig`,
+the stub session verifier and supplier directory, and `StubCreditBus`, which keeps in-memory holds, replies to `ReserveRequested` through
+`handleCreditResult`, and records any message that breaks the Order-Credit contract rules as a violation. Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: errand HTTP API
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation and tests for the Order Service HTTP API: authentication, admin role check, errand endpoints, status-code mapping
+- **Repository files affected:** `order-service/src/http/app.ts`, `order-service/src/http/auth.ts`, `order-service/src/http/errors.ts`, `order-service/src/http/routes.ts`, `order-service/test/http.test.ts`, `ai/usage-log.md`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 8 of the order-service-core plan: the errand HTTP API with relationship-based authorization.
+
+### Key response
+
+Claude wrote the HTTP tests first, then the Express app: session authentication, `requireRole("ADMINISTRATOR")` on `/admin/*`, validated paging and filters,
+one errand serializer, and an error mapper (400/403/404/409/422/503/500). Authorization comes from the repository and query layer, so an unrelated member gets 404.
+Tests pass against PostgreSQL 17; type-checked.
+
+## 2026-10-16 — Order Service: entry point, container, compose, gateway and demo script
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** implementation of the Order Service entry point, Dockerfile, database init script, Compose services, gateway routes, demo script and README
+- **Repository files affected:** `order-service/src/index.ts`, `order-service/src/config.ts`, `order-service/Dockerfile`, `order-service/.dockerignore`, `order-service/docker/postgres/init-roles.sh`, `order-service/scripts/demo.sh`, `order-service/README.md`, `compose.yaml`, `.env.example`, `frontend/nginx.conf`, `frontend/vite.config.ts`, `ai/usage-log.md`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Implement Task 9 of the order-service-core plan: entry point, container, compose services, gateway routes, demo script and README.
+
+### Key response
+
+Claude wrote `index.ts` (fail-fast config, database wait, stub adapters, publisher, sweeper, HTTP server, graceful shutdown), copied the User Service
+image and role script for Order, added `order-db`, `order-migrate` and `order-service` to Compose, put the two errand routes before the nginx
+`/api/` catch-all and in the Vite dev proxy, and wrote `scripts/demo.sh`. The demo passes through the gateway, before and after a service restart.
+
+## 2026-10-16 — Order Service: implementation plan and Order-Credit message contract
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** drafting an implementation plan and message contract; Claude proposed the design calls and the author decided
+- **Repository files affected:** `docs/superpowers/plans/2026-10-16-order-service-core.md`, `order-service/docs/order-credit-contract.md` (commit 8eba7ab)
+- **Author review:** Reviewed and approved by @mattis
+
+### Prompts
+
+> Draft an implementation plan for the Order Service core and the Order-Credit message contract from the D1 requirements and the Credit Service contract.
+
+### Key response
+
+Claude drafted the plan and contract and listed every design call as a proposal. The author @mattis reviewed and accepted the design calls as written (see the plan header).
+
+## 2026-10-16 — Order Service: fix round: calendar-invalid timestamps
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fix of a review finding in the validation task (no new design)
+- **Repository files affected:** `order-service/src/domain/validation.ts`, `order-service/test/validation.test.ts` (commit a3c54c2)
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Fix the review findings for the validation task.
+
+### Key response
+
+Claude made the validator reject timestamps that parse only by rolling over (for example 31 February) and added tests.
+
+## 2026-10-16 — Order Service: fix round: non-party visibility on admin actions
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fix of a review finding in the transitions task (no new design)
+- **Repository files affected:** `order-service/src/errands/repository.ts`, `order-service/test/repository.test.ts` (commit 06509d8)
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Fix the review findings for the transitions task.
+
+### Key response
+
+Claude made failed requester, courier and admin actions by a non-party member on a non-OPEN errand look like NOT_FOUND, with tests.
+
+## 2026-10-16 — Order Service: fix round: stub hold model and prompt publisher stop
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fix of review findings in the outbox and stub adapters task (no new design)
+- **Repository files affected:** `order-service/src/adapters/creditBus.ts`, `order-service/src/outbox.ts`, `order-service/test/adapters.test.ts`, `order-service/test/outbox.test.ts` (commit caf7e35)
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Fix the review findings for the outbox publisher and stub adapters task.
+
+### Key response
+
+Claude changed the stub so only accepted reserves create holds and a hold's terminal events wait for the reply, and made the publisher stop promptly, with tests.
+
+## 2026-10-16 — Order Service: fix round: 413 and 415 mapping
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fix of a review finding in the HTTP API task (no new design)
+- **Repository files affected:** `order-service/src/http/errors.ts`, `order-service/test/http.test.ts` (commit 8733643)
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Fix the review findings for the HTTP API task.
+
+### Key response
+
+Claude mapped oversized bodies to 413 and unsupported charset or encoding to 415 instead of 500, with tests.
+
+## 2026-10-16 — Order Service: final whole-branch review fix wave
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** fixes for the final review findings and the disclosure record (no new design)
+- **Repository files affected:** `order-service/src/adapters/creditBus.ts`, `order-service/src/index.ts`, `order-service/src/errands/{repository,queries}.ts`, `order-service/scripts/demo.sh`, `order-service/tsconfig.test.json`, `order-service/package.json`, `order-service/README.md`, `order-service/test/*.test.ts`, `docs/superpowers/plans/2026-10-16-order-service-core.md`, `README.md`, `ai/usage-log.md`
+- **Author review:** Reviewed and approved by @mattis.
+
+### Prompts
+
+> Fix the findings of the final whole-branch review of the Order Service core.
+
+### Key response
+
+Claude documented the pickup-timeout re-listing deviation as an open question for the author, added `StubCreditBus.restore()` so a restart causes no false violations, added demo self-checks, hid the current state and history actor ids from non-parties, strengthened the accept-vs-expiry race test, type-checked the tests, and recorded the disclosures.
