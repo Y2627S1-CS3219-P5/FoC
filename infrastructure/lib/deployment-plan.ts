@@ -20,7 +20,10 @@ export type DeploymentPhase = "foundation" | "release";
 
 const PHASE_STACKS = {
   foundation: ["foundation"],
-  release: ["data", "application", "edge"],
+  // The image-independent phase has no consumers, so CDK has not generated
+  // Foundation's automatic exports yet. Review/hash/reconcile its full release
+  // template before deploying any importing stack; never copy physical ARNs.
+  release: ["foundation", "data", "application", "edge"],
 } as const satisfies Readonly<Record<DeploymentPhase, readonly StackKey[]>>;
 
 export interface PlannedStack {

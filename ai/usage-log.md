@@ -2142,3 +2142,42 @@ Verification passed: JSON parsing, context formatting, and `git diff --check`.
 The existing usage log has unrelated historical formatting differences, which this
 narrow change preserves. Ignored configuration, deployment plans, artifacts, and
 assemblies were left untouched.
+
+## 2026-10-18 — Phased CDK cross-stack export regression
+
+- **Tool:** OpenAI Codex (GPT-6)
+- **Allowed-use scope:** Diagnose and fix the issue #52 first-deployment export gap within
+  the approved four-stack AWS design.
+- **Repository files affected:** `infrastructure/lib/deployment-plan.ts`,
+  `infrastructure/lib/deploy.ts`, `infrastructure/test/deployment-plan.test.ts`,
+  `infrastructure/RUNBOOK.md`, and this log.
+- **Author review:** Pending pull-request review by @ron.
+
+### Prompt
+
+> got it lets proceed, whats the next step you will deploy it automatically? via aws cli?
+
+### Key response
+
+Offline synthesis proved the image-independent Foundation phase contains zero automatic
+exports, whereas the full release assembly generates sixteen Foundation exports consumed
+by Data and Application. All thirty-two Foundation resource definitions are unchanged.
+The old release plan omitted Foundation, leaving Data's seven imported values unavailable
+on a first deployment. The real-assembly regression failed before the fix.
+
+The release plan now includes Foundation in its template/diff hashes and exact stack
+allowlist, and applies Foundation before Data, the four ordered database jobs, Application,
+and Edge. This publishes generated exports without hardcoded ARNs or a new stack. Tests
+also bind approval to Foundation template changes and verify a Foundation failure prevents
+Data and job execution. The runbook explains first-deploy and routine-release behavior.
+The diagnosis followed the official CDK documentation on automatically synthesized
+cross-stack exports. No AWS calls, resource mutations, or image pushes were performed for
+this source-only fix.
+
+Verification passed: infrastructure typecheck, lint, formatting, all 99 tests, production
+TypeScript build, and `git diff --check`.
+
+Integration retained the independent CLI/profile regression tests and all three
+disclosure entries while resolving adjacent append conflicts. The combined branch
+passed infrastructure typecheck, lint, formatting, all 102 tests, and the production
+TypeScript build; the generated Singapore lookup context was preserved.

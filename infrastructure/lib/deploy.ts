@@ -45,6 +45,9 @@ export function applyApprovedDeployment(
     throw new Error("Release apply requires a release manifest");
   }
 
+  // Publish CDK's release-generated cross-stack outputs before Data imports them.
+  // This exact Foundation template is included in the reviewed approval token.
+  deployExactStack(options, "foundation");
   deployExactStack(options, "data");
   const jobs =
     options.runJobs ??

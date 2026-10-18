@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import type { CommandRequest, CommandRunner } from "../lib/commands.js";
+import { createFocDemoApp } from "../lib/app.js";
 import { configFingerprint } from "../lib/config.js";
 import {
   calculateDeploymentPlan,
@@ -32,7 +33,12 @@ function withPlanFiles(
     const infrastructureRoot = resolve(root, "infrastructure");
     mkdirSync(resolve(infrastructureRoot, "cdk.out"), { recursive: true });
     mkdirSync(resolve(infrastructureRoot, "artifacts"), { recursive: true });
-    for (const id of ["FoCDemoData", "FoCDemoApplication", "FoCDemoEdge"]) {
+    for (const id of [
+      "FoCDemoFoundation",
+      "FoCDemoData",
+      "FoCDemoApplication",
+      "FoCDemoEdge",
+    ]) {
       writeFileSync(
         resolve(infrastructureRoot, "cdk.out", `${id}.template.json`),
         `{"id":"${id}"}`,
@@ -99,7 +105,12 @@ test("hashes the exact config, manifest, templates, stacks, and diff", () => {
     assert.equal(first.plan.costEvidence.pricingSnapshotSha256, "f".repeat(64));
     assert.deepEqual(
       first.plan.stacks.map(({ name }) => name),
-      ["foc-demo-data", "foc-demo-application", "foc-demo-edge"],
+      [
+        "foc-demo-foundation",
+        "foc-demo-data",
+        "foc-demo-application",
+        "foc-demo-edge",
+      ],
     );
   });
 });
@@ -132,6 +143,73 @@ test("synth, diff, and deploy use the configured AWS profile", () => {
     for (const request of cdkCalls) {
       assert.equal(request.env?.AWS_PROFILE, options.config.awsProfile);
     }
+  });
+});
+
+test("release order establishes every real CDK export before its consumer", () => {
+  // This is the actual first-deploy seam: the image-independent phase has no
+  // consumers, so CDK has not yet generated its cross-stack exports.
+  const foundationAssembly = createFocDemoApp(
+    validConfig(),
+    undefined,
+    "foundation",
+  ).synth();
+  const releaseAssembly = createFocDemoApp(
+    validConfig(),
+    validReleaseManifest(),
+    "release",
+  ).synth();
+  const initial = foundationAssembly.getStackArtifact("FoCDemoFoundation");
+  const reconciled = releaseAssembly.getStackArtifact("FoCDemoFoundation");
+  const initialTemplate: unknown = initial.template;
+  const reconciledTemplate: unknown = reconciled.template;
+  assert.ok(isRecord(initialTemplate));
+  assert.ok(isRecord(reconciledTemplate));
+  const availableExports = exportsIn(initialTemplate);
+  assert.equal(availableExports.size, 0);
+  assert.ok(exportsIn(reconciledTemplate).size > 0);
+  // Publishing the newly generated outputs does not replace or alter resources.
+  assert.deepEqual(initialTemplate.Resources, reconciledTemplate.Resources);
+
+  withPlanFiles((options) => {
+    for (const stack of releaseAssembly.stacks) {
+      writeFileSync(
+        resolve(
+          options.infrastructureRoot,
+          "cdk.out",
+          `${stack.id}.template.json`,
+        ),
+        JSON.stringify(stack.template),
+      );
+    }
+    const { plan } = calculateDeploymentPlan(options);
+    for (const planned of plan.stacks) {
+      const stack = releaseAssembly.getStackArtifact(planned.cdkId);
+      const missing = [...importsIn(stack.template)].filter(
+        (name) => !availableExports.has(name),
+      );
+      assert.deepEqual(
+        missing,
+        [],
+        `${stack.stackName} has unavailable imports`,
+      );
+      for (const name of exportsIn(stack.template)) availableExports.add(name);
+    }
+  });
+});
+
+test("binds release approval to the reconciled Foundation template", () => {
+  withPlanFiles((options) => {
+    const first = calculateDeploymentPlan(options);
+    writeFileSync(
+      resolve(
+        options.infrastructureRoot,
+        "cdk.out/FoCDemoFoundation.template.json",
+      ),
+      '{"Outputs":{"newExport":{"Value":"changed"}}}',
+    );
+    const changed = calculateDeploymentPlan(options);
+    assert.notEqual(changed.approvalToken, first.approvalToken);
   });
 });
 
@@ -181,7 +259,10 @@ test("binds plan approval to the exact pricing evidence", () => {
 test("deploy command accepts only a stack in the allowlisted phase", () => {
   withPlanFiles((options, calls) => {
     deployExactStack(options, "data");
-    assert.throws(() => deployExactStack(options, "foundation"), /not part/);
+    assert.throws(
+      () => deployExactStack({ ...options, phase: "foundation" }, "data"),
+      /not part/,
+    );
     const deploy = calls.find(
       ({ executable, args }) => executable === "npx" && args[1] === "deploy",
     );
@@ -213,6 +294,82 @@ test("never deploys Application when an ordered database job fails", () => {
         ({ executable, args }) => executable === "npx" && args[1] === "deploy",
       )
       .map(({ args }) => args[2]);
-    assert.deepEqual(deployed, ["FoCDemoData"]);
+    assert.deepEqual(deployed, ["FoCDemoFoundation", "FoCDemoData"]);
   });
 });
+
+test("never deploys Data or runs jobs when Foundation reconciliation fails", () => {
+  withPlanFiles((options, calls) => {
+    const plan = calculateDeploymentPlan(options);
+    let ranJobs = false;
+    const runner: CommandRunner = (request) => {
+      if (
+        request.executable === "npx" &&
+        request.args[1] === "deploy" &&
+        request.args[2] === "FoCDemoFoundation"
+      ) {
+        calls.push(request);
+        return { status: 1, stdout: "", stderr: "foundation failed" };
+      }
+      return options.runner(request);
+    };
+    assert.throws(
+      () =>
+        applyApprovedDeployment({
+          ...options,
+          runner,
+          approvalToken: plan.approvalToken,
+          runJobs: () => {
+            ranJobs = true;
+          },
+        }),
+      /foundation failed/,
+    );
+    assert.equal(ranJobs, false);
+    assert.deepEqual(
+      calls
+        .filter(
+          ({ executable, args }) =>
+            executable === "npx" && args[1] === "deploy",
+        )
+        .map(({ args }) => args[2]),
+      ["FoCDemoFoundation"],
+    );
+  });
+});
+
+function exportsIn(template: unknown): Set<string> {
+  assert.ok(isRecord(template));
+  const names = new Set<string>();
+  if (!isRecord(template.Outputs)) return names;
+  for (const output of Object.values(template.Outputs)) {
+    if (!isRecord(output) || !isRecord(output.Export)) continue;
+    assert.ok(typeof output.Export.Name === "string");
+    names.add(output.Export.Name);
+  }
+  return names;
+}
+
+function importsIn(template: unknown): Set<string> {
+  const names = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const child of value) visit(child);
+    } else if (isRecord(value)) {
+      for (const [key, child] of Object.entries(value)) {
+        if (key === "Fn::ImportValue") {
+          assert.ok(typeof child === "string");
+          names.add(child);
+        } else {
+          visit(child);
+        }
+      }
+    }
+  };
+  visit(template);
+  return names;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}

@@ -16,6 +16,14 @@ No AWS resource was created, updated, or deleted.
 Author review: Decision approved by @ron; wording pending pull-request review.
 -->
 
+<!--
+AI Assistance Disclosure:
+Tool: OpenAI Codex (GPT-6), date: 2026-10-18
+Scope: Documented the issue #52 phased cross-stack export ordering regression fix.
+No AWS resource was created, updated, or deleted for this source-only change.
+Author review: Pending pull-request review by @ron.
+-->
+
 # FoC demo release and operations runbook
 
 This runbook controls only the four exact FoC demo stacks in the approved AWS account:
@@ -55,6 +63,8 @@ cost approval, or configuration fingerprint must stop until the input is correct
 ## First deployment
 
 Foundation must exist before images can be pushed to its immutable ECR repositories.
+This image-independent phase is for the initial deployment only. Once consumer stacks
+exist, use the release phase so their required Foundation exports remain present.
 
 ```sh
 npm run deploy -- plan --phase foundation
@@ -78,7 +88,7 @@ scan counts. Existing SHA tags are reused and never overwritten. A scan failure 
 release. The approved specification does not define a severity rejection threshold, so
 the tool records findings without inventing one; a human must review the evidence.
 
-Plan and apply the remaining release:
+Plan and apply the complete release, including Foundation reconciliation:
 
 ```sh
 npm run deploy -- plan --phase release
@@ -87,12 +97,21 @@ npm run deploy -- apply --phase release --approve-plan <printed-sha256>
 
 The wrapper enforces this order:
 
-1. deploy Data only;
-2. run database bootstrap, User migration, Supplier migration, and Supplier seed, stopping
+1. reconcile Foundation only against its full release template;
+2. deploy Data only;
+3. run database bootstrap, User migration, Supplier migration, and Supplier seed, stopping
    at the first failed or missing exit code;
-3. deploy Application only and verify all three ECS primary deployments;
-4. deploy Edge only and wait for CloudFront to report deployed; and
-5. run the existing Bash API journeys and Playwright browser journeys through CloudFront.
+4. deploy Application only and verify all three ECS primary deployments;
+5. deploy Edge only and wait for CloudFront to report deployed; and
+6. run the existing Bash API journeys and Playwright browser journeys through CloudFront.
+
+CDK generates Foundation's cross-stack exports only when Data and Application consumers
+are present. The initial phase therefore lacks these exports, even though it creates the
+same resources. The release plan includes all four templates and diffs in its approval
+token, then publishes Foundation's generated outputs before Data imports them. A failed
+Foundation reconciliation stops the release before Data or any database job. This keeps
+the four approved stacks and avoids copying generated physical ARNs. See the
+[CDK cross-stack reference documentation](https://docs.aws.amazon.com/cdk/v2/guide/resources.html).
 
 Application is never updated before all four jobs succeed. Migrations are forward-only;
 an ECS rollback does not run a down migration. The Supplier seed remains insert-only by
@@ -100,7 +119,8 @@ stable ID, so a repeat run preserves administrator edits.
 
 ## Routine release
 
-For a later clean commit, Foundation already exists:
+For a later clean commit, Foundation already exists; the same release phase still
+reviews and reconciles its template before dependent stacks:
 
 ```sh
 npm run release:images
