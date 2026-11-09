@@ -2,6 +2,10 @@
 # Scope: Implemented the issue #42 pull-request CI foundation from the
 # project author's approved design decisions.
 # Author review: Pending project-author review.
+# Additional AI assistance: OpenAI Codex, 2026-11-09.
+# Scope: Added author-approved Order/Credit PostgreSQL-backed quality jobs
+# and included their results in CI / gate for issue #62.
+# Author review of this extension: Pending review by @ron.
 
 name: PR CI
 
@@ -115,6 +119,102 @@ jobs:
       - name: Build
         run: npm run build
 
+  order_quality:
+    name: order / typecheck-build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: order-service
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: order-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests against PostgreSQL (Kafka integration excluded)
+        run: npm test
+
+  credit_quality:
+    name: credit / typecheck-build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: credit-service
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    services:
+      postgres:
+        image: postgres:17.11-alpine3.24
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: credit-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests against PostgreSQL
+        run: npm test
+
   supplier_integration:
     name: integration / supplier-stack
     runs-on: ubuntu-latest
@@ -188,6 +288,8 @@ jobs:
       - frontend_quality
       - supplier_quality
       - user_build
+      - order_quality
+      - credit_quality
       - supplier_integration
       - supplier_ui_e2e
     runs-on: ubuntu-latest
@@ -199,6 +301,8 @@ jobs:
           FRONTEND_RESULT: ${{ needs.frontend_quality.result }}
           SUPPLIER_RESULT: ${{ needs.supplier_quality.result }}
           USER_RESULT: ${{ needs.user_build.result }}
+          ORDER_RESULT: ${{ needs.order_quality.result }}
+          CREDIT_RESULT: ${{ needs.credit_quality.result }}
           INTEGRATION_RESULT: ${{ needs.supplier_integration.result }}
           E2E_RESULT: ${{ needs.supplier_ui_e2e.result }}
         run: |
@@ -207,6 +311,8 @@ jobs:
             "$FRONTEND_RESULT" \
             "$SUPPLIER_RESULT" \
             "$USER_RESULT" \
+            "$ORDER_RESULT" \
+            "$CREDIT_RESULT" \
             "$INTEGRATION_RESULT" \
             "$E2E_RESULT"
           do

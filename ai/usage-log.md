@@ -85,6 +85,9 @@ Author review: Reviewed and approved by @mattis.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Recorded the Order Service final whole-branch review fix wave.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: OpenAI Codex, date: 2026-11-09
+Scope: Implemented and verified the author-approved issue #62 Order/Credit CI extension.
+Author review of this extension: Pending review by @ron.
 -->
 
 # AI Usage Log
@@ -94,6 +97,50 @@ To avoid duplicating prompt text, their initiating implementation request is quo
 under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend-api-and-test-foundation),
 and the approved metadata follow-up is quoted once under
 [Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
+
+## 2026-11-09 — Order and Credit database-backed CI checks
+
+- **Tool/mode:** OpenAI Codex; configuration implementation, verification, and documentation.
+- **Scope:** The author approved two quality jobs using existing service commands,
+  disposable PostgreSQL, and the existing aggregate CI gate. No domain architecture,
+  schemas, service business logic, Kafka integration, AWS deployment, or repository
+  ruleset change is included.
+- **Files:** `.github/workflows/pr-ci.yml`, `docs/ci.md`, `README.md`, and this log.
+- **Tracking:** GitHub issue #62. Human implementation review remains PENDING.
+
+### Exact prompts
+
+> i think for order and credit we should implement it based on making sure it compiles / builds / and tests pass correctly what do you think dont implement anything yet
+
+> ok proceed with implementation and return the PR link once you are done
+
+### Key response
+
+Codex inspected the existing scripts and test helpers, then implemented separate
+Order and Credit jobs with Node 22, service-specific npm lockfile caches, pinned
+existing GitHub Actions, twenty-minute timeouts, and independent PostgreSQL 17.11
+service containers with readiness checks and disposable test-only credentials.
+Each job runs `npm ci`, `npm run typecheck`, `npm run build`, and `npm test`.
+Both results are included in the existing fail-closed `CI / gate`.
+
+The CI guide distinguishes the real PostgreSQL tests from Order's explicitly
+skipped Kafka suite and Credit's separate Kafka E2E runner. It also corrects the
+outdated description of User Service's test command: the User CI job still only
+builds, but the service now has a separate real test suite. No existing job or
+workflow trigger/permission/concurrency setting was changed.
+
+Verification in progress: actionlint 1.7.12 reports no workflow errors; the official
+validator download checksum was verified. Parsed-workflow assertions pass for both
+new jobs and confirm existing jobs/settings are unchanged. Twenty-nine executed
+aggregate-gate cases verify all-success acceptance and rejection of each required
+job's failed, cancelled, skipped, or missing result. Clean Linux/x86-64 Node 22
+install/type-check/build/test runs are running against two disposable PostgreSQL
+containers, with no host database ports or application volumes used.
+
+The work uses a separate `ci/62-order-credit-checks` worktree to preserve the author's
+dirty main checkout, uncommitted research/operator disclosures, ignored AWS state,
+and stashes. The PR skill supplies the concise summary/evidence/merge-impact format.
+No human approval is inferred from the request to implement.
 
 ## 2026-10-18 — AWS demo deployment specification
 

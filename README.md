@@ -20,6 +20,9 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Added the Order Service AI Use Summary paragraph.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: OpenAI Codex, date: 2026-11-09
+Scope: Recorded the author-approved Order/Credit CI extension and its verification scope.
+Author review of this extension: Pending review by @ron.
 -->
 
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
@@ -70,6 +73,14 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
   one-service-per-folder skeleton** for core implementation.
 
 ## AI Use Summary
+
+OpenAI Codex assisted on 2026-11-09 with implementing the author-approved
+[Order/Credit CI extension](docs/ci.md) for issue #62: separate Node 22 jobs with
+disposable PostgreSQL, locked installation, type-check/build/test commands, and
+fail-closed aggregation into `CI / gate`. No service business logic, Kafka
+integration coverage, AWS deployment, or repository ruleset change is included.
+Implementation and verification details are recorded in `ai/usage-log.md`;
+project-author review remains pending.
 
 OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the first three Supplier backend increments from the author-approved specification: NestJS/Drizzle and PostgreSQL foundations; guarded, edit-preserving seed identities; least-privilege Compose setup; real User Service bearer verification; authenticated catalogue reads; request correlation and bundled assets; and administrator-only create/full-update/archive/restore with strict bodies, normalized race-safe duplicate creation rejection, and ETag concurrency. The isolated real-service integration runner now verifies API and SQL mutation state, concurrent stale-write rejection, lifecycle no-ops, repeat-migration/seed preservation, and fail-closed authentication. No Supplier frontend, User Service application changes, Order Service integration, or physical Supplier deletion were included. Project-author review of all three backend increments was completed and approved by @ron. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) retain the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.
 
