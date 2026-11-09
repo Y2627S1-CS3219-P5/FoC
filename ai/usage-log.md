@@ -91,7 +91,7 @@ Author review: Reviewed and approved by @mattis.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
 Scope: Implemented and verified the author-approved issue #62 Order/Credit CI
 extension, native Kafka Docker build fix, and approved change-aware messaging checks.
-Author review of this extension: Pending review by @ron.
+Author review of this extension: Reviewed and approved by @ron on 2026-11-09.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-09
 Scope: Recorded the member errand frontend pages entry.
 Author review: Reviewed and approved by @mattis.
@@ -105,12 +105,34 @@ under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend
 and the approved metadata follow-up is quoted once under
 [Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
 
+## 2026-11-09 — Author approval of PR #63
+
+- **Tool/mode:** OpenAI Codex; approval disclosure updates only.
+- **Author review:** PR #63 changes explicitly reviewed and approved by @ron.
+
+### Exact prompt
+
+> changes approved, add my approval thanks
+
+### Key response
+
+Codex recorded @ron's approval of the PR #63 CI, native Docker build, messaging
+tests, execution safeguards and Credit fixture cleanup changes in their affected
+file headers, this usage log and the README AI Use Summary. Existing approvals
+by other contributors and unrelated pending reviews/course-owner exceptions were
+preserved. This records Ron's approval; it does not create a GitHub review on his
+behalf or attribute new approval to any other service owner. The PR's executable
+code is unchanged from the revision whose automatic and manual full workflows
+both passed all 13 checks. The disclosure-only follow-up is committed and pushed
+to the existing PR; its normal automatic CI rerun remains enabled.
+
 ## 2026-11-09 — Change-aware messaging CI extension
 
 - **Tool/mode:** OpenAI Codex; implementation and test/debug assistance from the
   author's approved CI policy, five messaging boundaries and five safeguards.
 - **Tracking:** Issue #62 / PR #63; the explicit follow-up approval supersedes the
-  initial Kafka exclusions and run-all-on-every-PR policy. Human review is PENDING.
+  initial Kafka exclusions and run-all-on-every-PR policy. Reviewed and approved
+  by @ron on 2026-11-09.
 - **Files:** Workflow; `scripts/ci/`; Order/Credit test runners; Order Kafka and
   User account-status tests; CI guide; README; this log. No application business
   logic, domain schema, client version, AWS resource or ruleset change is included.
@@ -184,8 +206,8 @@ reporter array compatible with macOS Bash, made unknown executable documentation
 paths select the full suite, and sanitized logs/reports before cleanup. Both
 read-only re-reviews reported no outstanding findings. Current policy/report/CLI
 regressions pass 18 tests; final hosted and requested manual-run evidence is in
-PR #63. Prior owner approvals remain unchanged and this extension remains pending
-human review.
+PR #63. Prior owner approvals remain unchanged; @ron reviewed and approved this
+extension on 2026-11-09.
 
 ## 2026-11-09 — Native Kafka Docker installation fix for CI
 
@@ -194,7 +216,7 @@ human review.
   No Kafka client replacement, dependency-version update, application behavior,
   schema, AWS resource, test skip, or gate relaxation is included.
 - **Files:** User/Order/Credit `Dockerfile`, `docs/ci.md`, `README.md`, and this log.
-- **Tracking:** Issue #62 / PR #63. Human review of this follow-up remains PENDING;
+- **Tracking:** Issue #62 / PR #63. Reviewed and approved by @ron on 2026-11-09;
   previous owners' approvals apply only to their original scopes.
 
 ### Exact prompts
@@ -266,7 +288,7 @@ or cloud data is used.
   schemas, service business logic, Kafka integration, AWS deployment, or repository
   ruleset change is included.
 - **Files:** `.github/workflows/pr-ci.yml`, `docs/ci.md`, `README.md`, and this log.
-- **Tracking:** GitHub issue #62. Human implementation review remains PENDING.
+- **Tracking:** GitHub issue #62. Reviewed and approved by @ron on 2026-11-09.
 
 ### Exact prompts
 

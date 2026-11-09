@@ -1,4 +1,4 @@
-// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved GitHub change planning/gating. Review: pending.
+// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved GitHub change planning/gating. Review: Reviewed and approved by @ron on 2026-11-09.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, appendFileSync } from 'node:fs';
 import { JOBS, selectJobs, checkResults } from './policy.mjs';

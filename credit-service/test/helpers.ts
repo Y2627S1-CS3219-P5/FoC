@@ -4,7 +4,7 @@
  * Scope: Test helpers: a throwaway database with the real migrations applied, message
  *        builders, and the reconciliation check from implementation-proposal.md §12.
  * Author review: Reviewed and approved by @phuc
- * Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: wait for actual fixture disconnection before database deletion. Review: pending.
+ * Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: wait for actual fixture disconnection before database deletion. Review: Reviewed and approved by @ron on 2026-11-09.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

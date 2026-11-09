@@ -1,5 +1,5 @@
 // AI assistance: Codex (GPT-6), 2026-10-18. Scope: real HTTP/Kafka/Credit flow. Author review: Reviewed and approved by @phuc.
-// Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: approved initial-event replay and exact grant assertions. Review: pending.
+// Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: approved initial-event replay and exact grant assertions. Review: Reviewed and approved by @ron on 2026-11-09.
 // Run against isolated PostgreSQL and Kafka with all five topics provisioned. Never use a shared broker:
 // Credit Service uses its production consumer-group name, and this test starts a real consumer.
 const assert = require('node:assert/strict');

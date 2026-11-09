@@ -26,7 +26,7 @@ Author review: Reviewed and approved by @mattis.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
 Scope: Recorded the author-approved Order/Credit CI extension, native Kafka Docker
 build fix, change-aware messaging coverage/safeguards and verification scope.
-Author review of this extension: Pending review by @ron.
+Author review of this extension: Reviewed and approved by @ron on 2026-11-09.
 -->
 
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
@@ -89,8 +89,8 @@ selection, the complete existing messaging suites, actual authenticated Order/Cr
 journeys, strict execution/report checks and sanitized diagnostics before cleanup.
 Main pushes and manual runs keep full coverage. No service business logic,
 AWS deployment or repository ruleset change is included.
-Implementation and verification details are recorded in `ai/usage-log.md`;
-project-author review remains pending.
+Implementation and verification details are recorded in `ai/usage-log.md`.
+The PR #63 changes were reviewed and approved by @ron on 2026-11-09.
 
 OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the first three Supplier backend increments from the author-approved specification: NestJS/Drizzle and PostgreSQL foundations; guarded, edit-preserving seed identities; least-privilege Compose setup; real User Service bearer verification; authenticated catalogue reads; request correlation and bundled assets; and administrator-only create/full-update/archive/restore with strict bodies, normalized race-safe duplicate creation rejection, and ETag concurrency. The isolated real-service integration runner now verifies API and SQL mutation state, concurrent stale-write rejection, lifecycle no-ops, repeat-migration/seed preservation, and fail-closed authentication. No Supplier frontend, User Service application changes, Order Service integration, or physical Supplier deletion were included. Project-author review of all three backend increments was completed and approved by @ron. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) retain the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.
 

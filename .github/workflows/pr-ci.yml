@@ -5,9 +5,9 @@
 # Additional AI assistance: OpenAI Codex, 2026-11-09.
 # Scope: Added author-approved Order/Credit PostgreSQL-backed quality jobs
 # and included their results in CI / gate for issue #62.
-# Author review of this extension: Pending review by @ron.
+# Author review of this extension: Reviewed and approved by @ron on 2026-11-09.
 # Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: author-approved
-# change-aware selection, required Kafka suites, real-service journey and evidence. Review: pending.
+# change-aware selection, required Kafka suites, real-service journey and evidence. Review: Reviewed and approved by @ron on 2026-11-09.
 
 name: PR CI
 

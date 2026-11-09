@@ -1,4 +1,4 @@
-// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved CI selection/gate checks. Review: pending.
+// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved CI selection/gate checks. Review: Reviewed and approved by @ron on 2026-11-09.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { JOBS, selectJobs, checkResults } from './policy.mjs';

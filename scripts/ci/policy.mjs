@@ -1,4 +1,4 @@
-// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved CI selection/gate policy. Review: pending.
+// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved CI selection/gate policy. Review: Reviewed and approved by @ron on 2026-11-09.
 export const JOBS = [
   'frontend_quality', 'supplier_quality', 'user_build', 'order_quality', 'credit_quality',
   'supplier_integration', 'supplier_ui_e2e', 'order_messaging', 'credit_messaging',

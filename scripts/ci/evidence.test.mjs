@@ -1,4 +1,4 @@
-// AI assistance: OpenAI Codex, 2026-11-09. Scope: required-suite execution safeguards. Review: pending.
+// AI assistance: OpenAI Codex, 2026-11-09. Scope: required-suite execution safeguards. Review: Reviewed and approved by @ron on 2026-11-09.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';

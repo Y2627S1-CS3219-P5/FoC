@@ -1,4 +1,4 @@
-// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved isolated messaging CI runners and evidence. Review: pending.
+// AI assistance: OpenAI Codex, 2026-11-09. Scope: approved isolated messaging CI runners and evidence. Review: Reviewed and approved by @ron on 2026-11-09.
 import { spawn, execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { mkdtempSync, writeFileSync, readFileSync, appendFileSync, readdirSync, rmSync } from 'node:fs';

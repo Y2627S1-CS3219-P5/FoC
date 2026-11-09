@@ -2,7 +2,7 @@
 # AI Assistance Disclosure: Claude Code (Claude Opus 5.5), 2026-10-18. Scope: runs the Order
 # Service tests, including the Kafka integration suite, against a throwaway PostgreSQL and a
 # throwaway single-node Kafka broker. Author review: Reviewed and approved by @phuc
-# Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: CI reports, readiness and diagnostics. Review: pending.
+# Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: CI reports, readiness and diagnostics. Review: Reviewed and approved by @ron on 2026-11-09.
 #
 # Usage (from anywhere):  bash order-service/scripts/test-kafka.sh [--keep]
 #   --keep   leave both containers running afterwards

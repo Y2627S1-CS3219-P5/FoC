@@ -1,4 +1,4 @@
-// AI assistance: OpenAI Codex, 2026-11-09. Scope: required-suite reports and diagnostic redaction. Review: pending.
+// AI assistance: OpenAI Codex, 2026-11-09. Scope: required-suite reports and diagnostic redaction. Review: Reviewed and approved by @ron on 2026-11-09.
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';

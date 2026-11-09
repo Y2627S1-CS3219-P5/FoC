@@ -4,7 +4,7 @@
 # Author review: Reviewed and approved by @t-leongchuan
 # Additional AI assistance: OpenAI Codex, 2026-11-09, for issue #62.
 # Scope: compile the locked Kafka addon with Alpine libraries; copy pruned
-# production dependencies into the matching runtime. Author review: Pending.
+# production dependencies into the matching runtime. Author review: Reviewed and approved by @ron on 2026-11-09.
 
 # ---- Dependencies: compile the bundled librdkafka instead of fetching a binary --
 FROM node:22.23.3-alpine3.24 AS dependencies

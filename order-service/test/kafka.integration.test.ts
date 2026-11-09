@@ -6,7 +6,7 @@
  *        reserve/rejection, completion/release, timeouts and late replies, duplicates, the DLQ,
  *        crash recovery, concurrent publishers and a broker outage.
  * Author review: Reviewed and approved by @phuc
- * Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: approved rollback/publication and retry identity assertions. Review: pending.
+ * Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: approved rollback/publication and retry identity assertions. Review: Reviewed and approved by @ron on 2026-11-09.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";

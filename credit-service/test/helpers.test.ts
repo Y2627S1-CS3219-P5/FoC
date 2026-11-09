@@ -1,4 +1,4 @@
-// AI assistance: OpenAI Codex, 2026-11-09. Scope: database fixture shutdown regression. Review: pending.
+// AI assistance: OpenAI Codex, 2026-11-09. Scope: database fixture shutdown regression. Review: Reviewed and approved by @ron on 2026-11-09.
 import assert from "node:assert/strict";
 import { it } from "node:test";
 import { createServer, connect, type Socket } from "node:net";

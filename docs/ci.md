@@ -8,7 +8,7 @@ Additional AI assistance: OpenAI Codex, date: 2026-11-09
 Scope: Documented the author-approved issue #62 Order/Credit database-backed CI
 checks, disposable PostgreSQL prerequisites, native Kafka Docker build fix, and
 the later author-approved change-aware Kafka CI extension and safeguards.
-Author review of this extension: Pending review by @ron.
+Author review of this extension: Reviewed and approved by @ron on 2026-11-09.
 -->
 
 # Continuous integration
