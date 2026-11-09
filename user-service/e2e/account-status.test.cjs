@@ -1,4 +1,5 @@
 // AI assistance: Codex (GPT-6), 2026-10-18. Scope: real HTTP/Kafka/Credit flow. Author review: Reviewed and approved by @phuc.
+// Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: approved initial-event replay and exact grant assertions. Review: pending.
 // Run against isolated PostgreSQL and Kafka with all five topics provisioned. Never use a shared broker:
 // Credit Service uses its production consumer-group name, and this test starts a real consumer.
 const assert = require('node:assert/strict');
@@ -67,6 +68,12 @@ it('HTTP registration survives unavailable Kafka, catches up after restart, and 
       user = launch(path.resolve(__dirname, '..'), { ...userEnv, KAFKA_BROKERS: brokers });
       await ready();
       await harness.waitForBalance(member.id, { available: 100, reserved: 0, status: 'ACTIVE' });
+      const initial = (await userDb.pool.query(
+        "SELECT payload FROM outbox WHERE message_key=$1 AND payload->>'first_active'='true'", [member.id],
+      )).rows[0].payload;
+      await harness.send('user.account-status', member.id, initial);
+      await harness.grantedAccount(); // Same-topic progress barrier proves the replay was handled.
+      assert.deepEqual(await harness.balance(member.id), { available: 100, reserved: 0, status: 'ACTIVE' });
       const firstReserve = await harness.reserve(member.id, 10);
       assert.equal((await harness.reply(firstReserve.operation_id)).body.type, 'CreditReserved');
       const login = await fetch(`${base}/auth/login`, {
@@ -98,6 +105,10 @@ it('HTTP registration survives unavailable Kafka, catches up after restart, and 
       await harness.grantedAccount();
       const stillBlocked = await harness.reserve(member.id, 1);
       assert.equal((await harness.reply(stillBlocked.operation_id)).body.reason_code, 'ACCOUNT_NOT_ACTIVE');
+      assert.deepEqual(await harness.balance(member.id), { available: 89, reserved: 11, status: 'SUSPENDED' });
+      assert.equal((await harness.pool.query(
+        "SELECT count(*)::int AS n FROM credit_transactions WHERE user_id=$1 AND type='INITIAL_GRANT'", [member.id],
+      )).rows[0].n, 1);
       await waitFor(async () => (await userDb.pool.query('SELECT * FROM outbox WHERE published_at IS NULL')).rowCount === 0);
     } catch (err) {
       console.error(logs);
