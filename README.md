@@ -81,8 +81,8 @@ disposable PostgreSQL, locked installation, type-check/build/test commands, and
 fail-closed aggregation into `CI / gate`. The author-requested follow-up fixes
 native Kafka builds in the User, Order, and Credit Dockerfiles by compiling the
 locked addon's bundled source and copying pruned production dependencies into
-matching runtime images. No service business logic, Kafka
-integration coverage, AWS deployment, or repository ruleset change is included.
+matching runtime images. No service business logic, new real-Kafka CI
+coverage, AWS deployment, or repository ruleset change is included.
 Implementation and verification details are recorded in `ai/usage-log.md`;
 project-author review remains pending.
 

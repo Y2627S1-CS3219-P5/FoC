@@ -144,9 +144,31 @@ build was cancelled. The Dockerfiles now install with scripts deferred, limit
 that bundled make invocation to two jobs, and explicitly rebuild install scripts.
 This is a build-only adjustment inside the image, not a client-version change.
 
-Verification of the three images and the complete Actions run is in progress.
-The PR skill is used for the final summary, evidence, and merge-impact description.
-Root-checkout uncommitted work and existing stashes are preserved.
+Verification: all three Linux/amd64 source builds passed concurrently. With
+networking disabled, each final image loaded client 1.11.0 / librdkafka 2.16.0;
+assertions verified SSL/SASL, compression, HTTP/OIDC support, non-root production
+configuration, migrations, and absence of TypeScript/tsx and compiler/Python
+tools. `npm ls --omit=dev --depth=0` passed in all three images. Credit's separate
+E2E target built and loaded its native binding, tsx, and existing test file.
+
+All local Compose images built successfully. The first start attempt found the
+locally cached Kafka image was ARM64 while the build verification explicitly
+requested amd64; starting the already-built images with the cached broker's
+architecture resolved this local fixture mismatch without source changes. All
+13 existing endpoint checks and six API journeys passed on a disposable stack.
+The final User audit chain verified successfully. SQL assertions confirmed real
+User-to-Kafka-to-Credit account activation and the expected initial credit grant.
+Actionlint and `git diff --check` passed. All eight GitHub Actions checks passed
+on implementation commit `edace1a`, including both previously failing live jobs:
+<https://github.com/Y2627S1-CS3219-P5/FoC/actions/runs/42608381438>.
+The complete workflow is also required to pass on the final PR head; final run
+links/results are recorded in PR #63, rather than treating local checks as proof
+of hosted CI success.
+
+The PR skill supplies the final summary, evidence, and merge-impact description.
+Root-checkout uncommitted work and existing stashes are preserved. Disposable
+test containers and volumes are removed after verification; no shared development
+or cloud data is used.
 
 ## 2026-11-09 — Order and Credit database-backed CI checks
 
