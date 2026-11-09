@@ -86,7 +86,8 @@ Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Recorded the Order Service final whole-branch review fix wave.
 Author review: Reviewed and approved by @mattis.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
-Scope: Implemented and verified the author-approved issue #62 Order/Credit CI extension.
+Scope: Implemented and verified the author-approved issue #62 Order/Credit CI
+extension and the author-requested native Kafka Docker build fix.
 Author review of this extension: Pending review by @ron.
 -->
 
@@ -97,6 +98,55 @@ To avoid duplicating prompt text, their initiating implementation request is quo
 under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend-api-and-test-foundation),
 and the approved metadata follow-up is quoted once under
 [Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
+
+## 2026-11-09 — Native Kafka Docker installation fix for CI
+
+- **Tool/mode:** OpenAI Codex; debugging, Docker configuration, verification, and documentation.
+- **Scope:** The author requested the minimal fix for PR #63's failing Docker builds.
+  No Kafka client replacement, dependency-version update, application behavior,
+  schema, AWS resource, test skip, or gate relaxation is included.
+- **Files:** User/Order/Credit `Dockerfile`, `docs/ci.md`, `README.md`, and this log.
+- **Tracking:** Issue #62 / PR #63. Human review of this follow-up remains PENDING;
+  previous owners' approvals apply only to their original scopes.
+
+### Exact prompts
+
+> why not use another package then, is there no way of resolving this error?
+
+> implement the minimal fix that ensures that ci / github actions run without any errors
+
+> continue
+
+### Key response
+
+Codex used the diagnosing-bugs skill and retained the existing failure evidence:
+two GitHub Actions attempts failed before the integration/browser tests could run.
+The Confluent 1.11.0 prebuilt binary download returned HTTP 504; native fallback
+then failed because the unchanged Alpine images lacked Python and build tools.
+The official release inventory confirmed the binary exists. Inspection of the
+package's actual installer also showed that its default static-source fallback
+downloads dependencies from GitHub, so adding Python alone would not resolve that
+download dependency. Alpine's system librdkafka is 2.14.1, older than the client's
+bundled 2.16.0, and was not substituted.
+
+The three Dockerfiles now compile the locked addon's bundled source with
+`CKJS_LINKING=dynamic`, the pinned image's local Node headers, and Alpine's library
+development packages. Production dependencies are pruned in a separate stage,
+with lifecycle scripts disabled, then copied into the matching pinned runtime
+image with its shared library packages. Runtime remains non-root and contains no
+compiler/Python; Credit's development-dependent E2E target is preserved. There is
+no runtime reinstall and no GitHub release-asset request on this Docker path.
+
+The first local concurrent source builds exposed another upstream build issue:
+the bundled gyp action invokes unbounded `make -j`, exhausting the Docker VM's
+memory. Those failed probes were retained as failures and the remaining owned
+build was cancelled. The Dockerfiles now install with scripts deferred, limit
+that bundled make invocation to two jobs, and explicitly rebuild install scripts.
+This is a build-only adjustment inside the image, not a client-version change.
+
+Verification of the three images and the complete Actions run is in progress.
+The PR skill is used for the final summary, evidence, and merge-impact description.
+Root-checkout uncommitted work and existing stashes are preserved.
 
 ## 2026-11-09 — Order and Credit database-backed CI checks
 

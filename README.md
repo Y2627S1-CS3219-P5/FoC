@@ -21,7 +21,8 @@ Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Added the Order Service AI Use Summary paragraph.
 Author review: Reviewed and approved by @mattis.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
-Scope: Recorded the author-approved Order/Credit CI extension and its verification scope.
+Scope: Recorded the author-approved Order/Credit CI extension, native Kafka Docker
+build fix, and verification scope.
 Author review of this extension: Pending review by @ron.
 -->
 
@@ -77,7 +78,10 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
 OpenAI Codex assisted on 2026-11-09 with implementing the author-approved
 [Order/Credit CI extension](docs/ci.md) for issue #62: separate Node 22 jobs with
 disposable PostgreSQL, locked installation, type-check/build/test commands, and
-fail-closed aggregation into `CI / gate`. No service business logic, Kafka
+fail-closed aggregation into `CI / gate`. The author-requested follow-up fixes
+native Kafka builds in the User, Order, and Credit Dockerfiles by compiling the
+locked addon's bundled source and copying pruned production dependencies into
+matching runtime images. No service business logic, Kafka
 integration coverage, AWS deployment, or repository ruleset change is included.
 Implementation and verification details are recorded in `ai/usage-log.md`;
 project-author review remains pending.

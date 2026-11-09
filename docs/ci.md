@@ -6,7 +6,8 @@ failure evidence, and manual main-ruleset activation.
 Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
 Scope: Documented the author-approved issue #62 Order/Credit database-backed CI
-checks, disposable PostgreSQL prerequisites, and explicit Kafka exclusions.
+checks, disposable PostgreSQL prerequisites, explicit Kafka exclusions, and the
+author-requested native Kafka Docker build fix.
 Author review of this extension: Pending review by @ron.
 -->
 
@@ -46,6 +47,24 @@ This increment does **not** claim live Kafka coverage. Order's
 `npm run test:kafka` in Order and `npm run test:e2e` in Credit remain separate,
 opt-in checks for a later CI increment. The remaining Order/Credit database tests
 require `TEST_DATABASE_URL` and fail if it is missing; they are not skipped.
+
+## Kafka dependency builds in Docker
+
+User, Order, and Credit keep their locked Confluent Kafka client and pinned Alpine
+Node image. Their Docker dependency stage builds the addon's bundled librdkafka
+from source, using the image's Node headers and Alpine's SSL, SASL, compression,
+and HTTP library packages. This avoids the GitHub release-binary download that
+returned HTTP 504 and the source installer's additional release-asset downloads.
+It does not substitute Alpine's older system librdkafka for the bundled version.
+The bundled make invocation is limited to two jobs so simultaneous service builds
+do not run an unbounded number of native compilers. Install scripts run explicitly
+after the locked install and that build-only adjustment.
+
+The final image copies dependencies after `npm prune --omit=dev --ignore-scripts`,
+plus the compiled application and migrations. It includes the shared libraries,
+but no compiler, Python, or development packages, and still runs as `node`.
+Credit's separate `e2e` target keeps its development dependencies and tests.
+Builds still require access to the npm and Alpine package registries.
 
 ## Run the same checks locally
 
