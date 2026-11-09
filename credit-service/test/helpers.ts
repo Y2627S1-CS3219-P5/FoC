@@ -4,6 +4,7 @@
  * Scope: Test helpers: a throwaway database with the real migrations applied, message
  *        builders, and the reconciliation check from implementation-proposal.md §12.
  * Author review: Reviewed and approved by @phuc
+ * Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: wait for actual fixture disconnection before database deletion. Review: pending.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -59,7 +60,14 @@ export async function createTestDatabase(): Promise<TestDatabase> {
       const c = new Client({ connectionString: adminUrl() });
       await c.connect();
       try {
-        await c.query(`DROP DATABASE ${name} WITH (FORCE)`);
+        // pg-pool may resolve end() while socket termination is still in flight.
+        // Do not force-kill those clients: their late errors escape the finished test.
+        const deadline = Date.now() + 5_000;
+        while ((await c.query("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=$1) AS connected", [name])).rows[0].connected) {
+          if (Date.now() >= deadline) throw new Error(`Test database ${name} still has connected clients after shutdown`);
+          await new Promise(resolve => setTimeout(resolve, 25));
+        }
+        await c.query(`DROP DATABASE ${name}`);
       } finally {
         await c.end();
       }
