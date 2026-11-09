@@ -129,13 +129,31 @@ outdated description of User Service's test command: the User CI job still only
 builds, but the service now has a separate real test suite. No existing job or
 workflow trigger/permission/concurrency setting was changed.
 
-Verification in progress: actionlint 1.7.12 reports no workflow errors; the official
+Verification: actionlint 1.7.12 reports no workflow errors; the official
 validator download checksum was verified. Parsed-workflow assertions pass for both
 new jobs and confirm existing jobs/settings are unchanged. Twenty-nine executed
 aggregate-gate cases verify all-success acceptance and rejection of each required
-job's failed, cancelled, skipped, or missing result. Clean Linux/x86-64 Node 22
-install/type-check/build/test runs are running against two disposable PostgreSQL
-containers, with no host database ports or application volumes used.
+job's failed, cancelled, skipped, or missing result. Clean Linux/x86-64 Node 22.23.4
+install/type-check/build/test runs passed against independent PostgreSQL 17.11
+containers: Order 173 tests passed, Credit 36 tests passed. The real-Kafka Order
+suite was intentionally excluded. No host database ports or application volumes
+were used.
+
+The first local `node:22-bookworm-slim` install probes hit an HTTP 504 downloading
+the existing native Kafka release asset and could not fall back to compiling
+because that minimal image lacks Python/build tools. The bug-diagnosis skill
+guided a reproducible direct download probe and a check of the official release
+asset inventory. Both unchanged command sequences then passed in the full
+`node:22-bookworm` environment with native-build tooling, closer to the GitHub-hosted
+Ubuntu runner. A repeat slim-image probe still reproduced the environment failure;
+this was not treated as a passing install or repaired by changing dependencies.
+The GitHub workflow continues to use its normal Ubuntu runner, not either local
+Docker verification image. No failed application test was retried or suppressed.
+
+Order's existing lockfile also reports one high-severity transitive `body-parser`
+advisory, GHSA-27r3-jxmh-p828. A read-only `npm audit --json` confirmed the finding.
+No `npm audit fix`, lockfile update, or new vulnerability policy is included in
+this CI-only increment; the advisory must be flagged for separate owner review.
 
 The work uses a separate `ci/62-order-credit-checks` worktree to preserve the author's
 dirty main checkout, uncommitted research/operator disclosures, ignored AWS state,
