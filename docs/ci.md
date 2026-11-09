@@ -6,17 +6,20 @@ failure evidence, and manual main-ruleset activation.
 Author review: Pending project-author review.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
 Scope: Documented the author-approved issue #62 Order/Credit database-backed CI
-checks, disposable PostgreSQL prerequisites, explicit Kafka exclusions, and the
-author-requested native Kafka Docker build fix.
+checks, disposable PostgreSQL prerequisites, native Kafka Docker build fix, and
+the later author-approved change-aware Kafka CI extension and safeguards.
 Author review of this extension: Pending review by @ron.
 -->
 
 # Continuous integration
 
 The `PR CI` workflow checks every pull request targeting `main`, every push to
-`main`, and every manual run. Its jobs run independently on clean GitHub-hosted
-runners, then `CI / gate` combines their results into the single check used for
-branch protection.
+`main`, and every manual run. `CI / plan` tests its selection/gate/report policy and
+selects affected checks on PRs. Main pushes and manual runs select every job.
+Selected jobs run on separate clean GitHub-hosted runners; `CI / gate` always runs
+and validates their results against the plan. It rejects failed/cancelled/missing
+jobs, any skipped selected job, and failed change detection. Only explicitly
+unselected jobs may skip. The required-check name remains `CI / gate`.
 
 ## Required jobs
 
@@ -29,26 +32,66 @@ branch protection.
 | `credit / typecheck-build-and-test` | The Credit Service installs reproducibly, type-checks, builds, and passes its existing tests against disposable PostgreSQL. Its separate Kafka E2E runner is not invoked. |
 | `integration / supplier-stack` | The existing disposable Compose suite passes against the real User Service, Supplier Service, migrations, seed import, and PostgreSQL databases. |
 | `e2e / supplier-ui` | The existing Chromium journeys pass against a disposable live stack. |
-| `CI / gate` | Every required job above completed successfully. |
+| `messaging / order` | Complete existing Order runner: real Kafka/PostgreSQL, simulated Credit, duplicates, DLQs, consumer recovery, concurrency, outages, rollback exclusion and stable retry identity. |
+| `messaging / credit` | Complete existing Credit suite: real broker/database/Credit process, simulated upstream messages, exact balance and ledger assertions. |
+| `messaging / user-credit` | Existing real HTTP/User/Kafka/Credit flow: activation, outage catch-up, initial-grant replay, suspend/restore and one initial grant. |
+| `messaging / actual-services` | Real authenticated User/Supplier/Order/Kafka/Credit journeys: reserve/reject, completion/cancellation, command/reply replays, exact ledger effects and invalid-message isolation. |
+| `CI / gate` | Every selected job completed successfully; intentional unaffected skips validated. |
 
-Integration and browser jobs run for every pull request initially. This keeps
-the merge rule simple and avoids missing cross-service effects. They can become
-change-aware later if workflow duration or cost becomes material.
+## PR selection policy
+
+This is the author's approved change-aware extension to the original run-all policy.
+`scripts/ci/policy.mjs` is the selection source of truth. Git's complete three-dot
+PR diff is read locally with rename detection disabled, so deletions and both sides
+of renames count; API path-filter file limits do not truncate the plan.
+
+| Changed area | Selected jobs |
+| --- | --- |
+| User | User build, Supplier integration/browser, User–Credit messaging, actual-service messaging. |
+| Supplier | Supplier quality/integration/browser, actual-service messaging (Order's supplier lookup). |
+| Order | Order quality/messaging, browser (current Order frontend), actual-service messaging. |
+| Credit | Credit quality/messaging, User–Credit messaging, browser, actual-service messaging. |
+| Frontend | Frontend quality and browser. |
+| Ordinary Markdown/docs/AI logs only | Plan and gate; application suites intentionally skip. |
+| Kafka, Compose, CI scripts/workflows, root config, or unknown executable area | Full suite, conservatively. |
+
+Multiple changed areas select the union. The workflow always starts; main pushes
+and manual runs always select everything, including the requested manual CI test
+run. There is no override that can turn a PR's required messaging tests off.
 
 Order and Credit each receive their own PostgreSQL 17.11 service container, matching
 their Compose image (`postgres:17.11-alpine3.24`). A `pg_isready` health check gates
 startup. The hard-coded `postgres` password is only for the disposable CI instance;
-no GitHub secret, local `.env`, shared database, Kafka broker, or AWS account is used.
+no GitHub secret, local `.env`, shared development database/broker, or AWS account is used.
 The test helpers create isolated databases, apply the real migrations, and drop
 the test databases afterward. GitHub removes each service container with its job.
 
-This increment does **not** claim live Kafka coverage. Order's
-`test/kafka.integration.test.ts` is skipped when `TEST_KAFKA_BROKERS` is unset.
-`npm run test:kafka` in Order and `npm run test:e2e` in Credit remain separate,
-opt-in checks for a later CI increment. The remaining Order/Credit database tests
-require `TEST_DATABASE_URL` and fail if it is missing; they are not skipped.
+The fast Order job still excludes its Kafka suite; that suite runs with all
+prerequisites in `messaging / order`. Selected messaging jobs require a complete
+JUnit report containing the named messaging boundary, executed cases and zero
+skipped/failed cases. Missing prerequisites, missing/empty/truncated reports, or
+selecting only unrelated tests fail the job.
+
+Messaging runners use unique Compose projects, test identities, image tags and
+disposable databases/brokers. Host fixture ports bind to loopback. They wait for
+readiness and exact outcomes with deadlines. Replay assertions use same-topic
+progress markers or committed consumer offsets before checking unchanged effects.
+Reports and redacted broker/service logs are saved before cleanup and uploaded for
+seven days even on failure. Test containers and volumes are removed afterward.
+Only dummy test credentials are supplied. Single-broker tests do not certify
+multi-broker replication or production load.
 
 ## Kafka dependency builds in Docker
+
+The five approved messaging boundaries are covered as follows:
+
+| Boundary | Executed checks |
+| --- | --- |
+| User → Kafka → Credit | Existing User E2E plus initial-event replay, exact remaining balances and one `INITIAL_GRANT` ledger row. |
+| Order → Kafka → Credit → Kafka → Order | New actual-service completion/cancellation/rejection journeys through real HTTP authentication and Supplier lookup. |
+| Deduplication/recovery | Actual replayed commands/replies with offset barriers and exact ledger/history counts; existing Order crash-before-offset-commit case restarts consumption and checks one transition. |
+| PostgreSQL outbox | Real-broker rollback exclusion with a later-message barrier; outage recovery retains the same event/payload/operation identity; existing batch-failure/retry tests and all-published checks. |
+| Invalid messages | Existing malformed/correlation/DLQ suites plus actual-service malformed/unsupported messages, unchanged state and subsequent valid work. |
 
 User, Order, and Credit keep their locked Confluent Kafka client and pinned Alpine
 Node image. Their Docker dependency stage builds the addon's bundled librdkafka
@@ -133,6 +176,20 @@ Both live runners use unique Compose project names and remove their containers
 and volumes afterward.
 
 ## Investigate a failure
+
+Run the required messaging suites from the repository root (Docker and Node 22
+required; install the named services' locked dependencies first):
+
+```sh
+node scripts/ci/messaging.mjs order   # npm ci in order-service
+node scripts/ci/messaging.mjs credit  # dependencies and tests run inside Docker
+node scripts/ci/messaging.mjs user    # npm ci + build in user-service and credit-service
+node scripts/ci/messaging.mjs journey # npm ci in order-service; real services built by Compose
+```
+
+The runner prints the evidence directory and removes its owned containers,
+volumes, and uniquely tagged test images. Standard `npm run test:kafka` and
+Credit `npm run test:e2e` commands remain available for local development.
 
 1. Open the failed job from the pull request's **Checks** section.
 2. Expand the first failed step and read its command output.

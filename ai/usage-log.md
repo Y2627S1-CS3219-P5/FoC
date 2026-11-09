@@ -90,7 +90,7 @@ Scope: Recorded the Order Service final whole-branch review fix wave.
 Author review: Reviewed and approved by @mattis.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
 Scope: Implemented and verified the author-approved issue #62 Order/Credit CI
-extension and the author-requested native Kafka Docker build fix.
+extension, native Kafka Docker build fix, and approved change-aware messaging checks.
 Author review of this extension: Pending review by @ron.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-09
 Scope: Recorded the member errand frontend pages entry.
@@ -104,6 +104,68 @@ To avoid duplicating prompt text, their initiating implementation request is quo
 under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend-api-and-test-foundation),
 and the approved metadata follow-up is quoted once under
 [Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
+
+## 2026-11-09 — Change-aware messaging CI extension
+
+- **Tool/mode:** OpenAI Codex; implementation and test/debug assistance from the
+  author's approved CI policy, five messaging boundaries and five safeguards.
+- **Tracking:** Issue #62 / PR #63; the explicit follow-up approval supersedes the
+  initial Kafka exclusions and run-all-on-every-PR policy. Human review is PENDING.
+- **Files:** Workflow; `scripts/ci/`; Order/Credit test runners; Order Kafka and
+  User account-status tests; CI guide; README; this log. No application business
+  logic, domain schema, client version, AWS resource or ruleset change is included.
+
+### Exact implementation prompts
+
+> alright proceed to integrate the existing starting points, additionally include the integration for each of the propsoed PR checks ## Proposed PR checks
+>
+> | Boundary | Business assertions |
+> | --- | --- |
+> | User → Kafka → Credit | Registration/activation reaches Credit; the initial grant occurs once; replay and suspend/restore do not create another grant. |
+> | Order → Kafka → Credit → Kafka → Order | An actual reserve succeeds or rejects with the correct reason; Order reaches the expected state; completion transfers the exact amount once; cancellation releases the hold. Existing simulated-participant tests remain useful, but add a small actual-service journey to catch contract/configuration mismatches. |
+> | Deduplication and recovery | Replay the same event/operation and verify one reservation, ledger effect, and terminal transition. Include a bounded crash-after-business-commit/before-offset-commit case and verify restart catches up without a second effect. |
+> | PostgreSQL outbox | A rolled-back operation publishes nothing; committed pending work is eventually published; publication failure leaves recoverable work; retry/restart preserves the same logical event identity and produces one business effect downstream. |
+> | Invalid messages | A malformed/unsupported message reaches the expected DLQ with diagnostic context, changes no business state, and does not prevent a later valid message from being processed. | before you start could i clarify what do you mean by retaining them in fill on every PR if they are fast and stable explain simply
+
+> i think we should implement it such that depending on the changes made, only the ci suite for that service is ran, eg if changes are made to user service, only ci job for user service should be ran, what do you think
+
+> could you also go through each of the proposed execution safeguard and explain simply what they each do and how necessary it is to invlude each
+
+> got it proceed with implementation and once you are done push it to the existing PR and make sure you execute a dummy run of the ci workflow
+
+### Key response and verification
+
+Codex used the TDD skill at the already approved CI plan/gate, HTTP/Kafka,
+SQL outcome/outbox and replay boundaries. Selector/report regression tests were
+observed failing before implementation and passing afterward. Real-git tests
+cover renamed/deleted paths and manual full selection; gate cases reject skipped,
+failed, cancelled or missing selected jobs and accept only deliberate unaffected
+skips. Unknown/shared configuration changes select all jobs. Main/manual runs are
+always full; the workflow itself is never path-filtered away.
+
+The approved existing suites are retained in full. The real-service journey uses
+HTTP registration/login and live Supplier lookup before Order reserve/reject,
+completion/cancellation, duplicate commands/replies and bad-message isolation.
+Exact ledger, balance and history assertions wait for consumer offsets or markers.
+The Order broker suite also checks rolled-back publication exclusion and unchanged
+outbox event/payload identity through outage recovery; its existing consumer
+restart-before-offset-commit test remains required. User replay/suspend/restore
+assertions verify one initial grant and the exact remaining balance.
+
+Unique test projects, dummy credentials, loopback ports, bounded waits/commands,
+strict zero-skip JUnit evidence, and redacted logs before cleanup implement the
+agreed safeguards. No Testcontainers or Kafka client replacement was introduced.
+The latest main (Order member frontend, PR #59) was merged into the isolated PR
+worktree using the merge-conflict skill; both independent disclosure histories
+were retained. Current Order frontend dependencies are reflected in selection.
+
+Verification so far: 16 selector/report/real-git tests passed, actionlint and
+whitespace checks passed, and Order type-check passed in Linux Node 22. The first
+host type-check attempt correctly failed because the existing dependencies target
+Linux rather than Darwin; it was not counted as passing. The existing complete
+Credit broker suite passed locally: 23 cases, zero skips, through the CI wrapper.
+Hosted full-suite/manual workflow results and any follow-up corrections are
+recorded in the PR evidence. Existing root-checkout uncommitted work is preserved.
 
 ## 2026-11-09 — Native Kafka Docker installation fix for CI
 

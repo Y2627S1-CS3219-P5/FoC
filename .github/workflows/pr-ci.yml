@@ -6,6 +6,8 @@
 # Scope: Added author-approved Order/Credit PostgreSQL-backed quality jobs
 # and included their results in CI / gate for issue #62.
 # Author review of this extension: Pending review by @ron.
+# Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: author-approved
+# change-aware selection, required Kafka suites, real-service journey and evidence. Review: pending.
 
 name: PR CI
 
@@ -29,7 +31,42 @@ env:
   CI: true
 
 jobs:
+  changes:
+    name: CI / plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      frontend_quality: ${{ steps.plan.outputs.frontend_quality }}
+      supplier_quality: ${{ steps.plan.outputs.supplier_quality }}
+      user_build: ${{ steps.plan.outputs.user_build }}
+      order_quality: ${{ steps.plan.outputs.order_quality }}
+      credit_quality: ${{ steps.plan.outputs.credit_quality }}
+      supplier_integration: ${{ steps.plan.outputs.supplier_integration }}
+      supplier_ui_e2e: ${{ steps.plan.outputs.supplier_ui_e2e }}
+      order_messaging: ${{ steps.plan.outputs.order_messaging }}
+      credit_messaging: ${{ steps.plan.outputs.credit_messaging }}
+      user_messaging: ${{ steps.plan.outputs.user_messaging }}
+      order_credit_integration: ${{ steps.plan.outputs.order_credit_integration }}
+    steps:
+      - name: Check out repository and diff history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Verify selection, gate, and evidence safeguards
+        run: node --test scripts/ci/policy.test.mjs scripts/ci/evidence.test.mjs scripts/ci/run.test.mjs
+      - name: Select changed-service checks and dependent integrations
+        id: plan
+        run: node scripts/ci/run.mjs plan
+
   frontend_quality:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend_quality == 'true' }}
     name: frontend / static-and-unit
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -62,6 +99,8 @@ jobs:
         run: npm run build
 
   supplier_quality:
+    needs: changes
+    if: ${{ needs.changes.outputs.supplier_quality == 'true' }}
     name: supplier / static-and-unit
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -94,6 +133,8 @@ jobs:
         run: npm run build
 
   user_build:
+    needs: changes
+    if: ${{ needs.changes.outputs.user_build == 'true' }}
     name: user / build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -120,6 +161,8 @@ jobs:
         run: npm run build
 
   order_quality:
+    needs: changes
+    if: ${{ needs.changes.outputs.order_quality == 'true' }}
     name: order / typecheck-build-and-test
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -168,6 +211,8 @@ jobs:
         run: npm test
 
   credit_quality:
+    needs: changes
+    if: ${{ needs.changes.outputs.credit_quality == 'true' }}
     name: credit / typecheck-build-and-test
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -216,6 +261,8 @@ jobs:
         run: npm test
 
   supplier_integration:
+    needs: changes
+    if: ${{ needs.changes.outputs.supplier_integration == 'true' }}
     name: integration / supplier-stack
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -242,6 +289,8 @@ jobs:
         run: npm run test:integration
 
   supplier_ui_e2e:
+    needs: changes
+    if: ${{ needs.changes.outputs.supplier_ui_e2e == 'true' }}
     name: e2e / supplier-ui
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -281,10 +330,127 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  order_messaging:
+    name: messaging / order
+    needs: changes
+    if: ${{ needs.changes.outputs.order_messaging == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: order-service/package-lock.json
+      - run: npm ci --prefix order-service
+      - name: Run required Order Kafka suite
+        id: messaging
+        run: node scripts/ci/messaging.mjs order
+      - name: Retain messaging reports and sanitized diagnostics
+        if: ${{ always() && steps.messaging.outputs.artifacts != '' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: order-messaging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.messaging.outputs.artifacts }}
+          retention-days: 7
+          if-no-files-found: error
+
+  credit_messaging:
+    name: messaging / credit
+    needs: changes
+    if: ${{ needs.changes.outputs.credit_messaging == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Run required Credit broker/database suite
+        id: messaging
+        run: node scripts/ci/messaging.mjs credit
+      - name: Retain messaging reports and sanitized diagnostics
+        if: ${{ always() && steps.messaging.outputs.artifacts != '' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: credit-messaging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.messaging.outputs.artifacts }}
+          retention-days: 7
+          if-no-files-found: error
+
+  user_messaging:
+    name: messaging / user-credit
+    needs: changes
+    if: ${{ needs.changes.outputs.user_messaging == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            user-service/package-lock.json
+            credit-service/package-lock.json
+      - name: Install and build both real service processes
+        run: |
+          npm ci --prefix user-service
+          npm ci --prefix credit-service
+          npm run build --prefix user-service
+          npm run build --prefix credit-service
+      - name: Run required User-to-Kafka-to-Credit suite
+        id: messaging
+        run: node scripts/ci/messaging.mjs user
+      - name: Retain messaging reports and sanitized diagnostics
+        if: ${{ always() && steps.messaging.outputs.artifacts != '' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: user-messaging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.messaging.outputs.artifacts }}
+          retention-days: 7
+          if-no-files-found: error
+
+  order_credit_integration:
+    name: messaging / actual-services
+    needs: changes
+    if: ${{ needs.changes.outputs.order_credit_integration == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: order-service/package-lock.json
+      - run: npm ci --prefix order-service
+      - name: Run actual authenticated User/Supplier/Order/Kafka/Credit journeys
+        id: messaging
+        run: node scripts/ci/messaging.mjs journey
+      - name: Retain messaging reports and sanitized diagnostics
+        if: ${{ always() && steps.messaging.outputs.artifacts != '' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: actual-services-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.messaging.outputs.artifacts }}
+          retention-days: 7
+          if-no-files-found: error
+
   ci_gate:
     name: CI / gate
     if: ${{ always() }}
     needs:
+      - changes
       - frontend_quality
       - supplier_quality
       - user_build
@@ -292,38 +458,23 @@ jobs:
       - credit_quality
       - supplier_integration
       - supplier_ui_e2e
+      - order_messaging
+      - credit_messaging
+      - user_messaging
+      - order_credit_integration
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions: {}
+    permissions:
+      contents: read
     steps:
-      - name: Require every CI job to pass
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Require selected jobs to pass and validate deliberate skips
         env:
-          FRONTEND_RESULT: ${{ needs.frontend_quality.result }}
-          SUPPLIER_RESULT: ${{ needs.supplier_quality.result }}
-          USER_RESULT: ${{ needs.user_build.result }}
-          ORDER_RESULT: ${{ needs.order_quality.result }}
-          CREDIT_RESULT: ${{ needs.credit_quality.result }}
-          INTEGRATION_RESULT: ${{ needs.supplier_integration.result }}
-          E2E_RESULT: ${{ needs.supplier_ui_e2e.result }}
-        run: |
-          failed=0
-          for result in \
-            "$FRONTEND_RESULT" \
-            "$SUPPLIER_RESULT" \
-            "$USER_RESULT" \
-            "$ORDER_RESULT" \
-            "$CREDIT_RESULT" \
-            "$INTEGRATION_RESULT" \
-            "$E2E_RESULT"
-          do
-            if [ "$result" != "success" ]; then
-              failed=1
-            fi
-          done
-
-          if [ "$failed" -ne 0 ]; then
-            echo "At least one required CI job failed, was cancelled, or did not complete."
-            exit 1
-          fi
-
-          echo "All required CI jobs passed."
+          PLAN_JSON: ${{ needs.changes.outputs.plan }}
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: node scripts/ci/run.mjs gate

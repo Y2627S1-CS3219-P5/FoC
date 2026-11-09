@@ -25,7 +25,7 @@ Scope: Added the Order Service AI Use Summary paragraph.
 Author review: Reviewed and approved by @mattis.
 Additional AI assistance: OpenAI Codex, date: 2026-11-09
 Scope: Recorded the author-approved Order/Credit CI extension, native Kafka Docker
-build fix, and verification scope.
+build fix, change-aware messaging coverage/safeguards and verification scope.
 Author review of this extension: Pending review by @ron.
 -->
 
@@ -84,8 +84,11 @@ disposable PostgreSQL, locked installation, type-check/build/test commands, and
 fail-closed aggregation into `CI / gate`. The author-requested follow-up fixes
 native Kafka builds in the User, Order, and Credit Dockerfiles by compiling the
 locked addon's bundled source and copying pruned production dependencies into
-matching runtime images. No service business logic, new real-Kafka CI
-coverage, AWS deployment, or repository ruleset change is included.
+matching runtime images. The later author-approved extension adds change-aware PR
+selection, the complete existing messaging suites, actual authenticated Order/Credit
+journeys, strict execution/report checks and sanitized diagnostics before cleanup.
+Main pushes and manual runs keep full coverage. No service business logic,
+AWS deployment or repository ruleset change is included.
 Implementation and verification details are recorded in `ai/usage-log.md`;
 project-author review remains pending.
 
