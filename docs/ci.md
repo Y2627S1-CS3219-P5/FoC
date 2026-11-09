@@ -52,7 +52,7 @@ of renames count; API path-filter file limits do not truncate the plan.
 | Order | Order quality/messaging, browser (current Order frontend), actual-service messaging. |
 | Credit | Credit quality/messaging, User–Credit messaging, browser, actual-service messaging. |
 | Frontend | Frontend quality and browser. |
-| Ordinary Markdown/docs/AI logs only | Plan and gate; application suites intentionally skip. |
+| Markdown documentation/AI usage logs only | Plan and gate; application suites intentionally skip. |
 | Kafka, Compose, CI scripts/workflows, root config, or unknown executable area | Full suite, conservatively. |
 
 Multiple changed areas select the union. The workflow always starts; main pushes

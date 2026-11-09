@@ -16,10 +16,10 @@ const affected = {
 export function selectJobs(paths) {
   const selected = new Set();
   for (const path of paths) {
-    if (path.endsWith('.md') || path.startsWith('docs/') || path.startsWith('ai/')) continue;
+    if (path.endsWith('.md') || path === 'LICENSE') continue;
     const prefix = Object.keys(affected).find(prefix => path.startsWith(prefix));
     if (prefix) for (const job of affected[prefix]) selected.add(job);
-    else if (!/^(docs\/|ai\/|README\.md$|AGENTS\.md$|CONTEXT\.md$|LICENSE$)/.test(path)) return [...JOBS];
+    else return [...JOBS];
   }
   return JOBS.filter(job => selected.has(job));
 }

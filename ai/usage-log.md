@@ -159,13 +159,33 @@ The latest main (Order member frontend, PR #59) was merged into the isolated PR
 worktree using the merge-conflict skill; both independent disclosure histories
 were retained. Current Order frontend dependencies are reflected in selection.
 
-Verification so far: 16 selector/report/real-git tests passed, actionlint and
+Verification so far: selector/report/real-git tests passed, actionlint and
 whitespace checks passed, and Order type-check passed in Linux Node 22. The first
 host type-check attempt correctly failed because the existing dependencies target
 Linux rather than Darwin; it was not counted as passing. The existing complete
 Credit broker suite passed locally: 23 cases, zero skips, through the CI wrapper.
 Hosted full-suite/manual workflow results and any follow-up corrections are
 recorded in the PR evidence. Existing root-checkout uncommitted work is preserved.
+
+The first expanded hosted run passed all four messaging jobs, including the actual
+service journey, but correctly failed the gate for an existing Credit fixture
+teardown race: all business assertions passed, then `DROP DATABASE ... FORCE`
+terminated connections whose shutdown was still in flight. The initial unmodified
+ten-iteration local concurrency probe passed and was not claimed as a reproduction.
+A tighter real TCP proxy delays only PostgreSQL Terminate packets; the new regression
+then reproduced the same forced-termination errors before the fix. The test helper
+now waits for actual session disconnection under a five-second deadline and drops
+without FORCE. The regression and complete Credit quality suite then passed under
+Linux Node 22: 37 tests, zero skips. No errors were ignored and no test was disabled.
+
+The code-review skill ran separate standards/spec reviews. Follow-up changes bound
+journey HTTP ports to loopback, removed Order-owned anonymous volumes, kept the
+reporter array compatible with macOS Bash, made unknown executable documentation
+paths select the full suite, and sanitized logs/reports before cleanup. Both
+read-only re-reviews reported no outstanding findings. Current policy/report/CLI
+regressions pass 18 tests; final hosted and requested manual-run evidence is in
+PR #63. Prior owner approvals remain unchanged and this extension remains pending
+human review.
 
 ## 2026-11-09 — Native Kafka Docker installation fix for CI
 

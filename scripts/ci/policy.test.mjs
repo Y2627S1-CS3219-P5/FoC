@@ -37,7 +37,7 @@ test('ordinary documentation runs no application jobs', () => {
 });
 
 test('shared configuration, CI policy, and unknown paths conservatively select everything', () => {
-  for (const path of ['compose.yaml', 'kafka/create-topics.sh', '.github/workflows/pr-ci.yml', 'scripts/ci/run.mjs', 'new-shared-code.ts']) {
+  for (const path of ['compose.yaml', 'kafka/create-topics.sh', '.github/workflows/pr-ci.yml', 'scripts/ci/run.mjs', 'new-shared-code.ts', 'docs/check.sh', 'ai/tool.mjs']) {
     assert.deepEqual(selectJobs([path]), JOBS, path);
   }
 });

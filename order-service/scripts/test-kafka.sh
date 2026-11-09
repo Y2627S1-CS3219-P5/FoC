@@ -32,13 +32,17 @@ done
 finish() {
   status=$?
   if [[ -n "${CI_ARTIFACT_DIR:-}" ]]; then
-    docker logs --tail 300 "$KAFKA" > "$CI_ARTIFACT_DIR/kafka.log" 2>&1 || true
-    docker logs --tail 100 "$PG" > "$CI_ARTIFACT_DIR/postgres.log" 2>&1 || true
+    docker logs --tail 300 "$KAFKA" 2>&1 | node ../scripts/ci/evidence.mjs redact > "$CI_ARTIFACT_DIR/kafka.log" || true
+    docker logs --tail 100 "$PG" 2>&1 | node ../scripts/ci/evidence.mjs redact > "$CI_ARTIFACT_DIR/postgres.log" || true
+    if ! node ../scripts/ci/evidence.mjs sanitize "$CI_ARTIFACT_DIR"; then status=1; fi
   fi
   if [[ "$KEEP" == true ]]; then
-    echo "Containers left running: $PG $KAFKA (remove with: docker rm -f $PG $KAFKA)"
+    echo "Containers left running: $PG $KAFKA (remove with: docker rm -fv $PG $KAFKA)"
   else
-    docker rm -f "$PG" "$KAFKA" >/dev/null 2>&1 || true
+    if ! docker rm -fv "$PG" "$KAFKA" >/dev/null 2>&1; then
+      echo "Cleanup failed for owned containers $PG $KAFKA" >&2
+      status=1
+    fi
   fi
   exit $status
 }
@@ -84,9 +88,9 @@ echo "Creating topics with kafka/create-topics.sh..."
 tr -d '\r' < ../kafka/create-topics.sh | docker exec -i -e BOOTSTRAP_SERVER="localhost:$KAFKA_PORT" "$KAFKA" sh -s >/dev/null
 
 echo "Running the tests..."
-report_args=()
+report_args=(--test-reporter=spec --test-reporter-destination=stdout)
 if [[ -n "${CI_ARTIFACT_DIR:-}" ]]; then
-  report_args=(--test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination="$CI_ARTIFACT_DIR/tests.xml")
+  report_args+=(--test-reporter=junit --test-reporter-destination="$CI_ARTIFACT_DIR/tests.xml")
 fi
 TEST_DATABASE_URL="postgres://postgres:postgres@localhost:$PG_PORT/postgres" \
 TEST_KAFKA_BROKERS="localhost:$KAFKA_PORT" \

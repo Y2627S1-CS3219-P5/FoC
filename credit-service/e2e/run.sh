@@ -29,8 +29,9 @@ done
 finish() {
   status=$?
   if [[ -n "${CI_ARTIFACT_DIR:-}" ]]; then
-    compose logs --no-color --tail 300 > "$CI_ARTIFACT_DIR/compose.log" 2>&1 || true
-    compose ps -a > "$CI_ARTIFACT_DIR/compose-status.log" 2>&1 || true
+    compose logs --no-color --tail 300 2>&1 | node ../../scripts/ci/evidence.mjs redact > "$CI_ARTIFACT_DIR/compose.log" || true
+    compose ps -a 2>&1 | node ../../scripts/ci/evidence.mjs redact > "$CI_ARTIFACT_DIR/compose-status.log" || true
+    if ! node ../../scripts/ci/evidence.mjs sanitize "$CI_ARTIFACT_DIR"; then status=1; fi
   fi
   if [[ $status -ne 0 ]]; then
     echo
@@ -42,7 +43,10 @@ finish() {
     echo "Stack left running. Inspect:  docker compose -p $PROJECT -f credit-service/e2e/compose.yaml logs credit-service"
     echo "Remove it:                    docker compose -p $PROJECT -f credit-service/e2e/compose.yaml down -v"
   else
-    compose down -v --remove-orphans >/dev/null 2>&1 || true
+    if ! compose down -v --remove-orphans >/dev/null 2>&1; then
+      echo "Cleanup failed for owned Compose project $PROJECT" >&2
+      status=1
+    fi
   fi
   exit $status
 }

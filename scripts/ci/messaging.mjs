@@ -7,7 +7,7 @@ import { resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'node:net';
 import { randomUUID } from 'node:crypto';
-import { verifyReport, redact } from './evidence.mjs';
+import { verifyReport, redact, sanitizeDirectory } from './evidence.mjs';
 
 const root = resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const mode = process.argv[2];
@@ -18,7 +18,8 @@ if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `artifa
 console.log(`Messaging evidence: ${artifacts}`);
 const project = `foc-ci-${mode}-${randomUUID().slice(0, 12)}`;
 const env = { ...process.env, CI_ARTIFACT_DIR: artifacts, CI_COMPOSE_PROJECT: project };
-const secrets = ['e2eadmin', 'e2emigrator', 'e2eapp', 'StrongPassword123', 'test-only-secret'];
+const secrets = ['e2eadmin', 'e2emigrator', 'e2eapp', 'StrongPassword123', 'test-only-secret', 'ab'.repeat(32)];
+env.CI_REDACT_SECRETS_JSON = JSON.stringify(secrets);
 let active;
 let composeArgs;
 let started = false;
@@ -109,9 +110,10 @@ try {
         SUPPLIER_DB_ADMIN_PASSWORD: 'ci-messaging-password', SUPPLIER_DB_MIGRATION_PASSWORD: 'ci-messaging-password', SUPPLIER_DB_PASSWORD: 'ci-messaging-password',
         JWT_SECRET: 'ci-messaging-test-only-jwt-secret-32-chars', AUDIT_HMAC_KEY: 'ab'.repeat(32), ALLOWED_EMAIL_DOMAIN: 'u.nus.edu',
         BOOTSTRAP_ADMIN_USERNAME: 'ci_admin', BOOTSTRAP_ADMIN_EMAIL: 'ci-admin@u.nus.edu', BOOTSTRAP_ADMIN_PASSWORD: 'CiMessagingPassword1',
-        USER_PORT: await freePort(), SUPPLIER_PORT: await freePort(), ORDER_PORT: await freePort(),
+        USER_PORT: `127.0.0.1:${await freePort()}`, SUPPLIER_PORT: `127.0.0.1:${await freePort()}`, ORDER_PORT: `127.0.0.1:${await freePort()}`,
       });
       secrets.push('ci-messaging-password', env.JWT_SECRET, env.AUDIT_HMAC_KEY, env.BOOTSTRAP_ADMIN_PASSWORD);
+      env.CI_REDACT_SECRETS_JSON = JSON.stringify(secrets);
       override.services['order-db'] = { ports: ['127.0.0.1::5432'] };
       // Preserve developer image tags: every test image belongs only to this project.
       for (const [service, image] of Object.entries({ 'user-service': 'user', 'user-migrate': 'user', 'order-service': 'order', 'order-migrate': 'order', 'credit-service': 'credit', 'credit-migrate': 'credit', 'supplier-service': 'supplier', 'supplier-migrate': 'supplier' })) {
@@ -127,9 +129,9 @@ try {
       await run('node', ['--import', 'tsx', '--test', ...reporters, 'e2e/account-status.test.cjs'], { cwd: join(root, 'user-service') });
     } else {
       await compose(['up', '--build', '--detach', '--wait', 'user-service', 'supplier-service', 'order-service', 'credit-service']);
-      env.USER_API = `http://127.0.0.1:${env.USER_PORT}`;
-      env.SUPPLIER_API = `http://127.0.0.1:${env.SUPPLIER_PORT}`;
-      env.ORDER_API = `http://127.0.0.1:${env.ORDER_PORT}`;
+      env.USER_API = `http://${env.USER_PORT}`;
+      env.SUPPLIER_API = `http://${env.SUPPLIER_PORT}`;
+      env.ORDER_API = `http://${env.ORDER_PORT}`;
       env.ORDER_DATABASE_URL = `postgres://order_bootstrap:ci-messaging-password@127.0.0.1:${mappedPort('order-db')}/orders`;
       env.CREDIT_DATABASE_URL = `postgres://credit_bootstrap:ci-messaging-password@127.0.0.1:${mappedPort('credit-db')}/credits`;
       await run('node', ['--test', ...reporters, 'scripts/ci/order-credit.test.mjs']);
@@ -141,6 +143,8 @@ try {
   process.exitCode = 1;
   console.error(redact(error.stack || String(error), secrets));
 } finally {
+  try { sanitizeDirectory(artifacts, secrets); }
+  catch (error) { process.exitCode = 1; console.error(`Report sanitization failed: ${redact(String(error), secrets)}`); }
   if (started) {
     try {
       const log = execFileSync('docker', [...composeArgs, 'logs', '--no-color', '--tail', '300'], { cwd: root, env, encoding: 'utf8', timeout: 30_000, maxBuffer: 16 * 1024 * 1024 });
@@ -159,10 +163,7 @@ try {
   }
   for (const name of readdirSync(artifacts)) {
     const file = join(artifacts, name);
-    if (name.endsWith('.log') || name.endsWith('.xml')) {
-      const safe = redact(readFileSync(file, 'utf8'), secrets);
-      writeFileSync(file, name.endsWith('.xml') ? safe.replaceAll('<REDACTED>', '&lt;REDACTED&gt;') : safe);
-    }
+    if (name.endsWith('.log') || name.endsWith('.xml')) continue;
     else rmSync(file);
   }
 }
