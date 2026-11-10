@@ -6,6 +6,7 @@
  *        reserve/rejection, completion/release, timeouts and late replies, duplicates, the DLQ,
  *        crash recovery, concurrent publishers and a broker outage.
  * Author review: Reviewed and approved by @phuc
+ * Additional AI assistance: OpenAI Codex, 2026-11-09. Scope: approved rollback/publication and retry identity assertions. Review: Reviewed and approved by @ron on 2026-11-09.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -25,7 +26,7 @@ import { createKafka, createProducer, SharedProducer } from "../src/kafka/client
 import { KafkaCreditPublisher } from "../src/kafka/creditPublisher";
 import { createResultsConsumer, startCreditResultsConsumer, type ConsumerLike } from "../src/kafka/creditResultsConsumer";
 import { metrics } from "../src/metrics";
-import { outboxBacklog, startOutboxPublisher } from "../src/outbox";
+import { insertOutboxEvent, outboxBacklog, startOutboxPublisher } from "../src/outbox";
 import { createTestDatabase, type TestDatabase } from "./helpers";
 import { complete, COURIER, member, newErrand, REQUESTER, reply, state, waitFor } from "./kafkaFixtures";
 
@@ -156,6 +157,25 @@ describe("Kafka integration", { skip: BROKERS ? false : "TEST_KAFKA_BROKERS is n
     await credit?.stop();
     await db?.drop();
     mock.restoreAll();
+  });
+
+  it("rolled-back outbox work is never published, while later committed work is delivered", async () => {
+    const key = randomUUID();
+    const client = await pool.connect();
+    let eventId: string;
+    try {
+      await client.query("BEGIN");
+      eventId = await insertOutboxEvent(client, {
+        eventType: "ReserveRequested", topic: TOPICS.commands, key,
+        payload: { type: "ReserveRequested", schema_version: 1, operation_id: randomUUID(), order_id: key, requester_id: REQUESTER, amount: 10, occurred_at: new Date().toISOString() },
+      });
+      await client.query("ROLLBACK");
+    } finally { client.release(); }
+    // Publication of later committed work is a progress barrier, not an arbitrary sleep.
+    const marker = await newErrand(pool);
+    await credit.waitForCommand(marker.id, "ReserveRequested");
+    assert.equal(credit.commands(key).length, 0);
+    assert.equal((await pool.query("SELECT * FROM outbox WHERE event_id=$1", [eventId])).rowCount, 0);
   });
 
   it("reserve: ReserveRequested keyed by order_id; CreditReserved opens the errand", async () => {
@@ -310,6 +330,7 @@ describe("Kafka integration", { skip: BROKERS ? false : "TEST_KAFKA_BROKERS is n
     let paused = true;
     try {
       const e = await newErrand(pool);
+      const pending = (await pool.query("SELECT event_id, payload FROM outbox WHERE message_key=$1", [e.id])).rows[0];
       const health = await fetch(`http://127.0.0.1:${port}/health`);
       assert.equal(health.status, 200);
       await waitFor("a failed publish", () => metrics.snapshot().outboxPublishFailures > failuresBefore, 30_000);
@@ -317,10 +338,14 @@ describe("Kafka integration", { skip: BROKERS ? false : "TEST_KAFKA_BROKERS is n
 
       execFileSync("docker", ["unpause", CONTAINER!]);
       paused = false;
-      await credit.waitForCommand(e.id, "ReserveRequested");
+      const delivered = await credit.waitForCommand(e.id, "ReserveRequested");
+      assert.deepEqual(delivered.body, pending.payload, "retry preserves the logical event and operation identity");
       await credit.send(e.id, reply(e, "CreditReserved"));
       await errandState(e.id, "OPEN");
       await waitFor("outbox drained", async () => (await outboxBacklog(pool)).outboxPending === 0, 30_000);
+      const sent = (await pool.query("SELECT event_id, payload, published_at FROM outbox WHERE event_id=$1", [pending.event_id])).rows[0];
+      assert.deepEqual(sent.payload, pending.payload);
+      assert.ok(sent.published_at);
     } finally {
       if (paused) execFileSync("docker", ["unpause", CONTAINER!]);
       server.close();

@@ -5,6 +5,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-11-09.
 Scope: Credit history endpoint prompts and verification for #58. Author review: Reviewed and approved by @phuc.
 AI Assistance Disclosure:
 Additional AI assistance: OpenAI Codex, date: 2026-11-10.
+Scope: Recorded PR #63 merge resolution and Credit HTTP test-fixture compatibility.
+Author review: Follow-up review pending; prior approval records retained.
+Additional AI assistance: OpenAI Codex, date: 2026-11-10.
 Scope: Recorded the approved local logging plan and implementation/verification for #66.
 Author review: Reviewed and approved by @ron on 2026-11-10.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-11-09.
@@ -95,6 +98,10 @@ Author review: Reviewed and approved by @mattis.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Recorded the Order Service final whole-branch review fix wave.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: OpenAI Codex, date: 2026-11-09
+Scope: Implemented and verified the author-approved issue #62 Order/Credit CI
+extension, native Kafka Docker build fix, and approved change-aware messaging checks.
+Author review of this extension: Reviewed and approved by @ron on 2026-11-09.
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-09
 Scope: Recorded the member errand frontend pages entry.
 Author review: Reviewed and approved by @mattis.
@@ -104,6 +111,37 @@ Author review: Reviewed and approved by @mattis.
 -->
 
 # AI Usage Log
+
+## 2026-11-10 — Resolve PR #63 conflict with current main
+
+- **Tool/mode:** OpenAI Codex; resolving-merge-conflicts workflow.
+- **Tracking:** Issue #62 / PR #63.
+- **Scope:** Merge `origin/main` at `0a9c389` into the existing CI branch. Preserve
+  main's Order natural-language creation, Credit history and local logging changes.
+- **Author review:** Resolution explicitly requested; existing CI/logging approvals
+  retained. This new resolution record awaits author review.
+
+### Exact prompt
+
+> new merge conflict https://github.com/Y2627S1-CS3219-P5/FoC/pull/63 please resolve
+
+### Key response
+
+The only conflicted file was README.md: CI and local-logging AI summaries occupied
+the same insertion point. Both complete summaries and their prior approval dates
+were retained. The usage log and application changes merged automatically; no
+application behaviour, schema or CI policy was invented for the resolution.
+Relevant verification results are recorded on PR #63 and issue #62. The author's
+dirty normal checkout and the separate logging worktree were preserved.
+
+The first post-merge workflow exposed an existing fixture's incompatibility with
+the merged Credit HTTP contract: Credit exited with `USER_SERVICE_BASE_URL is not
+set`, and the actual User–Credit check correctly failed waiting for its grant.
+The follow-up supplies Credit's real User verifier URL and a distinct ephemeral
+HTTP port in that test, detects early Credit exit, and isolates the newly published
+Credit port in the actual-service Compose runner. Service implementation, contract,
+business assertions and CI gate policy remain unchanged. Prior author approvals
+are preserved; these compatibility additions remain pending human review.
 
 ## 2026-11-10 — Author approval of local logging PR #68
 
@@ -198,6 +236,242 @@ under [Supplier frontend API and test foundation](#2026-09-27--supplier-frontend
 and the approved metadata follow-up is quoted once under
 [Supplier Building Code metadata endpoint](#2026-09-27--supplier-building-code-metadata-endpoint).
 
+## 2026-11-09 — Author approval of PR #63
+
+- **Tool/mode:** OpenAI Codex; approval disclosure updates only.
+- **Author review:** PR #63 changes explicitly reviewed and approved by @ron.
+
+### Exact prompt
+
+> changes approved, add my approval thanks
+
+### Key response
+
+Codex recorded @ron's approval of the PR #63 CI, native Docker build, messaging
+tests, execution safeguards and Credit fixture cleanup changes in their affected
+file headers, this usage log and the README AI Use Summary. Existing approvals
+by other contributors and unrelated pending reviews/course-owner exceptions were
+preserved. This records Ron's approval; it does not create a GitHub review on his
+behalf or attribute new approval to any other service owner. The PR's executable
+code is unchanged from the revision whose automatic and manual full workflows
+both passed all 13 checks. The disclosure-only follow-up is committed and pushed
+to the existing PR; its normal automatic CI rerun remains enabled.
+
+## 2026-11-09 — Change-aware messaging CI extension
+
+- **Tool/mode:** OpenAI Codex; implementation and test/debug assistance from the
+  author's approved CI policy, five messaging boundaries and five safeguards.
+- **Tracking:** Issue #62 / PR #63; the explicit follow-up approval supersedes the
+  initial Kafka exclusions and run-all-on-every-PR policy. Reviewed and approved
+  by @ron on 2026-11-09.
+- **Files:** Workflow; `scripts/ci/`; Order/Credit test runners; Order Kafka and
+  User account-status tests; CI guide; README; this log. No application business
+  logic, domain schema, client version, AWS resource or ruleset change is included.
+
+### Exact implementation prompts
+
+> alright proceed to integrate the existing starting points, additionally include the integration for each of the propsoed PR checks ## Proposed PR checks
+>
+> | Boundary | Business assertions |
+> | --- | --- |
+> | User → Kafka → Credit | Registration/activation reaches Credit; the initial grant occurs once; replay and suspend/restore do not create another grant. |
+> | Order → Kafka → Credit → Kafka → Order | An actual reserve succeeds or rejects with the correct reason; Order reaches the expected state; completion transfers the exact amount once; cancellation releases the hold. Existing simulated-participant tests remain useful, but add a small actual-service journey to catch contract/configuration mismatches. |
+> | Deduplication and recovery | Replay the same event/operation and verify one reservation, ledger effect, and terminal transition. Include a bounded crash-after-business-commit/before-offset-commit case and verify restart catches up without a second effect. |
+> | PostgreSQL outbox | A rolled-back operation publishes nothing; committed pending work is eventually published; publication failure leaves recoverable work; retry/restart preserves the same logical event identity and produces one business effect downstream. |
+> | Invalid messages | A malformed/unsupported message reaches the expected DLQ with diagnostic context, changes no business state, and does not prevent a later valid message from being processed. | before you start could i clarify what do you mean by retaining them in fill on every PR if they are fast and stable explain simply
+
+> i think we should implement it such that depending on the changes made, only the ci suite for that service is ran, eg if changes are made to user service, only ci job for user service should be ran, what do you think
+
+> could you also go through each of the proposed execution safeguard and explain simply what they each do and how necessary it is to invlude each
+
+> got it proceed with implementation and once you are done push it to the existing PR and make sure you execute a dummy run of the ci workflow
+
+### Key response and verification
+
+Codex used the TDD skill at the already approved CI plan/gate, HTTP/Kafka,
+SQL outcome/outbox and replay boundaries. Selector/report regression tests were
+observed failing before implementation and passing afterward. Real-git tests
+cover renamed/deleted paths and manual full selection; gate cases reject skipped,
+failed, cancelled or missing selected jobs and accept only deliberate unaffected
+skips. Unknown/shared configuration changes select all jobs. Main/manual runs are
+always full; the workflow itself is never path-filtered away.
+
+The approved existing suites are retained in full. The real-service journey uses
+HTTP registration/login and live Supplier lookup before Order reserve/reject,
+completion/cancellation, duplicate commands/replies and bad-message isolation.
+Exact ledger, balance and history assertions wait for consumer offsets or markers.
+The Order broker suite also checks rolled-back publication exclusion and unchanged
+outbox event/payload identity through outage recovery; its existing consumer
+restart-before-offset-commit test remains required. User replay/suspend/restore
+assertions verify one initial grant and the exact remaining balance.
+
+Unique test projects, dummy credentials, loopback ports, bounded waits/commands,
+strict zero-skip JUnit evidence, and redacted logs before cleanup implement the
+agreed safeguards. No Testcontainers or Kafka client replacement was introduced.
+The latest main (Order member frontend, PR #59) was merged into the isolated PR
+worktree using the merge-conflict skill; both independent disclosure histories
+were retained. Current Order frontend dependencies are reflected in selection.
+
+Verification so far: selector/report/real-git tests passed, actionlint and
+whitespace checks passed, and Order type-check passed in Linux Node 22. The first
+host type-check attempt correctly failed because the existing dependencies target
+Linux rather than Darwin; it was not counted as passing. The existing complete
+Credit broker suite passed locally: 23 cases, zero skips, through the CI wrapper.
+Hosted full-suite/manual workflow results and any follow-up corrections are
+recorded in the PR evidence. Existing root-checkout uncommitted work is preserved.
+
+The first expanded hosted run passed all four messaging jobs, including the actual
+service journey, but correctly failed the gate for an existing Credit fixture
+teardown race: all business assertions passed, then `DROP DATABASE ... FORCE`
+terminated connections whose shutdown was still in flight. The initial unmodified
+ten-iteration local concurrency probe passed and was not claimed as a reproduction.
+A tighter real TCP proxy delays only PostgreSQL Terminate packets; the new regression
+then reproduced the same forced-termination errors before the fix. The test helper
+now waits for actual session disconnection under a five-second deadline and drops
+without FORCE. The regression and complete Credit quality suite then passed under
+Linux Node 22: 37 tests, zero skips. No errors were ignored and no test was disabled.
+
+The code-review skill ran separate standards/spec reviews. Follow-up changes bound
+journey HTTP ports to loopback, removed Order-owned anonymous volumes, kept the
+reporter array compatible with macOS Bash, made unknown executable documentation
+paths select the full suite, and sanitized logs/reports before cleanup. Both
+read-only re-reviews reported no outstanding findings. Current policy/report/CLI
+regressions pass 18 tests; final hosted and requested manual-run evidence is in
+PR #63. Prior owner approvals remain unchanged; @ron reviewed and approved this
+extension on 2026-11-09.
+
+## 2026-11-09 — Native Kafka Docker installation fix for CI
+
+- **Tool/mode:** OpenAI Codex; debugging, Docker configuration, verification, and documentation.
+- **Scope:** The author requested the minimal fix for PR #63's failing Docker builds.
+  No Kafka client replacement, dependency-version update, application behavior,
+  schema, AWS resource, test skip, or gate relaxation is included.
+- **Files:** User/Order/Credit `Dockerfile`, `docs/ci.md`, `README.md`, and this log.
+- **Tracking:** Issue #62 / PR #63. Reviewed and approved by @ron on 2026-11-09;
+  previous owners' approvals apply only to their original scopes.
+
+### Exact prompts
+
+> why not use another package then, is there no way of resolving this error?
+
+> implement the minimal fix that ensures that ci / github actions run without any errors
+
+> continue
+
+### Key response
+
+Codex used the diagnosing-bugs skill and retained the existing failure evidence:
+two GitHub Actions attempts failed before the integration/browser tests could run.
+The Confluent 1.11.0 prebuilt binary download returned HTTP 504; native fallback
+then failed because the unchanged Alpine images lacked Python and build tools.
+The official release inventory confirmed the binary exists. Inspection of the
+package's actual installer also showed that its default static-source fallback
+downloads dependencies from GitHub, so adding Python alone would not resolve that
+download dependency. Alpine's system librdkafka is 2.14.1, older than the client's
+bundled 2.16.0, and was not substituted.
+
+The three Dockerfiles now compile the locked addon's bundled source with
+`CKJS_LINKING=dynamic`, the pinned image's local Node headers, and Alpine's library
+development packages. Production dependencies are pruned in a separate stage,
+with lifecycle scripts disabled, then copied into the matching pinned runtime
+image with its shared library packages. Runtime remains non-root and contains no
+compiler/Python; Credit's development-dependent E2E target is preserved. There is
+no runtime reinstall and no GitHub release-asset request on this Docker path.
+
+The first local concurrent source builds exposed another upstream build issue:
+the bundled gyp action invokes unbounded `make -j`, exhausting the Docker VM's
+memory. Those failed probes were retained as failures and the remaining owned
+build was cancelled. The Dockerfiles now install with scripts deferred, limit
+that bundled make invocation to two jobs, and explicitly rebuild install scripts.
+This is a build-only adjustment inside the image, not a client-version change.
+
+Verification: all three Linux/amd64 source builds passed concurrently. With
+networking disabled, each final image loaded client 1.11.0 / librdkafka 2.16.0;
+assertions verified SSL/SASL, compression, HTTP/OIDC support, non-root production
+configuration, migrations, and absence of TypeScript/tsx and compiler/Python
+tools. `npm ls --omit=dev --depth=0` passed in all three images. Credit's separate
+E2E target built and loaded its native binding, tsx, and existing test file.
+
+All local Compose images built successfully. The first start attempt found the
+locally cached Kafka image was ARM64 while the build verification explicitly
+requested amd64; starting the already-built images with the cached broker's
+architecture resolved this local fixture mismatch without source changes. All
+13 existing endpoint checks and six API journeys passed on a disposable stack.
+The final User audit chain verified successfully. SQL assertions confirmed real
+User-to-Kafka-to-Credit account activation and the expected initial credit grant.
+Actionlint and `git diff --check` passed. All eight GitHub Actions checks passed
+on implementation commit `edace1a`, including both previously failing live jobs:
+<https://github.com/Y2627S1-CS3219-P5/FoC/actions/runs/42608381438>.
+The complete workflow is also required to pass on the final PR head; final run
+links/results are recorded in PR #63, rather than treating local checks as proof
+of hosted CI success.
+
+The PR skill supplies the final summary, evidence, and merge-impact description.
+Root-checkout uncommitted work and existing stashes are preserved. Disposable
+test containers and volumes are removed after verification; no shared development
+or cloud data is used.
+
+## 2026-11-09 — Order and Credit database-backed CI checks
+
+- **Tool/mode:** OpenAI Codex; configuration implementation, verification, and documentation.
+- **Scope:** The author approved two quality jobs using existing service commands,
+  disposable PostgreSQL, and the existing aggregate CI gate. No domain architecture,
+  schemas, service business logic, Kafka integration, AWS deployment, or repository
+  ruleset change is included.
+- **Files:** `.github/workflows/pr-ci.yml`, `docs/ci.md`, `README.md`, and this log.
+- **Tracking:** GitHub issue #62. Reviewed and approved by @ron on 2026-11-09.
+
+### Exact prompts
+
+> i think for order and credit we should implement it based on making sure it compiles / builds / and tests pass correctly what do you think dont implement anything yet
+
+> ok proceed with implementation and return the PR link once you are done
+
+### Key response
+
+Codex inspected the existing scripts and test helpers, then implemented separate
+Order and Credit jobs with Node 22, service-specific npm lockfile caches, pinned
+existing GitHub Actions, twenty-minute timeouts, and independent PostgreSQL 17.11
+service containers with readiness checks and disposable test-only credentials.
+Each job runs `npm ci`, `npm run typecheck`, `npm run build`, and `npm test`.
+Both results are included in the existing fail-closed `CI / gate`.
+
+The CI guide distinguishes the real PostgreSQL tests from Order's explicitly
+skipped Kafka suite and Credit's separate Kafka E2E runner. It also corrects the
+outdated description of User Service's test command: the User CI job still only
+builds, but the service now has a separate real test suite. No existing job or
+workflow trigger/permission/concurrency setting was changed.
+
+Verification: actionlint 1.7.12 reports no workflow errors; the official
+validator download checksum was verified. Parsed-workflow assertions pass for both
+new jobs and confirm existing jobs/settings are unchanged. Twenty-nine executed
+aggregate-gate cases verify all-success acceptance and rejection of each required
+job's failed, cancelled, skipped, or missing result. Clean Linux/x86-64 Node 22.23.4
+install/type-check/build/test runs passed against independent PostgreSQL 17.11
+containers: Order 173 tests passed, Credit 36 tests passed. The real-Kafka Order
+suite was intentionally excluded. No host database ports or application volumes
+were used.
+
+The first local `node:22-bookworm-slim` install probes hit an HTTP 504 downloading
+the existing native Kafka release asset and could not fall back to compiling
+because that minimal image lacks Python/build tools. The bug-diagnosis skill
+guided a reproducible direct download probe and a check of the official release
+asset inventory. Both unchanged command sequences then passed in the full
+`node:22-bookworm` environment with native-build tooling, closer to the GitHub-hosted
+Ubuntu runner. A repeat slim-image probe still reproduced the environment failure;
+this was not treated as a passing install or repaired by changing dependencies.
+The GitHub workflow continues to use its normal Ubuntu runner, not either local
+Docker verification image. No failed application test was retried or suppressed.
+
+Order's existing lockfile also reports one high-severity transitive `body-parser`
+advisory, GHSA-27r3-jxmh-p828. A read-only `npm audit --json` confirmed the finding.
+No `npm audit fix`, lockfile update, or new vulnerability policy is included in
+this CI-only increment; the advisory must be flagged for separate owner review.
+
+The work uses a separate `ci/62-order-credit-checks` worktree to preserve the author's
+dirty main checkout, uncommitted research/operator disclosures, ignored AWS state,
+and stashes. The PR skill supplies the concise summary/evidence/merge-impact format.
+No human approval is inferred from the request to implement.
 ## 2026-11-09 — Fix the stale Supplier UI E2E assertion on PR #59 (issue #64)
 
 - **Tool/mode:** OpenAI Codex (GPT-6); diagnosis, test maintenance, and verification.

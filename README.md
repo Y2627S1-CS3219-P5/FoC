@@ -5,6 +5,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-11-09.
 Scope: Credit history endpoint summary for #58. Author review: Reviewed and approved by @phuc.
 AI Assistance Disclosure:
 Additional AI assistance: OpenAI Codex, date: 2026-11-10.
+Scope: Retained the CI and logging summaries while resolving PR #63 against main.
+Author review: Resolution requested; this follow-up record awaits review.
+Additional AI assistance: OpenAI Codex, date: 2026-11-10.
 Scope: Added optional local centralised logging instructions and AI summary for #66.
 Author review: Reviewed and approved by @ron on 2026-11-10.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-11-09.
@@ -30,6 +33,10 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-10-16
 Scope: Added the Order Service AI Use Summary paragraph.
 Author review: Reviewed and approved by @mattis.
+Additional AI assistance: OpenAI Codex, date: 2026-11-09
+Scope: Recorded the author-approved Order/Credit CI extension, native Kafka Docker
+build fix, change-aware messaging coverage/safeguards and verification scope.
+Author review of this extension: Reviewed and approved by @ron on 2026-11-09.
 -->
 
 # CS3219 — Software Design and Architecture (AY2627 Sem 1)
@@ -86,6 +93,20 @@ See [setup, searches and logging-only shutdown/reset](observability/README.md).
 Grafana uses loopback port 3300; existing application startup is unchanged.
 
 ## AI Use Summary
+
+OpenAI Codex assisted on 2026-11-09 with implementing the author-approved
+[Order/Credit CI extension](docs/ci.md) for issue #62: separate Node 22 jobs with
+disposable PostgreSQL, locked installation, type-check/build/test commands, and
+fail-closed aggregation into `CI / gate`. The author-requested follow-up fixes
+native Kafka builds in the User, Order, and Credit Dockerfiles by compiling the
+locked addon's bundled source and copying pruned production dependencies into
+matching runtime images. The later author-approved extension adds change-aware PR
+selection, the complete existing messaging suites, actual authenticated Order/Credit
+journeys, strict execution/report checks and sanitized diagnostics before cleanup.
+Main pushes and manual runs keep full coverage. No service business logic,
+AWS deployment or repository ruleset change is included.
+Implementation and verification details are recorded in `ai/usage-log.md`.
+The PR #63 changes were reviewed and approved by @ron on 2026-11-09.
 
 OpenAI Codex assisted on 2026-11-10 with the author-approved local centralised
 logging plan and its optional configuration, isolated smoke checks and documentation
