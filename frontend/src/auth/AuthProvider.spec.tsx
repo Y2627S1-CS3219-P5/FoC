@@ -29,8 +29,9 @@ function Status() {
 function renderApp() {
   return render(<ToastProvider><AuthProvider><Status /></AuthProvider></ToastProvider>)
 }
-// A token that does not expire for decades, so no expiry timers interfere
-const TOKEN = `${btoa('{"alg":"HS256"}')}.${btoa('{"sub":"x","exp":4102444800}')}.sig`
+// A token valid for another hour. (Not decades: the provider schedules its expiry timers from
+// `exp`, and a delay beyond setTimeout's 32-bit limit fires after 1 ms and ends the session.)
+const TOKEN = `${btoa('{"alg":"HS256"}')}.${btoa(JSON.stringify({ sub: 'x', exp: Math.floor(Date.now() / 1000) + 3600 }))}.sig`
 
 beforeEach(() => {
   vi.mocked(userApi.whoami).mockReset()
