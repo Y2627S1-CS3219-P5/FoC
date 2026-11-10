@@ -27,7 +27,8 @@ Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-11-09. Scope: docu
 the N2 description box on the create page and ApiError's retryAfterSeconds.
 Author review: Reviewed and approved by @mattis.
 Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-11-10. Scope: documented
-the User Service admin pages (accounts, login activity, audit log).
+the User Service admin pages (accounts, login activity, audit log, reviews), the profile page and the
+"Service temporarily unavailable" screen.
 Author review: Reviewed and approved by @t-leongchuan
 -->
 
@@ -251,4 +252,17 @@ and **Audit log** (`/admin/audit`). Code: `src/admin/`, calls in `src/api/adminA
   when pressed.
 - Times are Singapore time. Members who open these URLs see "Administrator access required"
   and no admin request is made; the User Service checks the role on every call anyway.
+- **Reviews tab** (`/admin/reviews`): every account review with a status filter. An account page
+  has **Open review** (with a required reason), or a link to its open review. The review page
+  (`/admin/reviews/{id}`) shows why it was opened, the counts (current, or as saved with the
+  decision), the account's errands as requester and courier straight from the Order Service
+  (`/api/v1/admin/errands`; if it is down, the rest still shows), its logins and audit history,
+  then the decision form (outcomes allowed for the status at opening, reasoning) or the result.
+
+### Profile and session
+
+- **Profile** (`/profile`, from the name or avatar in the header): username, email, joined date,
+  role for administrators only; the display name is edited in place and the header updates at once.
+- On page load with a saved login, only a 401 from `/whoami` logs out. Any other failure (503,
+  gateway unreachable) keeps the login and shows "Service temporarily unavailable" with Try again.
 

@@ -3,16 +3,22 @@
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-09-26
  * Scope: Typed wrappers for the User Service endpoints used by the auth pages.
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-10
+ * Scope: email and createdAt on /whoami, and updateDisplayName() for the profile page.
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { apiRequest } from './client'
 
 export type Role = 'MEMBER' | 'ADMINISTRATOR'
 
-// Shape of GET /api/v1/whoami (author decision: exactly these three fields)
+// Shape of GET /api/v1/whoami. Email and creation date were added for the profile page
+// (author, 2026-11-10); optional here so older test doubles still type-check.
 export interface CurrentUser {
   username: string
   displayName: string
   role: Role
+  email?: string
+  createdAt?: string
 }
 
 interface LoginResponse {
@@ -37,4 +43,9 @@ export async function login(identifier: string, password: string): Promise<strin
 
 export function whoami(): Promise<CurrentUser> {
   return apiRequest<CurrentUser>('/whoami')
+}
+
+/** PATCH /whoami: only the display name can change (1-50 characters, trimmed by the server) */
+export function updateDisplayName(displayName: string): Promise<CurrentUser> {
+  return apiRequest<CurrentUser>('/whoami', { method: 'PATCH', body: { displayName } })
 }

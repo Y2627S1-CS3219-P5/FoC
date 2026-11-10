@@ -57,6 +57,7 @@ export interface LoginEventQuery {
 }
 
 export type AuditAction = 'FIRST_ADMIN_CREATED' | 'ROLE_CHANGED' | 'ACCOUNT_SUSPENDED' | 'ACCOUNT_RESTORED'
+  | 'REVIEW_OPENED' | 'REVIEW_DECIDED' | 'REVIEW_CANCELLED'
 
 export interface AuditEntry {
   id: string
@@ -94,3 +95,50 @@ export const LOGIN_OUTCOMES: readonly LoginOutcome[] = ['SUCCESS', 'FAILED', 'BL
 export const LOGIN_REASONS: readonly LoginReason[] = ['WRONG_PASSWORD', 'NO_SUCH_ACCOUNT', 'SUSPENDED', 'CLOSED', 'NOT_VERIFIED']
 /** Same rule as the User Service: 1-500 characters after trimming */
 export const REASON_MAX = 500
+
+// ---- Account reviews (N2H1b) -------------------------------------------------------------
+
+export type ReviewStatus = 'OPEN' | 'DECIDED' | 'CANCELLED'
+export type ReviewOutcome = 'REINSTATE' | 'KEEP_SUSPENDED' | 'SUSPEND' | 'NO_ACTION'
+export const REVIEW_STATUSES: readonly ReviewStatus[] = ['OPEN', 'DECIDED', 'CANCELLED']
+
+/** Counts the User Service saves when a review is decided (author's decision B6) */
+export interface ReviewEvidence {
+  capturedAt: string
+  failedLoginsLast7Days: number
+  blockedLoginsLast7Days: number
+  failedLoginsLast90Days: number
+  blockedLoginsLast90Days: number
+  auditEntriesLast90Days: number
+}
+
+export interface AccountReview {
+  id: string
+  account: { id: string; username: string; displayName: string; status: AccountStatus }
+  status: ReviewStatus
+  statusAtOpen: 'ACTIVE' | 'SUSPENDED'
+  allowedOutcomes: ReviewOutcome[]
+  openedBy: { id: string; username: string }
+  openedAt: string
+  openReason: string
+  closedBy: { id: string; username: string } | null
+  closedAt: string | null
+  outcome: ReviewOutcome | null
+  reasoning: string | null
+  evidence: ReviewEvidence | null
+}
+
+export interface AccountReviewDetail extends AccountReview {
+  /** For an open review: the same counts as they are right now */
+  currentEvidence: ReviewEvidence | null
+}
+
+export interface ReviewPage {
+  reviews: AccountReview[]
+  nextCursor: string | null
+}
+
+export interface ReviewQuery {
+  accountId?: string
+  status?: ReviewStatus
+}
