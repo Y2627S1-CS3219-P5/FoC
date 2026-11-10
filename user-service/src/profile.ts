@@ -4,6 +4,10 @@
  * Scope: Implemented GET /whoami and PATCH /whoami as specified by the author
  *        (view own profile; change own displayName only, other fields ignored).
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-10
+ * Scope: /whoami also returns the caller's email and account creation date (author's
+ *        decision for the profile page).
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { Router, Request, Response } from "express";
 import { pool } from "./db";
@@ -14,13 +18,16 @@ export const profileRouter = Router();
 const DISPLAY_NAME_MAX = 50; // US-F7.1.2
 
 // The caller's own profile (US-F7.1).
-profileRouter.get("/whoami", authenticate, (req: Request, res: Response) => {
-  const user = currentUser(res);
-  res.json({
-    username: user.username,
-    displayName: user.displayName,
-    role: user.role,
-  });
+// Own profile fields; email and creation date are read here, not on every request in authenticate
+async function ownProfile(id: string) {
+  const result = await pool.query("SELECT username, display_name, role, email, created_at FROM users WHERE id = $1", [id]);
+  const u = result.rows[0];
+  return { username: u.username, displayName: u.display_name, role: u.role, email: u.email, createdAt: (u.created_at as Date).toISOString() };
+}
+
+// The caller's own profile (US-F7.1).
+profileRouter.get("/whoami", authenticate, async (req: Request, res: Response) => {
+  res.json(await ownProfile(currentUser(res).id));
 });
 
 // Only displayName can be changed; other fields are never read, and a body without
@@ -30,7 +37,7 @@ profileRouter.patch("/whoami", authenticate, async (req: Request, res: Response)
   const body = typeof req.body === "object" && req.body !== null ? req.body : {};
 
   if (!("displayName" in body)) {
-    res.json({ username: user.username, displayName: user.displayName, role: user.role });
+    res.json(await ownProfile(user.id));
     return;
   }
 
@@ -45,12 +52,6 @@ profileRouter.patch("/whoami", authenticate, async (req: Request, res: Response)
     return;
   }
 
-  const result = await pool.query(
-    `UPDATE users SET display_name = $1, updated_at = now()
-     WHERE id = $2
-     RETURNING username, display_name, role`,
-    [displayName, user.id],
-  );
-  const updated = result.rows[0];
-  res.json({ username: updated.username, displayName: updated.display_name, role: updated.role });
+  await pool.query("UPDATE users SET display_name = $1, updated_at = now() WHERE id = $2", [displayName, user.id]);
+  res.json(await ownProfile(user.id));
 });

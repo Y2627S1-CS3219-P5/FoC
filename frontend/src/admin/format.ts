@@ -2,10 +2,10 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-11-10
  * Scope: Display helpers for the admin pages: Singapore time, short browser summaries,
- *        shortened hashes and labels for statuses, outcomes, reasons and audit actions.
+ *        shortened hashes and labels for statuses, outcomes, reasons, audit actions and reviews.
  * Author review: Reviewed and approved by @t-leongchuan
  */
-import type { AccountRole, AccountStatus, AuditAction, LoginOutcome, LoginReason } from './types'
+import type { AccountRole, AccountStatus, AuditAction, LoginOutcome, LoginReason, ReviewOutcome, ReviewStatus } from './types'
 
 // Author's decision: Singapore time, like the credit history page. Seconds are shown because
 // login attempts in a burst are often within the same minute.
@@ -69,6 +69,17 @@ export const REASON_LABELS: Record<LoginReason, string> = {
 export const ACTION_LABELS: Record<AuditAction, string> = {
   FIRST_ADMIN_CREATED: 'First administrator created', ROLE_CHANGED: 'Role changed',
   ACCOUNT_SUSPENDED: 'Account suspended', ACCOUNT_RESTORED: 'Account restored',
+  REVIEW_OPENED: 'Review opened', REVIEW_DECIDED: 'Review decided', REVIEW_CANCELLED: 'Review cancelled',
+}
+export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = { OPEN: 'Open', DECIDED: 'Decided', CANCELLED: 'Cancelled' }
+export const REVIEW_STATUS_STYLES: Record<ReviewStatus, string> = {
+  OPEN: 'bg-amber-50 text-amber-800', DECIDED: 'bg-navy-100 text-navy-900', CANCELLED: 'bg-slate-100 text-slate-600',
+}
+export const OUTCOME_CHOICES: Record<ReviewOutcome, { label: string; effect: string }> = {
+  REINSTATE: { label: 'Reinstate', effect: 'The account is restored and can log in again.' },
+  KEEP_SUSPENDED: { label: 'Keep suspended', effect: 'Nothing changes; the account stays suspended.' },
+  SUSPEND: { label: 'Suspend', effect: 'The account is suspended and logged out at once.' },
+  NO_ACTION: { label: 'No action', effect: 'Nothing changes; the account stays active.' },
 }
 
 export const STATUS_STYLES: Record<AccountStatus, string> = {

@@ -6,7 +6,8 @@
  *        HMAC hash-chain recipe, chain verification, and the paged viewer query.
  * Author review: Reviewed and approved by @t-leongchuan
  * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-10
- * Scope: The viewer also returns each entry's link to the one before (previousHash).
+ * Scope: The viewer also returns each entry's link to the one before (previousHash); the
+ *        three account-review actions (migration 0005).
  * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { createHmac } from "node:crypto";
@@ -21,7 +22,10 @@ export const ADMIN_ACTIONS_LOCK_ID = 3219002;
 
 export const GENESIS_HASH = "0".repeat(64);
 
-export const AUDIT_ACTIONS = ["FIRST_ADMIN_CREATED", "ROLE_CHANGED", "ACCOUNT_SUSPENDED", "ACCOUNT_RESTORED"] as const;
+export const AUDIT_ACTIONS = [
+  "FIRST_ADMIN_CREATED", "ROLE_CHANGED", "ACCOUNT_SUSPENDED", "ACCOUNT_RESTORED",
+  "REVIEW_OPENED", "REVIEW_DECIDED", "REVIEW_CANCELLED",
+] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 export interface AuditEntryInput {

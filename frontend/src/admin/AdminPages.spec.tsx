@@ -82,6 +82,7 @@ beforeEach(() => {
   vi.mocked(adminApi.suspendAccount).mockReset().mockResolvedValue({})
   vi.mocked(adminApi.restoreAccount).mockReset().mockResolvedValue({})
   vi.mocked(adminApi.changeRole).mockReset().mockResolvedValue({})
+  vi.mocked(adminApi.listReviews).mockReset().mockResolvedValue({ reviews: [], nextCursor: null })
   saveToken(tokenFor(ADMIN_ID))
 })
 afterEach(() => clearToken())
@@ -96,11 +97,11 @@ describe('access', () => {
     for (const call of [adminApi.listAccounts, adminApi.getAccount, adminApi.listLoginEvents, adminApi.listAudit]) expect(call).not.toHaveBeenCalled()
   })
 
-  it('administrators get the Admin button and the three tabs', async () => {
+  it('administrators get the Admin button and the four tabs', async () => {
     renderAt('/admin/accounts')
     expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Admin' })).toHaveAttribute('href', '/admin/accounts')
     const tabs = within(screen.getByRole('navigation', { name: 'Administration' })).getAllByRole('link')
-    expect(tabs.map((t) => t.textContent)).toEqual(['Accounts', 'Login activity', 'Audit log'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['Accounts', 'Login activity', 'Audit log', 'Reviews'])
     expect(tabs[0]).toHaveAttribute('aria-current', 'page')
   })
 })
