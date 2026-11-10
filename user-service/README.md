@@ -24,7 +24,8 @@ Scope: Login-events known limitations and the speed-limit numbers, from tests on
 2026-11-10: removed the AWS limitation after the team stopped the AWS deployment.
 Author review of additional changes: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-10
-Scope: Documented the admin accounts endpoints and the audit viewer's previousHash.
+Scope: Documented the admin accounts endpoints and the audit viewer's previousHash; account reviews
+(N2H1b) and the /whoami profile fields.
 Author review of additional changes: Reviewed and approved by @t-leongchuan
 -->
 
@@ -102,13 +103,18 @@ The gateway strips `/api/v1` before forwarding.
 | --- | --- | --- |
 | `POST /api/v1/auth/register` | anyone | `{ username, email, password }` → new MEMBER account |
 | `POST /api/v1/auth/login` | anyone | `{ identifier, password }` (username or email) → `{ accessToken, tokenType, expiresIn }` |
-| `GET /api/v1/whoami` | logged in | → `{ username, displayName, role }` of the caller |
+| `GET /api/v1/whoami` | logged in | → `{ username, displayName, role, email, createdAt }` of the caller |
 | `PATCH /api/v1/whoami` | logged in | `{ displayName }` (1–50 chars). Other fields are ignored. Missing displayName → no change |
 | `PUT /api/v1/users/{id}/role` | ADMINISTRATOR | `{ role: "MEMBER" \| "ADMINISTRATOR", reason? }`. Same role → no change. Promotion only for ACTIVE accounts; demotion for ACTIVE or SUSPENDED |
 | `POST /api/v1/users/{id}/suspend` | ADMINISTRATOR | `{ reason }` (required). ACTIVE → SUSPENDED; their existing logins stop working at once |
 | `POST /api/v1/users/{id}/restore` | ADMINISTRATOR | `{ reason }` (required). SUSPENDED → ACTIVE |
 | `GET /api/v1/admin/accounts` | ADMINISTRATOR | Accounts, newest first: `{ id, username, displayName, email, role, status, createdAt, lastLoginAt }`. `search` (part of username, email or display name, any case, max 100 chars), filters `status`, `role`; paging `?before=<nextCursor>`, `limit` (default 50, max 100). `lastLoginAt` is the newest SUCCESS in the login log (so at most 90 days back), else null |
 | `GET /api/v1/admin/accounts/{id}` | ADMINISTRATOR | One account, same fields; 404 `USER_NOT_FOUND` |
+| `POST /api/v1/admin/reviews` | ADMINISTRATOR | `{ accountId, reason }` (1–500) → 201 review, `OPEN`. 409 `REVIEW_ALREADY_OPEN` (+ `reviewId`), 403 `CANNOT_REVIEW_SELF`, 409 `INVALID_STATUS_TRANSITION` (only ACTIVE or SUSPENDED accounts) |
+| `GET /api/v1/admin/reviews` | ADMINISTRATOR | Reviews, newest first. Filters `accountId`, `status` (`OPEN`/`DECIDED`/`CANCELLED`); paging `?before=<nextCursor>`, `limit` (default 50, max 100) |
+| `GET /api/v1/admin/reviews/{id}` | ADMINISTRATOR | One review; an open one also has `currentEvidence` (the counts as they are now) |
+| `POST /api/v1/admin/reviews/{id}/decision` | ADMINISTRATOR | `{ outcome, reasoning }` (1–500). Outcomes: SUSPENDED when opened → `REINSTATE`/`KEEP_SUSPENDED`; ACTIVE → `SUSPEND`/`NO_ACTION`. Saves the evidence counts; SUSPEND/REINSTATE run suspend/restore with the reasoning as reason. 409 `ACCOUNT_STATUS_CHANGED` if the status changed since opening, 409 `REVIEW_NOT_OPEN` |
+| `POST /api/v1/admin/reviews/{id}/cancel` | ADMINISTRATOR | `{ reason }` (1–500) → `CANCELLED`; nothing changes on the account |
 | `GET /api/v1/admin/audit` | ADMINISTRATOR | Audit entries, newest first, each with its `hash` and `previousHash` (the link to the entry before). Filters `targetId`, `actorId`, `action`; paging `?before=<nextCursor>`, `limit` (default 50, max 200) |
 | `GET /api/v1/admin/audit/verify` | ADMINISTRATOR | Checks the hash chain → `{ valid, checkedEntries, firstInvalidId, latestHash }` |
 | `GET /api/v1/admin/login-events` | ADMINISTRATOR | Login attempts, newest first. Filters `accountId`, `outcome`, `reason`; paging `?before=<nextCursor>`, `limit` (default 50, max 100). Without `accountId`, attempts on unknown usernames are included |
@@ -244,6 +250,24 @@ Known limitations (measured on the local Compose stack, 2026-11-08):
   change, the total number of 503s in a burst did not measurably change (5 rounds each of 8 and
   16 simultaneous logins), but some 503s now come from this call.
 - Not built yet: checkpoints of this table in the audit chain, and users seeing their own history.
+
+## Account reviews (N2H1b)
+
+An admin opens a review of one account with a reason; it is decided (or cancelled) with written
+reasoning. Table `account_reviews` (migration `0005`); each step writes `REVIEW_OPENED`,
+`REVIEW_DECIDED` or `REVIEW_CANCELLED` to the hash-chained audit log.
+
+- **One open review per account** (unique index). Any admin may decide, including the opener
+  (requiring a second admin is future work). Your own account cannot be reviewed.
+- **Outcomes** depend on the status when opened: SUSPENDED → reinstate / keep suspended; ACTIVE →
+  suspend / no action. Reinstate and suspend run the normal restore/suspend in the same
+  transaction (audit entry, Kafka message to Credit, immediate logout), with the reasoning as reason.
+- **Refused if the account's status changed** after the review was opened (409
+  `ACCOUNT_STATUS_CHANGED`): the admin looks again.
+- **Evidence snapshot:** at decision time the service saves failed and blocked logins (last 7 and
+  90 days) and audit entries (last 90 days), so the numbers survive the 90-day login cleanup.
+  Errands come from the Order Service in the browser and are described in the reasoning.
+- `user_app` may insert and read reviews and change only the closing columns; it cannot delete.
 
 ## Suspension and the audit log
 

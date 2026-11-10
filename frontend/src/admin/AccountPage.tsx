@@ -4,10 +4,13 @@
  * Scope: One account's admin page: details, suspend/restore/role actions through the reason
  *        pop-up, then its login attempts and audit entries stacked below (author's decisions).
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-10
+ * Scope: The author's "Open review" button (N2H1b), or a link to the account's open review.
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
-import { changeRole, getAccount, restoreAccount, suspendAccount } from '../api/adminApi'
+import { Link, useNavigate, useParams } from 'react-router'
+import { changeRole, getAccount, listReviews, openReview, restoreAccount, suspendAccount } from '../api/adminApi'
 import { getCurrentUserId } from '../auth/tokenSubject'
 import { useToast } from '../components/toast/toastContext'
 import { AdminShell } from './AdminShell'
@@ -20,7 +23,7 @@ import { Badge, ErrorBox } from './shared'
 import type { AdminAccount } from './types'
 
 const SECTION_SIZE = 10
-type Action = 'suspend' | 'restore' | 'promote' | 'demote'
+type Action = 'suspend' | 'restore' | 'promote' | 'demote' | 'review'
 
 export function AccountPage() {
   return <AdminShell><AccountContent /></AdminShell>
@@ -47,9 +50,26 @@ function AccountContent() {
   const account = state.account?.id === id ? state.account : null
   const loading = state.key !== key && !account
   const isSelf = getCurrentUserId() === id.toLowerCase()
+  const navigate = useNavigate()
+  // The account's open review, if any (author: at most one); re-read after every action
+  const [openReviewId, setOpenReviewId] = useState<{ key: string; id: string | null }>({ key: '', id: null })
+  useEffect(() => {
+    const controller = new AbortController()
+    listReviews({ accountId: id, status: 'OPEN' }, null, 1, controller.signal).then(
+      (page) => { if (!controller.signal.aborted) setOpenReviewId({ key, id: page.reviews[0]?.id ?? null }) },
+      () => { if (!controller.signal.aborted) setOpenReviewId({ key, id: null }) },
+    )
+    return () => controller.abort()
+  }, [id, key])
 
   async function run(chosen: Action, reason: string) {
     if (!account) return
+    if (chosen === 'review') {
+      const review = await openReview(account.id, reason)
+      showToast(`Review #${review.id} opened for @${account.username}.`, 'success')
+      navigate(`/admin/reviews/${review.id}`)
+      return
+    }
     if (chosen === 'suspend') await suspendAccount(account.id, reason)
     else if (chosen === 'restore') await restoreAccount(account.id, reason)
     else await changeRole(account.id, chosen === 'promote' ? 'ADMINISTRATOR' : 'MEMBER', reason)
@@ -92,6 +112,9 @@ function AccountContent() {
             {account.role === 'MEMBER'
               ? <button type="button" className={buttonClass} onClick={() => setAction('promote')}>Make administrator</button>
               : <button type="button" className={buttonClass} onClick={() => setAction('demote')}>Make member</button>}
+            {openReviewId.key === key && (openReviewId.id
+              ? <Link to={`/admin/reviews/${openReviewId.id}`} className="inline-flex min-h-11 items-center rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100">Open review #{openReviewId.id} in progress →</Link>
+              : <button type="button" className={buttonClass} onClick={() => setAction('review')}>Open review</button>)}
           </div>}
       </section>
 
@@ -118,5 +141,6 @@ const DIALOGS: Record<Action, (a: AdminAccount) => { title: string; description:
   suspend: (a) => ({ title: `Suspend @${a.username}?`, description: 'They are logged out at once and cannot log in until restored. The reason is kept in the audit log.', confirmLabel: 'Suspend account', tone: 'danger', reasonRequired: true }),
   restore: (a) => ({ title: `Restore @${a.username}?`, description: 'They can log in again. The reason is kept in the audit log.', confirmLabel: 'Restore account', tone: 'safe', reasonRequired: true }),
   promote: (a) => ({ title: `Make @${a.username} an administrator?`, description: 'They get access to every admin page and action.', confirmLabel: 'Make administrator', tone: 'neutral', reasonRequired: false }),
+  review: (a) => ({ title: `Open a review of @${a.username}?`, description: 'Say why. The review collects the evidence and records a decision with your reasoning; nothing changes on the account until it is decided.', confirmLabel: 'Open review', tone: 'neutral', reasonRequired: true }),
   demote: (a) => ({ title: `Make @${a.username} a member?`, description: 'They lose access to the admin pages and actions at once.', confirmLabel: 'Make member', tone: 'neutral', reasonRequired: false }),
 }

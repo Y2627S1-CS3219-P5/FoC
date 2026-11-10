@@ -17,7 +17,8 @@
  * Author review: Reviewed and approved by @mattis.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-11-10. Scope: added the
  * administrators' "Admin" button next to "Manage Suppliers", and let the header row wrap onto
- * a second line on phones (author's decision). Author review: Reviewed and approved by @t-leongchuan
+ * a second line on phones, and made the name and avatar a link to the profile page (author's
+ * decisions). Author review: Reviewed and approved by @t-leongchuan
  */
 import { Link, NavLink } from 'react-router'
 import { useAuth } from '../auth/authContext'
@@ -66,6 +67,8 @@ export function TopBar({ creditRefreshKey = 0 }: { creditRefreshKey?: number }) 
             </Link>
           )}
           <CreditBalanceSummary key={user.username} refreshKey={creditRefreshKey} />
+          {/* Name and avatar open the profile page (author's decision) */}
+          <Link to="/profile" title="Your profile" className="flex min-w-0 items-center gap-3 rounded-lg p-0.5 hover:bg-navy-50">
           <div className="min-w-0 text-right">
             <p className="truncate text-sm font-semibold text-navy-900">
               {user.displayName}
@@ -81,6 +84,7 @@ export function TopBar({ creditRefreshKey = 0 }: { creditRefreshKey?: number }) 
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-800 text-xs font-semibold text-white" aria-hidden="true">
             {initials(user.displayName)}
           </span>
+          </Link>
           <button
             type="button"
             onClick={logout}

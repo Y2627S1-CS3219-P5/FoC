@@ -14,13 +14,16 @@
  * Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-11-09. Scope: added
  * the protected member errand routes. Author review: Reviewed and approved by @mattis.
  * Additional AI assistance: Claude Code (Claude Opus 5.5), 2026-11-10. Scope: added the
- * User Service admin routes (/admin/...). Author review: Reviewed and approved by @t-leongchuan
+ * User Service admin routes (/admin/...), the reviews routes and /profile. Author review: Reviewed and approved by @t-leongchuan
  */
 import { Navigate, Route, Routes } from 'react-router'
 import { AccountPage } from './admin/AccountPage'
 import { AccountsPage } from './admin/AccountsPage'
 import { AuditLogPage } from './admin/AuditLogPage'
 import { LoginActivityPage } from './admin/LoginActivityPage'
+import { ReviewPage } from './admin/ReviewPage'
+import { ReviewsPage } from './admin/ReviewsPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { RequireAuth } from './components/RequireAuth'
 import { CreditTransactionsPage } from './credits/CreditTransactionsPage'
 import { CreateErrandPage } from './errands/CreateErrandPage'
@@ -57,6 +60,9 @@ export default function App() {
       <Route path="/admin/accounts/:id" element={<RequireAuth><AccountPage /></RequireAuth>} />
       <Route path="/admin/login-activity" element={<RequireAuth><LoginActivityPage /></RequireAuth>} />
       <Route path="/admin/audit" element={<RequireAuth><AuditLogPage /></RequireAuth>} />
+      <Route path="/admin/reviews" element={<RequireAuth><ReviewsPage /></RequireAuth>} />
+      <Route path="/admin/reviews/:id" element={<RequireAuth><ReviewPage /></RequireAuth>} />
+      <Route path="/profile" element={<RequireAuth><ProfilePage /></RequireAuth>} />
       {/* Unknown URLs return to the protected catalogue. */}
       <Route path="*" element={<Navigate to="/suppliers" replace />} />
     </Routes>

@@ -114,6 +114,9 @@ Author review: Reviewed and approved by @t-leongchuan
 Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-10
 Scope: Drafted the User Service author's two N2H1 admin-pages entries; the author edited and approved them.
 Author review: Reviewed and approved by @t-leongchuan
+Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-11
+Scope: Drafted the User Service author's two entries for the profile page, the 503 fix and account reviews; the author approved them.
+Author review: Reviewed and approved by @t-leongchuan
 -->
 
 # AI Usage Log
@@ -2722,3 +2725,38 @@ Claude built `GET /admin/accounts` (search, status/role filters, newest first wi
 Claude's own implementation choices, listed for the author: the endpoint paths `/admin/accounts` and `/admin/accounts/{id}` (following "Addresses go under /admin/..."); the cursor is the last account's id; search is limited to 100 characters; page sizes 50 (max 100); the field name `previousHash`; the wording of labels, dialogs and messages; the browser-summary matching rules; seconds shown in login times.
 
 A test found that a member opening an admin URL still triggered the admin requests before the notice; Claude changed the pages so nothing is requested unless the user is an administrator.
+
+## 2026-11-10 — User Service and frontend: profile page, 503 fix and account reviews (N2H1b) decisions
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Allowed-use scope:** describing the existing profile API, page-load login check, account-status rules and evidence sources so the author could decide; presenting general alternatives with their consequences; recording the author's answers (no design decisions by Claude)
+- **Repository files affected:** none (decisions recorded in the author's own notes)
+- **Author review:** All decisions were made by the author.
+
+### Prompts
+
+> "P1: (a), by clicking your name or avatar. [...] P2: (b), also show email and joined date. [...] Keep the role visible to admins only, as before. P3: (a), edit the display name on the page and press Save, with the header updating straight away. [...] S. keep the login and show “Service temporarily unavailable” with a Try again button. Only “your login is no longer valid” (401) should log you out."
+
+> "B1: (b), add CANCELLED. [...] B2: (a), one open review per account [...] B3: (a), any admin can decide. [...] Mention it as future work. B4: (a), the reason for opening is required. [...] B5i: (a), reuse the reasoning text as the suspend or restore reason. [...] B5ii: (a), refuse the decision if the account’s status changed meanwhile [...] B6: (b), but only for numbers the User Service can count itself: failed and blocked logins, and recent audit entries. [...] For errands, the admin writes what they saw in the reasoning text. B7: (a), the browser asks the Order Service directly. [...] B8: (a), 1–500 characters. [...] B9: (a), /admin/reviews, with an optional account filter [...] R1: (a), a fourth “Reviews” tab plus an “Open review” button on the account page. R2: (a), one page with evidence on top and the decision below."
+
+### Key response
+
+Claude described the profile API and header, how the page-load login check treats failures, and the existing review decisions and evidence sources (account page sections, Order's admin errand list, the 90-day login retention). It posed the profile (P1–P3), 503 (S1) and review (B1–B9, R1–R2) questions with general alternatives and their consequences and no recommendation. The answers were recorded in the author's own words.
+
+## 2026-11-10 — User Service and frontend: profile page, 503 fix and account reviews (N2H1b) implementation
+
+- **Tool:** Claude Code (Claude Opus 5.5)
+- **Mode:** generate
+- **Allowed-use scope:** implementation code, tests and documentation for the author's decisions above; no new design
+- **Repository files affected:** `user-service/migrations/0005_account_reviews.sql` (new), `user-service/src/accountReviews.ts` (new), `user-service/src/accountStatus.ts`, `user-service/src/audit.ts`, `user-service/src/profile.ts`, `user-service/src/index.ts`, `user-service/test/accountReviews.test.ts` (new), `user-service/README.md`, `frontend/src/admin/ReviewsPage.tsx` (new), `frontend/src/admin/ReviewPage.tsx` (new), `frontend/src/admin/ReviewPages.spec.tsx` (new), `frontend/src/admin/AccountPage.tsx`, `frontend/src/admin/AdminShell.tsx`, `frontend/src/admin/AdminPages.spec.tsx`, `frontend/src/admin/format.ts`, `frontend/src/admin/types.ts`, `frontend/src/api/adminApi.ts`, `frontend/src/api/userApi.ts`, `frontend/src/auth/AuthProvider.tsx`, `frontend/src/auth/AuthProvider.spec.tsx` (new), `frontend/src/auth/authContext.ts`, `frontend/src/components/ServiceUnavailable.tsx` (new), `frontend/src/components/TopBar.tsx`, `frontend/src/pages/ProfilePage.tsx` (new), `frontend/src/pages/ProfilePage.spec.tsx` (new), `frontend/src/App.tsx`, `frontend/nginx.conf`, `frontend/vite.config.ts`, `frontend/README.md`
+- **Author review:** Reviewed and approved by @t-leongchuan
+
+### Prompts
+
+> (the author's answers in the entry above)
+
+### Key response
+
+Claude built the account reviews: migration `0005` (reviews table with OPEN/DECIDED/CANCELLED, one open review per account, required 1–500 character texts, the evidence snapshot, and the three review audit actions), and `/admin/reviews` to open, list, read, decide and cancel. A decision runs the existing suspend/restore in the same transaction with the reasoning as its reason, and is refused if the account's status changed after opening. In the frontend it added the Reviews tab, the "Open review" button (or a link to the open review) on the account page, and the review page with the counts, the account's errands from the Order Service, its logins and audit history, then the decision or cancel form. It also built the profile page reached from the header name and avatar (`/whoami` now returns email and creation date) and changed the page-load check so only a 401 logs out; other failures keep the login and show "Service temporarily unavailable" with Try again.
+
+Claude's own implementation choices, listed for the author: cancelling needs a reason; reviews of one's own account (the audit log refuses self-actions) and of accounts that are neither active nor suspended are refused; the evidence counts cover the last 7 and 90 days; the review audit values (`NONE` → `OPEN #n`, `OPEN #n` → `DECIDED #n: OUTCOME` / `CANCELLED #n`); the endpoint paths below `/admin/reviews` (`/{id}`, `/{id}/decision`, `/{id}/cancel`); no extra confirmation step on the decision form; wording of labels and messages.

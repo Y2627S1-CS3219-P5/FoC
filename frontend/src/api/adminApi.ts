@@ -2,14 +2,16 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-11-10
  * Scope: Typed calls to the User Service admin endpoints (accounts, suspend/restore, role,
- *        login events, audit log and chain check) for the admin pages (N2H1).
+ *        login events, audit log and chain check) for the admin pages (N2H1); account reviews
+ *        and the account's errands from the Order Service as review evidence (N2H1b).
  * Author review: Reviewed and approved by @t-leongchuan
  */
 import { apiRequest } from './client'
 import type {
-  AccountPage, AccountQuery, AccountRole, AdminAccount, AuditPage, AuditQuery, ChainCheck,
-  LoginEventPage, LoginEventQuery,
+  AccountPage, AccountQuery, AccountReview, AccountReviewDetail, AccountRole, AdminAccount, AuditPage, AuditQuery, ChainCheck,
+  LoginEventPage, LoginEventQuery, ReviewOutcome, ReviewPage, ReviewQuery,
 } from '../admin/types'
+import type { ErrandPage } from '../errands/types'
 
 function query(values: Record<string, string | number | undefined>): string {
   const params = new URLSearchParams()
@@ -51,4 +53,30 @@ export function listAudit(q: AuditQuery, before: string | null, limit: number, s
 
 export function verifyAuditChain(): Promise<ChainCheck> {
   return apiRequest<ChainCheck>('/admin/audit/verify')
+}
+
+export function openReview(accountId: string, reason: string): Promise<AccountReview> {
+  return apiRequest<AccountReview>('/admin/reviews', { method: 'POST', body: { accountId, reason } })
+}
+
+export function listReviews(q: ReviewQuery, before: string | null, limit: number, signal?: AbortSignal): Promise<ReviewPage> {
+  return apiRequest<ReviewPage>(`/admin/reviews${query({ ...q, before: before ?? undefined, limit })}`, { signal })
+}
+
+export function getReview(id: string, signal?: AbortSignal): Promise<AccountReviewDetail> {
+  return apiRequest<AccountReviewDetail>(`/admin/reviews/${encodeURIComponent(id)}`, { signal })
+}
+
+export function decideReview(id: string, outcome: ReviewOutcome, reasoning: string): Promise<AccountReview> {
+  return apiRequest<AccountReview>(`/admin/reviews/${encodeURIComponent(id)}/decision`, { method: 'POST', body: { outcome, reasoning } })
+}
+
+export function cancelReview(id: string, reason: string): Promise<AccountReview> {
+  return apiRequest<AccountReview>(`/admin/reviews/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: { reason } })
+}
+
+/** Review evidence straight from the Order Service (author's decision B7): one side of the account's errands */
+export function listAccountErrands(accountId: string, as: 'requester' | 'courier', size: number, signal?: AbortSignal): Promise<ErrandPage> {
+  const key = as === 'requester' ? 'requesterId' : 'courierId'
+  return apiRequest<ErrandPage>(`/admin/errands${query({ [key]: accountId, page: 0, size })}`, { signal })
 }

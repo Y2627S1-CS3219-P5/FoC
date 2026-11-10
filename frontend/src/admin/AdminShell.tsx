@@ -2,7 +2,8 @@
  * AI Assistance Disclosure:
  * Tool: Claude Code (Claude Opus 5.5), date: 2026-11-10
  * Scope: Shared frame for the User Service admin pages: top bar, the author's three tabs
- *        (Accounts, Login activity, Audit log) and the administrator-only notice.
+ *        (Accounts, Login activity, Audit log), the fourth Reviews tab (N2H1b) and the
+ *        administrator-only notice.
  * Author review: Reviewed and approved by @t-leongchuan
  */
 import type { ReactNode } from 'react'
@@ -14,6 +15,7 @@ const TABS = [
   { to: '/admin/accounts', label: 'Accounts' },
   { to: '/admin/login-activity', label: 'Login activity' },
   { to: '/admin/audit', label: 'Audit log' },
+  { to: '/admin/reviews', label: 'Reviews' },
 ] as const
 
 /** Pages put their data-loading parts in `children`, so members never trigger admin requests */

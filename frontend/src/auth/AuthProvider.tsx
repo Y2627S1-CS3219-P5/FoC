@@ -4,10 +4,15 @@
  * Scope: App-wide login state, login/logout, and the author's expiry-warning behaviour
  *        (toast at 5 min and 2 min before expiry; on expiry, back to login with a message).
  * Author review: Reviewed and approved by @t-leongchuan
+ * Additional AI assistance: Claude Code (Claude Opus 5.5), date: 2026-11-10
+ * Scope: author's fix: only a 401 ends the session on page load; any other failure keeps the
+ *        login and shows "Service temporarily unavailable" with Try again. updateUser().
+ * Author review of additional changes: Reviewed and approved by @t-leongchuan
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { setUnauthorizedHandler } from '../api/client'
+import { ApiError, setUnauthorizedHandler } from '../api/client'
 import * as userApi from '../api/userApi'
+import { ServiceUnavailable } from '../components/ServiceUnavailable'
 import { useToast } from '../components/toast/toastContext'
 import { AuthContext, type AuthStatus } from './authContext'
 import { getTokenExpiryMs } from './tokenExpiry'
@@ -82,13 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(me)
         setStatus('loggedIn')
       })
-      .catch(() => {
-        // 401s are already handled by the unauthorized handler; for anything else
-        // (e.g. server unreachable) fall back to logged out
-        if (cancelled) return
-        clearToken()
-        setToken(null)
-        setStatus('loggedOut')
+      .catch((error: unknown) => {
+        // A 401 has already ended the session through the unauthorized handler. Anything else
+        // (503, gateway unreachable, ...) is the server's problem, not the login's: keep the
+        // token and let the user try again (author's decision; no automatic retry).
+        if (cancelled || (error instanceof ApiError && error.status === 401)) return
+        setStatus('unavailable')
       })
     return () => {
       cancelled = true
@@ -124,6 +128,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => timers.forEach(clearTimeout)
   }, [token, status, showToast, endSession])
 
-  const api = useMemo(() => ({ status, user, notice, login, logout }), [status, user, notice, login, logout])
-  return <AuthContext.Provider value={api}>{children}</AuthContext.Provider>
+  const updateUser = useCallback((next: userApi.CurrentUser) => setUser(next), [])
+  const api = useMemo(() => ({ status, user, notice, login, logout, updateUser }), [status, user, notice, login, logout, updateUser])
+  return (
+    <AuthContext.Provider value={api}>
+      {status === 'unavailable' ? <ServiceUnavailable onRetry={() => setStatus('checking')} /> : children}
+    </AuthContext.Provider>
+  )
 }
