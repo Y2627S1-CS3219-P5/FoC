@@ -1,5 +1,12 @@
 <!--
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-11-09.
+Scope: Credit frontend summary for #65. Author review: Reviewed and approved by @phuc.
+Additional AI assistance: OpenAI Codex (GPT-6), 2026-11-09.
+Scope: Credit history endpoint summary for #58. Author review: Reviewed and approved by @phuc.
 AI Assistance Disclosure:
+Additional AI assistance: OpenAI Codex, date: 2026-11-10.
+Scope: Added optional local centralised logging instructions and AI summary for #66.
+Author review: Reviewed and approved by @ron on 2026-11-10.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-11-09.
 Scope: Recorded issue #64's Supplier browser assertion fix and verification.
 Author review: PENDING.
@@ -76,6 +83,12 @@ microservice (`user-service/`, `supplier-service/`, `order-service/`,
   may be added as needed, but must still **respect the
   one-service-per-folder skeleton** for core implementation.
 
+## Optional local logs
+
+The application can run with an independent local Alloy/Loki/Grafana logging stack.
+See [setup, searches and logging-only shutdown/reset](observability/README.md).
+Grafana uses loopback port 3300; existing application startup is unchanged.
+
 ## AI Use Summary
 
 OpenAI Codex assisted on 2026-11-09 with implementing the author-approved
@@ -91,6 +104,13 @@ Main pushes and manual runs keep full coverage. No service business logic,
 AWS deployment or repository ruleset change is included.
 Implementation and verification details are recorded in `ai/usage-log.md`.
 The PR #63 changes were reviewed and approved by @ron on 2026-11-09.
+
+OpenAI Codex assisted on 2026-11-10 with the author-approved local centralised
+logging plan and its optional configuration, isolated smoke checks and documentation
+for issue #66. No application source, root Compose, AWS or CI jobs were changed.
+The plan, implementation and disclosures were reviewed and approved by @ron on
+2026-11-10. Exact prompts,
+scope and verification are recorded in [the usage log](ai/usage-log.md).
 
 OpenAI Codex (GPT-6) assisted on 2026-09-25 and 2026-09-26 with implementing the first three Supplier backend increments from the author-approved specification: NestJS/Drizzle and PostgreSQL foundations; guarded, edit-preserving seed identities; least-privilege Compose setup; real User Service bearer verification; authenticated catalogue reads; request correlation and bundled assets; and administrator-only create/full-update/archive/restore with strict bodies, normalized race-safe duplicate creation rejection, and ETag concurrency. The isolated real-service integration runner now verifies API and SQL mutation state, concurrent stale-write rejection, lifecycle no-ops, repeat-migration/seed preservation, and fail-closed authentication. No Supplier frontend, User Service application changes, Order Service integration, or physical Supplier deletion were included. Project-author review of all three backend increments was completed and approved by @ron. [Strict-JSON disclosure details](supplier-service/AI-DISCLOSURES.md#strict-json-files) retain the pending course-owner exception approval; the exact prompts and key-response summaries are recorded in `ai/usage-log.md`.
 
@@ -124,3 +144,19 @@ browser test to check the existing "Request an errand from here" link and its ex
 Supplier preselection URL after PR #59 removed the old placeholder. The existing
 member and administrator browser journeys both passed locally. Author review is
 pending; the exact prompt and verification results are in `ai/usage-log.md`.
+
+OpenAI Codex (GPT-6) assisted on 2026-11-09 with the requested authenticated Credit
+transaction history endpoint from issue #58: own-user reads, optional date bounds,
+pagination, live User Service verification, independent Kafka startup, gateway and
+Compose wiring, and focused HTTP/database tests. Author review: Reviewed and approved by @phuc.
+Exact prompts and verification evidence are recorded in `ai/usage-log.md`;
+JSON dependency attribution is in `credit-service/AI-DISCLOSURES.md`.
+
+OpenAI Codex (GPT-6) assisted on 2026-11-09 with the Credit transaction frontend
+in issue #65: authenticated history, Singapore date filters, pagination, responsive
+transaction cards, failure recovery, tests and local preview startup. Author review: Reviewed and approved by @phuc. Exact prompts and verification are recorded in `ai/usage-log.md`.
+
+The issue #65 Credit view now also displays live available and reserved balances
+from the existing balance query through authenticated GET /api/v1/me/credit.
+OpenAI Codex (GPT-6), 2026-11-09; Author review: Reviewed and approved by @phuc. Verification and the exact
+request are recorded in `ai/usage-log.md`.
