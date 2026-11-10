@@ -5,6 +5,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-11-09.
 Scope: Credit history endpoint summary for #58. Author review: Reviewed and approved by @phuc.
 AI Assistance Disclosure:
 Additional AI assistance: OpenAI Codex, date: 2026-11-10.
+Scope: Retained the CI and logging summaries while resolving PR #63 against main.
+Author review: Resolution requested; this follow-up record awaits review.
+Additional AI assistance: OpenAI Codex, date: 2026-11-10.
 Scope: Added optional local centralised logging instructions and AI summary for #66.
 Author review: Reviewed and approved by @ron on 2026-11-10.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-11-09.

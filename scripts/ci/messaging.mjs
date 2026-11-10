@@ -1,4 +1,5 @@
 // AI assistance: OpenAI Codex, 2026-11-09. Scope: approved isolated messaging CI runners and evidence. Review: Reviewed and approved by @ron on 2026-11-09.
+// Additional AI assistance: OpenAI Codex, 2026-11-10. Scope: isolate Credit's newly merged HTTP port (#62). Review: pending for this compatibility follow-up.
 import { spawn, execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { mkdtempSync, writeFileSync, readFileSync, appendFileSync, readdirSync, rmSync } from 'node:fs';
@@ -111,6 +112,7 @@ try {
         JWT_SECRET: 'ci-messaging-test-only-jwt-secret-32-chars', AUDIT_HMAC_KEY: 'ab'.repeat(32), ALLOWED_EMAIL_DOMAIN: 'u.nus.edu',
         BOOTSTRAP_ADMIN_USERNAME: 'ci_admin', BOOTSTRAP_ADMIN_EMAIL: 'ci-admin@u.nus.edu', BOOTSTRAP_ADMIN_PASSWORD: 'CiMessagingPassword1',
         USER_PORT: `127.0.0.1:${await freePort()}`, SUPPLIER_PORT: `127.0.0.1:${await freePort()}`, ORDER_PORT: `127.0.0.1:${await freePort()}`,
+        CREDIT_PORT: `127.0.0.1:${await freePort()}`,
       });
       secrets.push('ci-messaging-password', env.JWT_SECRET, env.AUDIT_HMAC_KEY, env.BOOTSTRAP_ADMIN_PASSWORD);
       env.CI_REDACT_SECRETS_JSON = JSON.stringify(secrets);

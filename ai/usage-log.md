@@ -5,6 +5,9 @@ Additional AI assistance: OpenAI Codex (GPT-6), 2026-11-09.
 Scope: Credit history endpoint prompts and verification for #58. Author review: Reviewed and approved by @phuc.
 AI Assistance Disclosure:
 Additional AI assistance: OpenAI Codex, date: 2026-11-10.
+Scope: Recorded PR #63 merge resolution and Credit HTTP test-fixture compatibility.
+Author review: Follow-up review pending; prior approval records retained.
+Additional AI assistance: OpenAI Codex, date: 2026-11-10.
 Scope: Recorded the approved local logging plan and implementation/verification for #66.
 Author review: Reviewed and approved by @ron on 2026-11-10.
 Additional AI assistance: OpenAI Codex (GPT-6), date: 2026-11-09.
@@ -130,6 +133,15 @@ were retained. The usage log and application changes merged automatically; no
 application behaviour, schema or CI policy was invented for the resolution.
 Relevant verification results are recorded on PR #63 and issue #62. The author's
 dirty normal checkout and the separate logging worktree were preserved.
+
+The first post-merge workflow exposed an existing fixture's incompatibility with
+the merged Credit HTTP contract: Credit exited with `USER_SERVICE_BASE_URL is not
+set`, and the actual User–Credit check correctly failed waiting for its grant.
+The follow-up supplies Credit's real User verifier URL and a distinct ephemeral
+HTTP port in that test, detects early Credit exit, and isolates the newly published
+Credit port in the actual-service Compose runner. Service implementation, contract,
+business assertions and CI gate policy remain unchanged. Prior author approvals
+are preserved; these compatibility additions remain pending human review.
 
 ## 2026-11-10 — Author approval of local logging PR #68
 
